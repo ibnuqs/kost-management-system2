@@ -1,0 +1,79 @@
+# Laravel Docker ignore file
+
+# Development files
+.env.local
+.env.example
+.env.testing
+.env.dusk.local
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+*.log
+logs/
+storage/logs/*.log
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+*.tmp
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Tests
+tests/
+phpunit.xml
+.phpunit.result.cache
+
+# Development tools
+.editorconfig
+.php_cs.cache
+.php-cs-fixer.cache
+
+# Documentation
+README.md
+docs/
+
+# Storage (will be mounted as volume)
+storage/app/public/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+
+# Bootstrap cache (will be regenerated)
+bootstrap/cache/*.php
+
+# Vendor (will be installed in container)
+vendor/
+
+# Docker files
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Development scripts
+artisan.bat
