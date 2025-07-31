@@ -88,7 +88,7 @@ root@srv930017:~#
    git add .
    git commit -m "Initial commit"
    git branch -M main
-   git remote add origin https://github.com/USERNAME/kost-management-system.git
+   git remote add origin https://github.com/ibnuqs/kost-management-system2.git
    git push -u origin main
    ```
    (Ganti `USERNAME` dengan username GitHub Anda)
@@ -101,6 +101,8 @@ root@srv930017:~#
 
 **Di Terminal VPS, ketik:**
 ```bash
+# Buat folder /var/www jika belum ada
+mkdir -p /var/www
 cd /var/www/
 git clone https://github.com/USERNAME/kost-management-system.git kost-10
 ```
@@ -108,8 +110,9 @@ git clone https://github.com/USERNAME/kost-management-system.git kost-10
 
 **Contoh:**
 ```bash
+mkdir -p /var/www
 cd /var/www/
-git clone https://github.com/john123/kost-management-system.git kost-10
+git clone https://github.com/ibnuqs/kost-management-system2.git kost-10
 ```
 
 ### **Method 2: Upload Manual via FileZilla (Jika tidak mau pakai GitHub)**

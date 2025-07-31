@@ -53,7 +53,8 @@ mv composer.phar /usr/local/bin/composer
 print_status "Installing Git..."
 apt install git -y
 
-# Navigate to web directory
+# Create and navigate to web directory
+mkdir -p /var/www
 cd /var/www/
 
 print_status "Setting up project directory..."

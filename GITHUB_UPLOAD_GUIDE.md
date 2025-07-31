@@ -125,6 +125,8 @@ git push -u origin main
 **Sekarang di Terminal VPS, ketik:**
 
 ```bash
+# Buat folder /var/www dulu (jika belum ada)
+mkdir -p /var/www
 cd /var/www/
 git clone https://github.com/USERNAME/kost-management-system.git kost-10
 ```
@@ -133,8 +135,9 @@ git clone https://github.com/USERNAME/kost-management-system.git kost-10
 
 ### **Contoh:**
 ```bash
+mkdir -p /var/www
 cd /var/www/
-git clone https://github.com/john123/kost-management-system.git kost-10
+git clone https://github.com/ibnuqs/kost-management-system2.git kost-10
 ```
 
 ### ✅ **Berhasil jika muncul:**

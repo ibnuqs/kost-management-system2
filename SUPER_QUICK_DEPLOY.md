@@ -21,6 +21,7 @@
 3. **Copy URL repo** (contoh: `https://github.com/john123/kost-management-system.git`)
 4. **Clone ke VPS:**
 ```bash
+mkdir -p /var/www
 cd /var/www/
 git clone https://github.com/USERNAME/kost-management-system.git kost-10
 ```
