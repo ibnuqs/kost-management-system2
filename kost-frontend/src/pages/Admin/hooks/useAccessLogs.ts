@@ -26,9 +26,8 @@ export const useAccessLogs = (initialFilters?: AccessLogFilters) => {
       setLogs(data.logs);
       setStats(data.summary);
       setPagination(data.pagination);
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to load access logs';
-      setError(errorMessage);
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to load access logs');
       console.error('Error loading access logs:', err);
       // toast.error(errorMessage);
       
@@ -50,7 +49,7 @@ export const useAccessLogs = (initialFilters?: AccessLogFilters) => {
     try {
       const data = await accessLogService.getStatistics(days);
       setStatistics(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load access log statistics:', err);
       // Don't show error toast for statistics as it's not critical
       setStatistics(null);
@@ -61,8 +60,7 @@ export const useAccessLogs = (initialFilters?: AccessLogFilters) => {
     try {
       await accessLogService.exportLogs(filters);
       // toast.success('Export completed successfully');
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to export access logs';
+    } catch (err: unknown) {
       console.error('Error exporting access logs:', err);
       // toast.error(errorMessage);
       throw err;
@@ -80,7 +78,7 @@ export const useAccessLogs = (initialFilters?: AccessLogFilters) => {
   useEffect(() => {
     loadLogs(initialFilters);
     loadStatistics();
-  }, [loadLogs, loadStatistics]);
+  }, [loadLogs, loadStatistics, initialFilters]);
 
   return {
     data: {

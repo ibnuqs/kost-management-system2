@@ -109,10 +109,10 @@ const DeviceFilters: React.FC<DeviceFiltersProps> = ({
               >
                 <option value="">Semua Status</option>
                 <option value="online">
-                  🟢 Terhubung
+                  Terhubung
                 </option>
                 <option value="offline">
-                  🔴 Terputus
+                  Terputus
                 </option>
               </select>
             </div>
@@ -129,10 +129,10 @@ const DeviceFilters: React.FC<DeviceFiltersProps> = ({
               >
                 <option value="">Semua Tipe</option>
                 <option value="door_lock">
-                  🚪 Kunci Pintu
+                  Kunci Pintu
                 </option>
                 <option value="card_scanner">
-                  💳 Pembaca Kartu
+                  Pembaca Kartu
                 </option>
               </select>
             </div>
@@ -148,10 +148,10 @@ const DeviceFilters: React.FC<DeviceFiltersProps> = ({
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
               >
                 <option value="">Semua Kamar</option>
-                <option value="unassigned">🏠 Belum Ditugaskan</option>
+                <option value="unassigned">Belum Ditugaskan</option>
                 {rooms.map((room) => (
                   <option key={room.id} value={room.id.toString()}>
-                    🏠 Kamar {room.room_number}
+                    Kamar {room.room_number}
                   </option>
                 ))}
               </select>

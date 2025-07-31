@@ -12,6 +12,12 @@ import {
 } from 'lucide-react';
 import { reservationService } from '../../../services/reservationService';
 
+interface ActionResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
 interface RoomSystemActionsProps {
   onRefresh?: () => void;
 }
@@ -20,18 +26,18 @@ export const RoomSystemActions: React.FC<RoomSystemActionsProps> = ({
   onRefresh
 }) => {
   const [loading, setLoading] = useState<Record<string, boolean>>({});
-  const [results, setResults] = useState<Record<string, any>>({});
+  const [results, setResults] = useState<Record<string, ActionResult>>({});
   const [isExpanded, setIsExpanded] = useState(false);
 
   const setActionLoading = (action: string, isLoading: boolean) => {
     setLoading(prev => ({ ...prev, [action]: isLoading }));
   };
 
-  const setActionResult = (action: string, result: any) => {
+  const setActionResult = (action: string, result: ActionResult) => {
     setResults(prev => ({ ...prev, [action]: result }));
   };
 
-  const handleAction = async (action: string, apiCall: () => Promise<any>) => {
+  const handleAction = async (action: string, apiCall: () => Promise<ActionResult>) => {
     setActionLoading(action, true);
     try {
       const result = await apiCall();
@@ -41,10 +47,10 @@ export const RoomSystemActions: React.FC<RoomSystemActionsProps> = ({
       if (onRefresh) {
         await onRefresh();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setActionResult(action, {
         success: false,
-        error: error?.response?.data?.message || error.message || 'Terjadi kesalahan'
+        error: (error as Record<string, unknown>)?.response?.data?.message as string || (error as Error).message || 'Terjadi kesalahan'
       });
     } finally {
       setActionLoading(action, false);

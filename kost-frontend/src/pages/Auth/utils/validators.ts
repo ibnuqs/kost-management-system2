@@ -1,4 +1,4 @@
-﻿// pages/Auth/utils/validators.ts
+// pages/Auth/utils/validators.ts
 // Validation functions for Auth forms
 
 import { 
@@ -165,9 +165,9 @@ export const calculatePasswordStrength = (password: string) => {
 };
 
 // Generic form validation
-export const validateForm = <T extends Record<string, any>>(
+export const validateForm = <T extends Record<string, unknown>>(
   values: T,
-  rules: Record<keyof T, (value: any) => string | null>
+  rules: Record<keyof T, (value: unknown) => string | null>
 ): Record<keyof T, string> => {
   const errors: Record<keyof T, string> = {} as Record<keyof T, string>;
   

@@ -17,22 +17,22 @@ class IoTDeviceController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $tenant = Tenant::where('user_id', $user->id)
                 ->where('status', Tenant::STATUS_ACTIVE)
                 ->first();
 
-            if (!$tenant || !$tenant->room_id) {
+            if (! $tenant || ! $tenant->room_id) {
                 return response()->json([
                     'success' => true,
                     'data' => [],
-                    'message' => 'No room assigned to tenant'
+                    'message' => 'No room assigned to tenant',
                 ]);
             }
 
             // Get devices in tenant's room
             $devices = IoTDevice::where('room_id', $tenant->room_id)
-                ->orWhere('location', 'like', '%' . $tenant->room->room_number . '%') // Fallback jika tidak ada room_id
+                ->orWhere('location', 'like', '%'.$tenant->room->room_number.'%') // Fallback jika tidak ada room_id
                 ->get()
                 ->map(function ($device) {
                     return [
@@ -52,13 +52,13 @@ class IoTDeviceController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $devices->toArray(),
-                'message' => 'Room IoT devices retrieved successfully'
+                'message' => 'Room IoT devices retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve room devices: ' . $e->getMessage()
+                'message' => 'Failed to retrieve room devices: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -70,15 +70,15 @@ class IoTDeviceController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $tenant = Tenant::where('user_id', $user->id)
                 ->where('status', Tenant::STATUS_ACTIVE)
                 ->first();
 
-            if (!$tenant || !$tenant->room_id) {
+            if (! $tenant || ! $tenant->room_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No room assigned to tenant'
+                    'message' => 'No room assigned to tenant',
                 ], 404);
             }
 
@@ -86,10 +86,10 @@ class IoTDeviceController extends Controller
                 ->where('room_id', $tenant->room_id)
                 ->first();
 
-            if (!$device) {
+            if (! $device) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Device not found in your room'
+                    'message' => 'Device not found in your room',
                 ], 404);
             }
 
@@ -111,13 +111,13 @@ class IoTDeviceController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $deviceStatus,
-                'message' => 'Device status retrieved successfully'
+                'message' => 'Device status retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve device status: ' . $e->getMessage()
+                'message' => 'Failed to retrieve device status: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -148,8 +148,8 @@ class IoTDeviceController extends Controller
         }
 
         // Check last seen
-        $lastSeen = $device->last_seen ? 
-            \Carbon\Carbon::parse($device->last_seen) : 
+        $lastSeen = $device->last_seen ?
+            \Carbon\Carbon::parse($device->last_seen) :
             $device->updated_at;
 
         if ($lastSeen->diffInMinutes(now()) > 60) {

@@ -19,34 +19,34 @@ class RegisterRequest extends BaseRequest
                 'string',
                 'min:2',
                 'max:255',
-                'regex:/^[a-zA-Z\s]+$/' // Only letters and spaces
+                'regex:/^[a-zA-Z\s]+$/', // Only letters and spaces
             ],
             'email' => [
                 'required',
                 'string',
                 'email',
                 'max:255',
-                'unique:users,email'
+                'unique:users,email',
             ],
             'phone' => [
                 'required',
                 'string',
                 'max:20',
                 'unique:users,phone',
-                new IndonesianPhone()
+                new IndonesianPhone,
             ],
             'password' => [
                 'required',
                 'string',
                 'min:8',
                 'confirmed',
-                new StrongPassword()
+                new StrongPassword,
             ],
             'role' => [
                 'sometimes',
                 'string',
-                'in:admin,tenant'
-            ]
+                'in:admin,tenant',
+            ],
         ];
     }
 
@@ -75,7 +75,7 @@ class RegisterRequest extends BaseRequest
     {
         $validator->after(function ($validator) {
             // Additional custom validation logic can go here
-            if ($this->role === 'admin' && !$this->user()?->isAdmin()) {
+            if ($this->role === 'admin' && ! $this->user()?->isAdmin()) {
                 $validator->errors()->add('role', 'You are not authorized to create admin accounts.');
             }
         });

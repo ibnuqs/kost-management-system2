@@ -36,7 +36,7 @@ interface RfidRealtimeData {
     lastHourActivity: number;
   };
   refreshData: () => void;
-  sendCommand: (deviceId: string, command: any) => boolean;
+  sendCommand: (deviceId: string, command: unknown) => boolean;
 }
 
 export const useRfidRealtime = (): RfidRealtimeData => {
@@ -65,7 +65,7 @@ export const useRfidRealtime = (): RfidRealtimeData => {
     console.log('🔄 Refreshing RFID data...');
   };
 
-  const sendCommand = (deviceId: string, command: any): boolean => {
+  const sendCommand = (deviceId: string, command: Record<string, unknown>): boolean => {
     console.log('📤 Sending command to', deviceId, ':', command);
     return true;
   };

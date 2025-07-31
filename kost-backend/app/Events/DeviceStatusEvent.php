@@ -1,4 +1,5 @@
 <?php
+
 // File: app/Events/DeviceStatusEvent.php
 
 namespace App\Events;
@@ -23,7 +24,7 @@ class DeviceStatusEvent implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new Channel('admin-notifications')
+            new Channel('admin-notifications'),
         ];
     }
 
@@ -36,7 +37,7 @@ class DeviceStatusEvent implements ShouldBroadcast
     {
         return [
             'type' => 'device_status',
-            'data' => $this->statusData
+            'data' => $this->statusData,
         ];
     }
 }

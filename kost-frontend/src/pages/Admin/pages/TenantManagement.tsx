@@ -1,8 +1,6 @@
-// File: src/pages/Admin/pages/TenantManagement.tsx
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useTenants } from '../hooks/useTenants';
-import api, { endpoints } from '../../../utils/api';
 import {
   TenantStats,
   TenantTable,
@@ -11,13 +9,12 @@ import {
   MoveOutWizard,
   RoomTransferWizard
 } from '../components/feature/tenants';
-import { PageHeader } from '../components/layout';
 import { DangerousActionModal } from '../components/ui';
-import type { 
-  Tenant, 
-  TenantFormData, 
-  MoveOutData, 
-  TenantFilters as TenantFiltersType 
+import type {
+  Tenant,
+  TenantFormData,
+  MoveOutData,
+  TenantFilters as TenantFiltersType
 } from '../types/tenant';
 
 const TenantManagement: React.FC = () => {
@@ -52,7 +49,7 @@ const TenantManagement: React.FC = () => {
   const [showRoomTransferWizard, setShowRoomTransferWizard] = useState(false);
   const [showDangerousAction, setShowDangerousAction] = useState<{
     type: 'update_access' | 'bulk_action' | null;
-    data?: any;
+    data?: unknown;
   }>({ type: null });
 
   // Load tenants when filters change with debouncing
@@ -83,8 +80,8 @@ const TenantManagement: React.FC = () => {
       setShowTenantForm(false);
       setSelectedTenant(null);
       toast.success('Penyewa berhasil ditambahkan');
-    } catch (error: any) {
-      toast.error(error.message || 'Gagal menambahkan penyewa');
+    } catch (error: unknown) {
+      toast.error((error as Error).message || 'Gagal menambahkan penyewa');
       throw error; // Re-throw to prevent modal from closing on error
     }
   };
@@ -110,15 +107,15 @@ const TenantManagement: React.FC = () => {
       setShowTenantForm(false);
       setSelectedTenant(null);
       toast.success('Penyewa berhasil diperbarui');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Update failed:', error);
-      toast.error(error.message || 'Gagal memperbarui penyewa');
+      toast.error((error as Error).message || 'Gagal memperbarui penyewa');
       throw error; // Re-throw to prevent modal from closing on error
     }
   };
 
   // Handle move out tenant
-  const handleMoveOut = async (data: MoveOutData & { billing_calculation?: any }) => {
+  const handleMoveOut = async (data: MoveOutData & { billing_calculation?: unknown }) => {
     if (!selectedTenant) return;
     
     try {
@@ -132,12 +129,13 @@ const TenantManagement: React.FC = () => {
           style: 'currency',
           currency: 'IDR',
           minimumFractionDigits: 0
-        }).format(data.billing_calculation.finalBalance)}`);
+        }).format((data.billing_calculation as { finalBalance: number }).finalBalance)}`);
       } else {
         toast.success('Penyewa berhasil di-move out');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Gagal melakukan move out');
+    }
+    catch (error: unknown) {
+      toast.error((error as Error).message || 'Gagal melakukan move out');
       throw error; // Re-throw to prevent modal from closing on error
     }
   };
@@ -156,13 +154,13 @@ const TenantManagement: React.FC = () => {
     try {
       await deleteTenant(tenantId);
       toast.success('Penyewa berhasil dihapus');
-    } catch (error: any) {
-      toast.error(error.message || 'Gagal menghapus penyewa');
+    } catch (error: unknown) {
+      toast.error((error as Error).message || 'Gagal menghapus penyewa');
     }
   };
 
   // Handle filter changes
-  const handleFilterChange = (key: keyof TenantFiltersType, value: any) => {
+  const handleFilterChange = (key: keyof TenantFiltersType, value: TenantFiltersType[typeof key]) => {
     setFilters(prev => ({
       ...prev,
       [key]: value,
@@ -235,7 +233,7 @@ const TenantManagement: React.FC = () => {
     try {
       await refresh();
       toast.success('Data berhasil diperbarui');
-    } catch (error) {
+    } catch {
       toast.error('Gagal memperbarui data');
     }
   };

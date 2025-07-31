@@ -15,7 +15,6 @@ interface RfidFormProps {
   users?: UserType[];
   rooms?: Room[];
   devices?: IoTDevice[];
-  tenants?: any[];
   onClose: () => void;
   onSubmit: (data: RfidFormData) => void;
 }
@@ -26,7 +25,6 @@ export const RfidForm: React.FC<RfidFormProps> = ({
   users: propUsers,
   rooms: propRooms,
   devices,
-  tenants: propTenants,
   onClose,
   onSubmit
 }) => {
@@ -38,7 +36,8 @@ export const RfidForm: React.FC<RfidFormProps> = ({
   
   const [loading, setLoading] = useState(false);
   const [uidError, setUidError] = useState('');
-  const [tenants, setTenants] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
 
@@ -49,13 +48,14 @@ export const RfidForm: React.FC<RfidFormProps> = ({
       const tenantsResponse = await api.get('/admin/tenants').catch(() => null);
 
       if (tenantsResponse?.data.success) {
-        setTenants(tenantsResponse.data.data || []);
+        // Assuming tenantsResponse.data.data is an array of UserType
+        setUsers(tenantsResponse.data.data || []);
       } else {
-        setTenants([]);
+        setUsers([]);
       }
-    } catch (error) {
-      console.error('Error loading form data:', error);
-      setTenants([]);
+    } catch (_error) {
+      console.error('Error loading form data:', _error);
+      setUsers([]);
     } finally {
       setLoadingData(false);
     }
@@ -86,9 +86,9 @@ export const RfidForm: React.FC<RfidFormProps> = ({
         setFormData({
           uid: card.uid,
           user_id: card.user_id || undefined,
-          room_id: card.room_id || undefined,
-          device_id: card.device_id || undefined,
-          access_type: 'room_only'
+          room_id: card.tenant?.room?.id || undefined,
+          tenant_id: card.tenant_id || undefined,
+          card_type: 'primary'
         });
       } else {
         setFormData({
@@ -96,6 +96,7 @@ export const RfidForm: React.FC<RfidFormProps> = ({
           user_id: undefined,
           room_id: undefined,
           device_id: undefined,
+          card_type: 'primary',
           access_type: 'room_only'
         });
       }
@@ -194,7 +195,7 @@ export const RfidForm: React.FC<RfidFormProps> = ({
         
         if (existingCard) {
           const userName = existingCard.user?.name || 'Unknown';
-          const roomNumber = existingCard.room?.room_number || 'No room';
+          const roomNumber = existingCard.tenant?.room?.room_number || 'No room';
           setUidError(`UID sudah digunakan oleh ${userName} (Kamar ${roomNumber})`);
           return false;
         }

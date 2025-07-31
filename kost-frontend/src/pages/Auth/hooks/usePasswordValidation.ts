@@ -1,8 +1,7 @@
-﻿// pages/Auth/hooks/usePasswordValidation.ts
+// pages/Auth/hooks/usePasswordValidation.ts
 // Custom hook for password validation and strength calculation
 
 import { useMemo } from 'react';
-import { PasswordStrength } from '../types';
 import { calculatePasswordStrength } from '../utils';
 
 interface UsePasswordValidationOptions {
@@ -25,7 +24,7 @@ export function usePasswordValidation(
   password: string, 
   options: UsePasswordValidationOptions = {}
 ) {
-  const validationOptions = { ...defaultOptions, ...options };
+  const validationOptions = useMemo(() => ({ ...defaultOptions, ...options }), [options]);
 
   const validation = useMemo(() => {
     if (!password) {

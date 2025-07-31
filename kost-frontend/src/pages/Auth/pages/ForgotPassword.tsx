@@ -1,11 +1,8 @@
-﻿// pages/Auth/pages/ForgotPassword.tsx
-// Forgot password page
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useAuth, useAuthForm } from '../hooks';
-import { AuthInput, AuthButton, ErrorAlert, SuccessAlert } from '../components/ui';
+import { AuthInput, AuthButton, ErrorAlert } from '../components/ui';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { validateEmail, AUTH_ROUTES } from '../utils';
 import { ForgotPasswordFormData } from '../types';
@@ -116,8 +113,8 @@ const ForgotPassword: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-apple-background py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <Card className="w-full max-w-md mx-auto">
-        <CardHeader className="text-center space-y-1">
-          <CardTitle className="text-3xl font-bold text-apple-text-primary">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl font-bold text-apple-text-primary mb-2">
             Reset your password
           </CardTitle>
           <CardDescription className="text-sm font-medium text-apple-text-secondary">
@@ -125,82 +122,32 @@ const ForgotPassword: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Email Field */}
-            <AuthInput
-              id="email"
-              name="email"
-              type="email"
-              label="Email Address"
-              placeholder="Enter your email address"
-              value={values.email}
-              onChange={handleInputChange}
-              disabled={isSubmitting}
-              required
-              autoComplete="email"
-              error={errors.email}
-              icon={<Mail />}
-              helperText="Enter the email address associated with your account"
-            />
-
-            {/* Error Alert */}
-            {error && (
-              <ErrorAlert
-                message={error}
-                onClose={clearError}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && <ErrorAlert message={error} />}
+            
+            <div className="space-y-4">
+              <AuthInput
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                value={values.email}
+                onChange={handleInputChange}
+                error={errors.email}
+                disabled={isSubmitting}
+                icon={<Mail className="h-4 w-4 text-gray-400" />}
+                autoComplete="email"
+                autoFocus
               />
-            )}
+            </div>
 
-            {/* Submit Button */}
             <AuthButton
               type="submit"
-              variant="primary"
-              size="lg"
-              disabled={isSubmitting}
               loading={isSubmitting}
+              disabled={isSubmitting || !values.email}
               fullWidth
             >
-              Send reset instructions
+              Send reset link
             </AuthButton>
-
-            {/* Help Section */}
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Need help?</span>
-                </div>
-              </div>
-
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
-                  Can't access your email?{' '}
-                  <a
-                    href="mailto:support@kostmanager.com"
-                    className="font-medium text-apple-accent hover:text-blue-500"
-                  >
-                    Contact support
-                  </a>
-                </p>
-              </div>
-            </div>
-
-            {/* Additional Tips */}
-            <div className="mt-6">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-                <h4 className="text-sm font-medium text-yellow-800 mb-2">
-                  💡 Tips for password reset:
-                </h4>
-                <ul className="text-sm text-yellow-700 space-y-1">
-                  <li>• Check your spam/junk folder</li>
-                  <li>• The reset link expires in 60 minutes</li>
-                  <li>• Make sure to use the same email you registered with</li>
-                  <li>• Contact support if you still don't receive the email</li>
-                </ul>
-              </div>
-            </div>
           </form>
         </CardContent>
         <CardFooter className="text-sm text-gray-600">
@@ -218,5 +165,3 @@ const ForgotPassword: React.FC = () => {
 };
 
 export default ForgotPassword;
-
-// End of file.

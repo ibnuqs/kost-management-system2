@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Tenant;
-use Illuminate\Http\Request;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
@@ -35,16 +35,16 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $role = $request->get('role', 'tenant');
-            
-            if ($role === 'admin' && (!Auth::check() || Auth::user()->role !== 'admin')) {
+
+            if ($role === 'admin' && (! Auth::check() || Auth::user()->role !== 'admin')) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Unauthorized to create admin account'
+                    'message' => 'Unauthorized to create admin account',
                 ], 403);
             }
 
@@ -69,17 +69,17 @@ class AuthController extends Controller
                 'data' => [
                     'user' => $this->formatUserResponse($user),
                     'token' => $token,
-                    'token_type' => 'Bearer'
-                ]
+                    'token_type' => 'Bearer',
+                ],
             ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Registration failed',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -94,56 +94,59 @@ class AuthController extends Controller
             Log::info('Login attempt started', [
                 'email' => $request->email,
                 'ip' => $request->ip(),
-                'timestamp' => now()
+                'timestamp' => now(),
             ]);
 
             $validator = Validator::make($request->all(), [
                 'email' => 'required|email',
                 'password' => 'required|string',
-                'remember' => 'sometimes|boolean'
+                'remember' => 'sometimes|boolean',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $credentials = $request->only('email', 'password');
-            
+
             Log::info('Finding user by email...');
             $user = User::where('email', $request->email)->first();
-            
-            if (!$user) {
+
+            if (! $user) {
                 Log::warning('User not found', ['email' => $request->email]);
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'User not found'
+                    'message' => 'User not found',
                 ], 404);
             }
 
             if ($user->status !== 'active') {
                 Log::warning('User account inactive', ['user_id' => $user->id]);
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Account is inactive. Please contact administrator.'
+                    'message' => 'Account is inactive. Please contact administrator.',
                 ], 403);
             }
 
             Log::info('Attempting authentication...');
-            if (!Auth::attempt($credentials)) {
+            if (! Auth::attempt($credentials)) {
                 Log::warning('Authentication failed', ['user_id' => $user->id]);
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Invalid credentials'
+                    'message' => 'Invalid credentials',
                 ], 401);
             }
 
             Log::info('Creating access token...');
             $tokenName = $request->remember ? 'long_lived_token' : 'auth_token';
-            
+
             try {
                 // Simplified token creation without expiration to avoid potential issues
                 $token = $user->createToken($tokenName, [$user->role])->plainTextToken;
@@ -157,7 +160,7 @@ class AuthController extends Controller
             try {
                 $user->update([
                     'last_login_at' => now(),
-                    'last_login_ip' => $request->ip()
+                    'last_login_ip' => $request->ip(),
                 ]);
                 Log::info('User login info updated');
             } catch (\Exception $e) {
@@ -173,8 +176,8 @@ class AuthController extends Controller
                 'data' => [
                     'user' => $this->formatUserResponseSimple($user),
                     'token' => $token,
-                    'token_type' => 'Bearer'
-                ]
+                    'token_type' => 'Bearer',
+                ],
             ], 200);
 
         } catch (\Exception $e) {
@@ -182,13 +185,13 @@ class AuthController extends Controller
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'email' => $request->email ?? 'unknown'
+                'email' => $request->email ?? 'unknown',
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Login failed',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -203,14 +206,14 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Logout successful'
+                'message' => 'Logout successful',
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Logout failed',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -223,23 +226,23 @@ class AuthController extends Controller
         try {
             /** @var User $user */
             $user = Auth::user();
-            
-            $user->load(['tenants' => function($query) {
+
+            $user->load(['tenants' => function ($query) {
                 $query->where('status', Tenant::STATUS_ACTIVE)
-                      ->with(['room:id,room_number,room_name,monthly_price']);
+                    ->with(['room:id,room_number,room_name,monthly_price']);
             }]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Profile retrieved successfully',
-                'data' => $this->formatUserProfileResponse($user)
+                'data' => $this->formatUserProfileResponse($user),
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve profile',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -252,10 +255,10 @@ class AuthController extends Controller
         try {
             /** @var User $user */
             $user = Auth::user();
-            
+
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|string|max:255',
-                'phone' => 'sometimes|string|max:20|unique:users,phone,' . $user->id,
+                'phone' => 'sometimes|string|max:20|unique:users,phone,'.$user->id,
                 'current_password' => 'required_with:password|string',
                 'password' => 'sometimes|string|min:8|confirmed',
             ]);
@@ -264,48 +267,48 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             if ($request->has('password')) {
-                if (!Hash::check($request->current_password, $user->password)) {
+                if (! Hash::check($request->current_password, $user->password)) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Current password is incorrect'
+                        'message' => 'Current password is incorrect',
                     ], 422);
                 }
             }
 
             $updateData = [];
-            
+
             if ($request->has('name')) {
                 $updateData['name'] = $request->name;
             }
-            
+
             if ($request->has('phone')) {
                 $updateData['phone'] = $request->phone;
             }
-            
+
             if ($request->has('password')) {
                 $updateData['password'] = Hash::make($request->password);
             }
 
-            if (!empty($updateData)) {
+            if (! empty($updateData)) {
                 $user->update($updateData);
             }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Profile updated successfully',
-                'data' => $this->formatUserResponse($user->fresh())
+                'data' => $this->formatUserResponse($user->fresh()),
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Profile update failed',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -317,23 +320,23 @@ class AuthController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'email' => 'required|email|exists:users,email'
+                'email' => 'required|email|exists:users,email',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $user = User::where('email', $request->email)->first();
-            
+
             if ($user->status !== 'active') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Account is inactive'
+                    'message' => 'Account is inactive',
                 ], 403);
             }
 
@@ -342,20 +345,20 @@ class AuthController extends Controller
             if ($status === Password::RESET_LINK_SENT) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Password reset link sent to your email'
+                    'message' => 'Password reset link sent to your email',
                 ], 200);
             }
 
             return response()->json([
                 'success' => false,
-                'message' => 'Unable to send password reset link'
+                'message' => 'Unable to send password reset link',
             ], 500);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to send reset link',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -376,7 +379,7 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -395,20 +398,20 @@ class AuthController extends Controller
             if ($status === Password::PASSWORD_RESET) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Password reset successful'
+                    'message' => 'Password reset successful',
                 ], 200);
             }
 
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid reset token or email'
+                'message' => 'Invalid reset token or email',
             ], 422);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Password reset failed',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -421,9 +424,9 @@ class AuthController extends Controller
         try {
             /** @var User $user */
             $user = Auth::user();
-            
+
             $request->user()->currentAccessToken()->delete();
-            
+
             $token = $user->createToken('auth_token', [$user->role], now()->addDay())->plainTextToken;
 
             return response()->json([
@@ -432,15 +435,15 @@ class AuthController extends Controller
                 'data' => [
                     'token' => $token,
                     'token_type' => 'Bearer',
-                    'expires_at' => now()->addDay()->format('c')
-                ]
+                    'expires_at' => now()->addDay()->format('c'),
+                ],
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Token refresh failed',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -483,10 +486,10 @@ class AuthController extends Controller
     private function formatUserProfileResponse(User $user): array
     {
         $profile = $this->formatUserResponse($user);
-        
+
         if ($user->role === 'tenant') {
             $activeTenant = $user->tenants->first();
-            
+
             $profile['tenant_info'] = $activeTenant ? [
                 'tenant_code' => $activeTenant->tenant_code,
                 'monthly_rent' => (float) $activeTenant->monthly_rent,

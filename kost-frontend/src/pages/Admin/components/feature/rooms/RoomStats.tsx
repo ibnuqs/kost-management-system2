@@ -1,7 +1,7 @@
 // File: src/pages/Admin/components/feature/rooms/RoomStats.tsx
 import React from 'react';
 import { 
-  Building, Home, Wrench, CheckCircle, Archive, Clock,
+  Building, Wrench, Archive, Clock,
   TrendingUp, TrendingDown 
 } from 'lucide-react';
 import type { RoomStats as RoomStatsType } from '../../../types/room';
@@ -78,24 +78,6 @@ const StatCard: React.FC<StatCardProps> = ({
 export const RoomStats: React.FC<RoomStatsProps> = ({ stats }) => {
   const occupancyStatus = getOccupancyStatus(stats.occupancy_rate || 0);
   
-  // Primary stats that admin cares most about
-  const primaryStats = [
-    {
-      title: 'Total Kamar',
-      value: stats.total_rooms || 0,
-      subtitle: 'Total inventori',
-      icon: Building,
-      colorScheme: 'blue' as const
-    },
-    {
-      title: 'Siap Huni',
-      value: stats.available_rooms || 0,
-      subtitle: 'Dapat dipesan',
-      icon: CheckCircle,
-      colorScheme: 'green' as const
-    }
-  ];
-
   return (
     <div className="space-y-6">
       {/* Primary Stats - Main metrics */}

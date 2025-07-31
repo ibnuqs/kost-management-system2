@@ -244,7 +244,7 @@ export const getAccessMethodIcon = (method: string): string => {
 };
 
 // Type guards for runtime type checking
-export const isAccessLog = (obj: any): obj is AccessLog => {
+export const isAccessLog = (obj: unknown): obj is AccessLog => {
   return obj && 
     typeof obj.id === 'number' &&
     typeof obj.user_id === 'number' &&
@@ -252,7 +252,7 @@ export const isAccessLog = (obj: any): obj is AccessLog => {
     typeof obj.accessed_at === 'string';
 };
 
-export const isAccessStats = (obj: any): obj is AccessStats => {
+export const isAccessStats = (obj: unknown): obj is AccessStats => {
   return obj &&
     typeof obj.today_count === 'number' &&
     typeof obj.week_count === 'number' &&

@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { tenantQueryKeys } from '../config/apiConfig';
 // [PERBAIKAN 1]: Impor `paymentService` dari file yang benar, bukan `tenantService`.
 import { paymentService } from '../services/paymentService';
-import { Payment } from '../types/payment';
 import { FilterParams } from '../types/common';
 
 interface UsePaymentsParams extends FilterParams {

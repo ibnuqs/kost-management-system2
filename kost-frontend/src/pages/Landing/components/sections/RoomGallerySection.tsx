@@ -1,6 +1,6 @@
 // src/pages/Landing/components/sections/RoomGallerySection.tsx - Simple Version
 import React from 'react';
-import { Camera, Star, Phone } from 'lucide-react';
+import { Camera } from 'lucide-react';
 
 interface RoomGallerySectionProps {
   className?: string;
@@ -62,5 +62,3 @@ export const RoomGallerySection: React.FC<RoomGallerySectionProps> = ({
     </section>
   );
 };
-
-export default RoomGallerySection;

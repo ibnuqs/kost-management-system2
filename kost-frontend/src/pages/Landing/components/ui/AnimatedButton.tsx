@@ -28,7 +28,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   type = 'button'
 }) => {
   // Get icon component dynamically
-  const IconComponent = icon ? (LucideIcons as any)[icon] : null;
+  const IconComponent = icon ? (LucideIcons as typeof LucideIcons)[icon as keyof typeof LucideIcons] : null;
 
   const baseClasses = `
     inline-flex items-center justify-center gap-2 font-semibold rounded-2xl
@@ -108,5 +108,3 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
     </button>
   );
 };
-
-export default AnimatedButton;

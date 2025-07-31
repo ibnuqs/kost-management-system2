@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/RfidCard.php (Updated dengan Helper Methods)
 
 namespace App\Models;
@@ -6,7 +7,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RfidCard extends Model
 {
@@ -53,22 +53,25 @@ class RfidCard extends Model
     public function getDeviceIdAttribute(): ?string
     {
         \Log::info('Getting device_id for RFID card', ['card_id' => $this->id, 'tenant_id' => $this->tenant_id]);
-        
+
         // 1. Ambil tenant_id dari RFID card
-        if (!$this->tenant_id) {
+        if (! $this->tenant_id) {
             \Log::info('No tenant_id found for RFID card', ['card_id' => $this->id]);
+
             return null;
         }
 
         // 2. Cari tenant record, ambil room_id nya
         $tenant = Tenant::find($this->tenant_id);
-        if (!$tenant) {
+        if (! $tenant) {
             \Log::warning('Tenant not found', ['tenant_id' => $this->tenant_id]);
+
             return null;
         }
-        
-        if (!$tenant->room_id) {
+
+        if (! $tenant->room_id) {
             \Log::warning('Tenant has no room_id', ['tenant_id' => $this->tenant_id]);
+
             return null;
         }
 
@@ -76,14 +79,15 @@ class RfidCard extends Model
 
         // 3. Cari iot_device berdasarkan room_id
         $iotDevice = IoTDevice::where('room_id', $tenant->room_id)->first();
-        
-        if (!$iotDevice) {
+
+        if (! $iotDevice) {
             \Log::warning('No IoT device found for room', ['room_id' => $tenant->room_id]);
+
             return null;
         }
 
         \Log::info('Found IoT device', ['device_id' => $iotDevice->device_id, 'room_id' => $tenant->room_id]);
-        
+
         // 4. Return device_id yang real dari ESP32
         return $iotDevice->device_id;
     }

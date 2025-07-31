@@ -13,7 +13,7 @@ export const useIoTDevices = () => {
     door_locks: 0,
     card_scanners: 0
   });
-  const [rooms, setRooms] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
@@ -31,8 +31,8 @@ export const useIoTDevices = () => {
       setDevices(data.devices);
       setStats(data.stats);
       setPagination(data.pagination);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
       toast.error('Failed to load IoT devices');
       // Fallback to test data for development
       setDevices([]);
@@ -54,7 +54,7 @@ export const useIoTDevices = () => {
       const data = await iotService.getRooms();
       console.log('🏠 useIoTDevices: Rooms loaded:', data.length, data);
       setRooms(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('❌ useIoTDevices: Failed to load rooms:', err);
       setRooms([]);
     }
@@ -65,8 +65,8 @@ export const useIoTDevices = () => {
       await iotService.createDevice(data);
       toast.success('Device created successfully');
       loadDevices();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create device');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to create device');
       throw err;
     }
   }, [loadDevices]);
@@ -76,8 +76,8 @@ export const useIoTDevices = () => {
       await iotService.updateDevice(id, data);
       toast.success('Device updated successfully');
       loadDevices();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update device');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to update device');
       throw err;
     }
   }, [loadDevices]);
@@ -91,8 +91,8 @@ export const useIoTDevices = () => {
       await iotService.deleteDevice(id);
       toast.success('Device deleted successfully');
       loadDevices();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete device');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to delete device');
       throw err;
     }
   }, [loadDevices]);
@@ -102,8 +102,8 @@ export const useIoTDevices = () => {
       await iotService.updateStatus(id, status);
       toast.success(`Device ${status === 'online' ? 'enabled' : 'disabled'} successfully`);
       loadDevices();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update device status');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to update device status');
       throw err;
     }
   }, [loadDevices]);
@@ -112,8 +112,8 @@ export const useIoTDevices = () => {
     try {
       await iotService.exportDevices(format);
       toast.success('Export completed successfully');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to export devices');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to export devices');
       throw err;
     }
   }, []);

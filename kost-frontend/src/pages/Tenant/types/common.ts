@@ -1,13 +1,13 @@
 // ===== UPDATED types/common.ts =====
 // File: src/pages/Tenant/types/common.ts
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data: T;
   message?: string;
   errors?: Record<string, string[]>;
 }
 
-export interface PaginatedResponse<T = any> {
+export interface PaginatedResponse<T = unknown> {
   data: T[];
   current_page: number;
   last_page: number;
@@ -73,6 +73,7 @@ export interface TenantInfo {
   tenant_code?: string;
   user_id: number;
   room_id: number;
+  room_number?: string;
   monthly_rent: number;
   start_date: string;
   end_date?: string;
@@ -89,7 +90,7 @@ export type StatusType = 'success' | 'pending' | 'failed' | 'info' | 'warning';
 export interface MenuItem {
   id: string;
   label: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   path: string;
   badge?: number | string | null;
   description?: string;

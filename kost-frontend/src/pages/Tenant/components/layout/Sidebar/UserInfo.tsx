@@ -1,6 +1,6 @@
 // File: src/pages/Tenant/components/layout/Sidebar/UserInfo.tsx
 import React from 'react';
-import { MapPin, User, ChevronRight } from 'lucide-react';
+import { MapPin, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { User as UserType } from '../../../types/common';
 import { TenantInfo } from '../../../types/dashboard';

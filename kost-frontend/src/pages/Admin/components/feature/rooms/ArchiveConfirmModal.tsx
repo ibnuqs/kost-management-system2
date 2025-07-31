@@ -28,7 +28,7 @@ export const ArchiveConfirmModal: React.FC<ArchiveConfirmModalProps> = ({
       await onConfirm(room, reason.trim() || undefined);
       onClose();
       setReason('');
-    } catch (error) {
+    } catch {
       // Error handled by parent
     } finally {
       setLoading(false);

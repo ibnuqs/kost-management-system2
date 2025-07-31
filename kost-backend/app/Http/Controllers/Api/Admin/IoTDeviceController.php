@@ -1,4 +1,5 @@
 <?php
+
 // File: app/Http/Controllers/Api/Admin/IoTDeviceController.php
 
 namespace App\Http\Controllers\Api\Admin;
@@ -23,7 +24,7 @@ class IoTDeviceController extends Controller
             Log::info('IoT Devices API called', [
                 'user_id' => Auth::id(),
                 'params' => $request->all(),
-                'timestamp' => now()
+                'timestamp' => now(),
             ]);
 
             $perPage = min(100, max(5, (int) $request->get('per_page', 20)));
@@ -38,7 +39,7 @@ class IoTDeviceController extends Controller
 
             // Only add room relationship if needed for search or if we have few records
             $deviceCount = IoTDevice::count();
-            if ($deviceCount < 1000 || !empty($search)) {
+            if ($deviceCount < 1000 || ! empty($search)) {
                 $query->with(['room']);
             }
 
@@ -53,16 +54,16 @@ class IoTDeviceController extends Controller
             }
 
             // Simplified search functionality - avoid complex joins if possible
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $query->where(function ($q) use ($search) {
                     $q->where('device_id', 'like', "%{$search}%")
-                      ->orWhere('device_name', 'like', "%{$search}%");
-                    
+                        ->orWhere('device_name', 'like', "%{$search}%");
+
                     // Only search rooms if we have room relationship loaded
                     if ($q->getModel()->relationLoaded('room')) {
                         $q->orWhereHas('room', function ($roomQuery) use ($search) {
                             $roomQuery->where('room_number', 'like', "%{$search}%")
-                                     ->orWhere('room_name', 'like', "%{$search}%");
+                                ->orWhere('room_name', 'like', "%{$search}%");
                         });
                     }
                 });
@@ -79,7 +80,7 @@ class IoTDeviceController extends Controller
             Log::info('IoT devices query completed', ['count' => $devices->count()]);
 
             // Load rooms separately if not already loaded to avoid N+1 issue
-            if (!$devices->first()?->relationLoaded('room')) {
+            if (! $devices->first()?->relationLoaded('room')) {
                 $devices->load('room');
             }
 
@@ -105,8 +106,9 @@ class IoTDeviceController extends Controller
                 } catch (\Exception $e) {
                     Log::warning('Error formatting device data', [
                         'device_id' => $device->id,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ]);
+
                     // Return basic data if formatting fails
                     return [
                         'id' => $device->id,
@@ -143,7 +145,7 @@ class IoTDeviceController extends Controller
                     'sort_by' => $sortBy,
                     'sort_order' => $sortOrder,
                 ],
-                'message' => 'IoT devices retrieved successfully'
+                'message' => 'IoT devices retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
@@ -153,7 +155,7 @@ class IoTDeviceController extends Controller
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
                 'user_id' => Auth::id(),
-                'request_params' => $request->all()
+                'request_params' => $request->all(),
             ]);
 
             return response()->json([
@@ -174,16 +176,16 @@ class IoTDeviceController extends Controller
             $validator = Validator::make($request->all(), [
                 'device_id' => 'required|string|max:50|unique:iot_devices,device_id',
                 'device_name' => 'required|string|max:100',
-                'device_type' => 'required|in:' . implode(',', IoTDevice::ALLOWED_TYPES),
+                'device_type' => 'required|in:'.implode(',', IoTDevice::ALLOWED_TYPES),
                 'room_id' => 'nullable|exists:rooms,id',
-                'status' => 'sometimes|in:' . implode(',', IoTDevice::ALLOWED_STATUSES),
+                'status' => 'sometimes|in:'.implode(',', IoTDevice::ALLOWED_STATUSES),
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -200,26 +202,26 @@ class IoTDeviceController extends Controller
                 'device_id' => $device->id,
                 'device_identifier' => $device->device_id,
                 'device_type' => $device->device_type,
-                'created_by' => Auth::id()
+                'created_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $device->fresh()->getApiData(),
-                'message' => 'IoT device created successfully'
+                'message' => 'IoT device created successfully',
             ], 201);
 
         } catch (\Exception $e) {
             Log::error('Failed to create IoT device', [
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create IoT device',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -235,26 +237,26 @@ class IoTDeviceController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $device->getApiData(),
-                'message' => 'IoT device details retrieved successfully'
+                'message' => 'IoT device details retrieved successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'IoT device not found'
+                'message' => 'IoT device not found',
             ], 404);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch IoT device details', [
                 'device_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve IoT device details',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -268,44 +270,44 @@ class IoTDeviceController extends Controller
             $device = IoTDevice::findOrFail($id);
 
             $validator = Validator::make($request->all(), [
-                'device_id' => 'sometimes|string|max:50|unique:iot_devices,device_id,' . $id,
+                'device_id' => 'sometimes|string|max:50|unique:iot_devices,device_id,'.$id,
                 'device_name' => 'sometimes|string|max:100',
-                'device_type' => 'sometimes|in:' . implode(',', IoTDevice::ALLOWED_TYPES),
+                'device_type' => 'sometimes|in:'.implode(',', IoTDevice::ALLOWED_TYPES),
                 'room_id' => 'nullable|exists:rooms,id',
-                'status' => 'sometimes|in:' . implode(',', IoTDevice::ALLOWED_STATUSES),
+                'status' => 'sometimes|in:'.implode(',', IoTDevice::ALLOWED_STATUSES),
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $oldData = $device->toArray();
-            
+
             $device->update($request->only([
-                'device_id', 'device_name', 'device_type', 'room_id', 'status'
+                'device_id', 'device_name', 'device_type', 'room_id', 'status',
             ]));
 
             Log::info('IoT device updated successfully', [
                 'device_id' => $device->id,
                 'old_data' => $oldData,
                 'new_data' => $device->fresh()->toArray(),
-                'updated_by' => Auth::id()
+                'updated_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $device->fresh()->getApiData(),
-                'message' => 'IoT device updated successfully'
+                'message' => 'IoT device updated successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'IoT device not found'
+                'message' => 'IoT device not found',
             ], 404);
 
         } catch (\Exception $e) {
@@ -313,13 +315,13 @@ class IoTDeviceController extends Controller
                 'device_id' => $id,
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update IoT device',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -332,37 +334,37 @@ class IoTDeviceController extends Controller
         try {
             $device = IoTDevice::findOrFail($id);
             $deviceData = $device->getApiData();
-            
+
             $device->delete();
 
             Log::info('IoT device deleted successfully', [
                 'device_id' => $id,
                 'device_data' => $deviceData,
-                'deleted_by' => Auth::id()
+                'deleted_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'IoT device deleted successfully'
+                'message' => 'IoT device deleted successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'IoT device not found'
+                'message' => 'IoT device not found',
             ], 404);
 
         } catch (\Exception $e) {
             Log::error('Failed to delete IoT device', [
                 'device_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete IoT device',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -374,14 +376,14 @@ class IoTDeviceController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'status' => 'sometimes|in:' . implode(',', IoTDevice::ALLOWED_STATUSES),
+                'status' => 'sometimes|in:'.implode(',', IoTDevice::ALLOWED_STATUSES),
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -399,26 +401,26 @@ class IoTDeviceController extends Controller
                     'status' => $device->status,
                     'last_seen' => $device->formatDateForApi($device->last_seen),
                 ],
-                'message' => 'Heartbeat received successfully'
+                'message' => 'Heartbeat received successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'IoT device not found'
+                'message' => 'IoT device not found',
             ], 404);
 
         } catch (\Exception $e) {
             Log::error('Failed to process device heartbeat', [
                 'device_id' => $deviceId,
                 'error' => $e->getMessage(),
-                'request_data' => $request->all()
+                'request_data' => $request->all(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to process heartbeat',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -440,14 +442,14 @@ class IoTDeviceController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             if ($device->isOffline()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Cannot send command to offline device'
+                    'message' => 'Cannot send command to offline device',
                 ], 422);
             }
 
@@ -457,7 +459,7 @@ class IoTDeviceController extends Controller
                 'device_identifier' => $device->device_id,
                 'command' => $request->command,
                 'parameters' => $request->get('parameters', []),
-                'sent_by' => Auth::id()
+                'sent_by' => Auth::id(),
             ]);
 
             // TODO: Implement actual MQTT command sending
@@ -471,13 +473,13 @@ class IoTDeviceController extends Controller
                     'parameters' => $request->get('parameters', []),
                     'sent_at' => now()->format('c'),
                 ],
-                'message' => 'Command sent to device successfully'
+                'message' => 'Command sent to device successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'IoT device not found'
+                'message' => 'IoT device not found',
             ], 404);
 
         } catch (\Exception $e) {
@@ -485,13 +487,13 @@ class IoTDeviceController extends Controller
                 'device_id' => $id,
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to send command to device',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -519,19 +521,19 @@ class IoTDeviceController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $stats,
-                'message' => 'IoT device statistics retrieved successfully'
+                'message' => 'IoT device statistics retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch IoT device statistics', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve IoT device statistics',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -543,7 +545,7 @@ class IoTDeviceController extends Controller
     {
         try {
             $offlineThreshold = now()->subMinutes(30);
-            
+
             $offlineDevices = IoTDevice::with(['room'])
                 ->where('status', IoTDevice::STATUS_OFFLINE)
                 ->orWhere('last_seen', '<', $offlineThreshold)
@@ -551,9 +553,10 @@ class IoTDeviceController extends Controller
                 ->get()
                 ->map(function ($device) {
                     $data = $device->getApiData();
-                    $data['offline_duration'] = $device->last_seen 
+                    $data['offline_duration'] = $device->last_seen
                         ? now()->diffForHumans($device->last_seen, true)
                         : 'Unknown';
+
                     return $data;
                 });
 
@@ -561,19 +564,19 @@ class IoTDeviceController extends Controller
                 'success' => true,
                 'data' => $offlineDevices,
                 'count' => $offlineDevices->count(),
-                'message' => 'Offline devices retrieved successfully'
+                'message' => 'Offline devices retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch offline devices', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve offline devices',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -587,14 +590,14 @@ class IoTDeviceController extends Controller
             $validator = Validator::make($request->all(), [
                 'device_ids' => 'required|array|min:1',
                 'device_ids.*' => 'exists:iot_devices,id',
-                'status' => 'required|in:' . implode(',', IoTDevice::ALLOWED_STATUSES),
+                'status' => 'required|in:'.implode(',', IoTDevice::ALLOWED_STATUSES),
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -608,7 +611,7 @@ class IoTDeviceController extends Controller
                 'device_ids' => $request->device_ids,
                 'new_status' => $request->status,
                 'updated_count' => $updatedCount,
-                'updated_by' => Auth::id()
+                'updated_by' => Auth::id(),
             ]);
 
             return response()->json([
@@ -617,20 +620,20 @@ class IoTDeviceController extends Controller
                     'updated_count' => $updatedCount,
                     'new_status' => $request->status,
                 ],
-                'message' => 'Device status updated successfully'
+                'message' => 'Device status updated successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to bulk update device status', [
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update device status',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -642,7 +645,7 @@ class IoTDeviceController extends Controller
     {
         $totalDevices = IoTDevice::count();
         $onlineDevices = IoTDevice::where('status', IoTDevice::STATUS_ONLINE)->count();
-        
+
         return $totalDevices > 0 ? round(($onlineDevices / $totalDevices) * 100, 2) : 0.0;
     }
 
@@ -678,7 +681,7 @@ class IoTDeviceController extends Controller
                         'room_name' => $device->room->room_name,
                     ] : null,
                     'last_seen' => $device->formatDateForApi($device->last_seen),
-                    'offline_duration' => $device->last_seen 
+                    'offline_duration' => $device->last_seen
                         ? now()->diffForHumans($device->last_seen, true)
                         : 'Unknown',
                 ];
@@ -720,7 +723,7 @@ class IoTDeviceController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'All RFID devices are already assigned to rooms',
-                    'assignments' => []
+                    'assignments' => [],
                 ], 200);
             }
 
@@ -733,39 +736,39 @@ class IoTDeviceController extends Controller
 
                 if ($roomId) {
                     $device->update(['room_id' => $roomId]);
-                    
+
                     $assignments[] = [
                         'device_id' => $device->device_id,
                         'device_name' => $device->device_name,
                         'assigned_room_id' => $roomId,
-                        'room' => \App\Models\Room::find($roomId)
+                        'room' => \App\Models\Room::find($roomId),
                     ];
 
                     Log::info('Auto-assigned device to room', [
                         'device_id' => $device->device_id,
-                        'room_id' => $roomId
+                        'room_id' => $roomId,
                     ]);
                 }
             }
 
             return response()->json([
                 'success' => true,
-                'message' => count($assignments) > 0 
-                    ? 'Successfully auto-assigned ' . count($assignments) . ' devices to rooms'
+                'message' => count($assignments) > 0
+                    ? 'Successfully auto-assigned '.count($assignments).' devices to rooms'
                     : 'No suitable room assignments found for unassigned devices',
-                'assignments' => $assignments
+                'assignments' => $assignments,
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to auto-assign IoT devices to rooms', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to auto-assign devices to rooms',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -780,14 +783,14 @@ class IoTDeviceController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'room_id' => 'required|exists:rooms,id',
-                'reason' => 'sometimes|string|max:255'
+                'reason' => 'sometimes|string|max:255',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -801,7 +804,7 @@ class IoTDeviceController extends Controller
                 'old_room_id' => $oldRoomId,
                 'new_room_id' => $request->room_id,
                 'reason' => $request->reason ?? 'Manual assignment',
-                'assigned_by' => Auth::id()
+                'assigned_by' => Auth::id(),
             ]);
 
             return response()->json([
@@ -809,15 +812,15 @@ class IoTDeviceController extends Controller
                 'data' => [
                     'device' => $device->fresh()->getApiData(),
                     'room' => $room,
-                    'old_room_id' => $oldRoomId
+                    'old_room_id' => $oldRoomId,
                 ],
-                'message' => "Device {$device->device_name} assigned to room {$room->room_number}"
+                'message' => "Device {$device->device_name} assigned to room {$room->room_number}",
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'IoT device not found'
+                'message' => 'IoT device not found',
             ], 404);
 
         } catch (\Exception $e) {
@@ -825,13 +828,13 @@ class IoTDeviceController extends Controller
                 'device_id' => $id,
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to assign device to room',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -843,16 +846,16 @@ class IoTDeviceController extends Controller
     {
         // Strategy 1: Look for RFID cards that might be used with this device
         // If this is ESP32-RFID-01, it might correspond to the first room, etc.
-        
+
         // Extract potential room number from device name/ID
         if (preg_match('/(\d+)/', $device->device_id, $matches)) {
-            $deviceNumber = (int)$matches[1];
-            
+            $deviceNumber = (int) $matches[1];
+
             // Try to find a room that makes sense
-            $room = \App\Models\Room::where('room_number', 'LIKE', '%' . str_pad($deviceNumber, 2, '0', STR_PAD_LEFT) . '%')
-                ->orWhere('room_number', 'LIKE', '%' . $deviceNumber . '%')
+            $room = \App\Models\Room::where('room_number', 'LIKE', '%'.str_pad($deviceNumber, 2, '0', STR_PAD_LEFT).'%')
+                ->orWhere('room_number', 'LIKE', '%'.$deviceNumber.'%')
                 ->first();
-            
+
             if ($room) {
                 return $room->id;
             }

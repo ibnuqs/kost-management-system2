@@ -1,6 +1,6 @@
 // File: src/pages/Tenant/components/dashboard/AccessStats.tsx
 import React from 'react';
-import { Key, TrendingUp, Clock, AlertCircle, ChevronRight } from 'lucide-react';
+import { Key, TrendingUp, AlertCircle, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTenantDashboard } from '../../hooks/useTenantDashboard';
 import { Card } from '../ui/Card';

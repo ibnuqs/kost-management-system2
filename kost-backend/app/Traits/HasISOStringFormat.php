@@ -1,6 +1,6 @@
 <?php
-// File: app/Traits/HasISOStringFormat.php
 
+// File: app/Traits/HasISOStringFormat.php
 
 namespace App\Traits;
 

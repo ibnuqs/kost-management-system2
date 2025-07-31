@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccessLog;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class AccessController extends Controller
 {
@@ -32,17 +32,18 @@ class AccessController extends Controller
             if ($request->filled('access_granted') && $request->access_granted !== 'all') {
                 $query->where('access_granted', $request->boolean('access_granted'));
             }
-            
+
             $perPage = min(100, max(10, (int) $request->get('per_page', 15)));
             $logs = $query->orderBy('accessed_at', 'desc')->paginate($perPage);
 
             return response()->json([
                 'success' => true,
                 'data' => $logs,
-                'message' => 'Riwayat akses berhasil diambil.'
+                'message' => 'Riwayat akses berhasil diambil.',
             ]);
         } catch (\Exception $e) {
-            Log::error('Gagal mengambil riwayat akses penyewa: ' . $e->getMessage(), ['user_id' => Auth::id()]);
+            Log::error('Gagal mengambil riwayat akses penyewa: '.$e->getMessage(), ['user_id' => Auth::id()]);
+
             return response()->json(['success' => false, 'message' => 'Gagal mengambil riwayat akses.'], 500);
         }
     }
@@ -72,25 +73,26 @@ class AccessController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $stats,
-                'message' => 'Statistik akses berhasil diambil.'
+                'message' => 'Statistik akses berhasil diambil.',
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Gagal mengambil statistik akses penyewa: ' . $e->getMessage(), ['user_id' => Auth::id()]);
+            Log::error('Gagal mengambil statistik akses penyewa: '.$e->getMessage(), ['user_id' => Auth::id()]);
+
             return response()->json(['success' => false, 'message' => 'Gagal mengambil statistik akses.'], 500);
         }
     }
 
     /**
      * Metode bantu untuk mendapatkan pola akses berdasarkan unit waktu.
-     * @param int $userId
-     * @param string $timeUnit (DAYNAME atau HOUR)
-     * @return array
+     *
+     * @param  string  $timeUnit  (DAYNAME atau HOUR)
      */
     private function getAccessPatterns(int $userId, string $timeUnit): array
     {
         try {
             $column = strtolower($timeUnit); // 'dayname' atau 'hour'
+
             return AccessLog::where('user_id', $userId)
                 ->select(DB::raw("{$timeUnit}(accessed_at) as {$column}, COUNT(*) as jumlah"))
                 ->groupBy(DB::raw("{$timeUnit}(accessed_at)"))
@@ -98,7 +100,8 @@ class AccessController extends Controller
                 ->get()
                 ->toArray();
         } catch (\Exception $e) {
-            Log::warning("Gagal mengambil pola akses {$timeUnit}: " . $e->getMessage());
+            Log::warning("Gagal mengambil pola akses {$timeUnit}: ".$e->getMessage());
+
             return [];
         }
     }

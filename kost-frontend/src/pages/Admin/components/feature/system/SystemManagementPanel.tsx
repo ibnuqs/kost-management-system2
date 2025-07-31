@@ -14,6 +14,13 @@ import {
 } from 'lucide-react';
 import { reservationService } from '../../../services/reservationService';
 
+interface ActionResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  data?: Record<string, unknown>; // For system-health check, it returns data
+}
+
 interface SystemManagementPanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -24,25 +31,25 @@ export const SystemManagementPanel: React.FC<SystemManagementPanelProps> = ({
   onClose,
 }) => {
   const [loading, setLoading] = useState<Record<string, boolean>>({});
-  const [results, setResults] = useState<Record<string, any>>({});
+  const [results, setResults] = useState<Record<string, ActionResult>>({});
 
   const setActionLoading = (action: string, isLoading: boolean) => {
     setLoading(prev => ({ ...prev, [action]: isLoading }));
   };
 
-  const setActionResult = (action: string, result: any) => {
+  const setActionResult = (action: string, result: ActionResult) => {
     setResults(prev => ({ ...prev, [action]: result }));
   };
 
-  const handleAction = async (action: string, apiCall: () => Promise<any>) => {
+  const handleAction = async (action: string, apiCall: () => Promise<unknown>) => {
     setActionLoading(action, true);
     try {
       const result = await apiCall();
       setActionResult(action, result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setActionResult(action, {
         success: false,
-        error: error?.response?.data?.message || error.message || 'Terjadi kesalahan'
+        error: (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error).message || 'Terjadi kesalahan'
       });
     } finally {
       setActionLoading(action, false);

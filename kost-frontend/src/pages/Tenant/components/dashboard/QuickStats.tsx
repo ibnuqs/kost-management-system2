@@ -2,8 +2,7 @@
 import React, { memo, useMemo } from 'react';
 import { Calendar, CreditCard, Key, Wifi, TrendingUp, TrendingDown } from 'lucide-react';
 import { useTenantDashboard } from '../../hooks/useTenantDashboard';
-import { StatCard } from '../ui/Card';
-import { mergeClasses, getResponsiveColumns } from '../../utils/helpers';
+import { mergeClasses } from '../../utils/helpers';
 import { formatCompactNumber } from '../../utils/formatters';
 
 interface QuickStatsProps {

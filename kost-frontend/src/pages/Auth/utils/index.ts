@@ -1,4 +1,4 @@
-﻿// pages/Auth/utils/index.ts
+// pages/Auth/utils/index.ts
 // Central export file for Auth utilities
 
 // Re-export everything from constants
@@ -51,7 +51,7 @@ export const AUTH_ROUTES = {
   RESET_PASSWORD: '/auth/reset-password',
   // Add any additional routes your app needs
   HOME: '/',
-  DASHBOARD: '/dashboard',
+  DASHBOARD: '/',
 } as const;
 
 // Export validation helpers as a namespace for easier usage
@@ -70,7 +70,7 @@ export const ValidationHelpers = {
   },
   
   validatePhone: (phone: string) => {
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    const phoneRegex = /^[1-9][\d]{0,15}$/;
     return !phone || phoneRegex.test(phone);
   },
 } as const;
@@ -90,7 +90,7 @@ export const StorageHelpers = {
     }
   },
   
-  setUser: (user: any) => {
+  setUser: (user: unknown) => {
     localStorage.setItem('user_data', JSON.stringify(user));
   },
   
@@ -127,7 +127,7 @@ export const AUTH_FORM_CONFIGS = {
 // Export common patterns for form validation
 export const FORM_VALIDATION_PATTERNS = {
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  phone: /^[\+]?[1-9][\d]{0,15}$/,
+  phone: /^[1-9][\d]{0,15}$/,
   strongPassword: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
   name: /^[a-zA-Z\s]+$/,
 } as const;

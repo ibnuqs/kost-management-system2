@@ -43,7 +43,7 @@ export interface ApiListResponse<T> extends ApiResponse<{
   per_page: number;
   total: number;
 }> {
-  summary?: any;
+  summary?: unknown;
 }
 
 // Forward declaration for Room - this will be re-exported from room.ts
@@ -53,6 +53,10 @@ export interface Room {
   room_name: string;
   monthly_price: string;
   status: 'available' | 'occupied' | 'maintenance';
+  room_type?: string;
   created_at: string;
   updated_at: string;
+  is_archived?: boolean;
+  can_be_archived?: boolean;
+  can_be_unarchived?: boolean;
 }

@@ -33,7 +33,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
     outline: 'outline',
     ghost: 'ghost',
     danger: 'destructive',
-  }[variant];
+  }[variant] as 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' || 'default';
 
   const shadcnSize = {
     xs: 'sm',
@@ -41,7 +41,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
     md: 'default',
     lg: 'lg',
     xl: 'lg',
-  }[size];
+  }[size] as 'sm' | 'default' | 'lg' || 'default';
 
   const isDisabled = disabled || loading;
 

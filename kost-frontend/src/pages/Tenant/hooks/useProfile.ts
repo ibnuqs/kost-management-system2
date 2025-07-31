@@ -51,9 +51,17 @@ export const useUpdateProfile = () => {
       queryClient.invalidateQueries({ queryKey: tenantQueryKeys.profile() });
       queryClient.invalidateQueries({ queryKey: tenantQueryKeys.dashboard() });
     },
-    onError: (error: any) => {
-      // Penanganan error sudah baik.
-      const message = error?.response?.data?.message || 'Failed to update profile';
+    onError: (error: unknown) => {
+      // Penanganan error dengan type guard
+      let message = 'Failed to update profile';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorWithResponse = error as { response?: { data?: { message?: string } } };
+        if (errorWithResponse.response?.data?.message) {
+          message = errorWithResponse.response.data.message;
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       toast.error(message);
     },
   });
@@ -75,8 +83,16 @@ export const useUploadProfilePhoto = () => {
       queryClient.invalidateQueries({ queryKey: tenantQueryKeys.profile() });
       queryClient.invalidateQueries({ queryKey: tenantQueryKeys.dashboard() });
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Failed to upload photo';
+    onError: (error: unknown) => {
+      let message = 'Failed to upload photo';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorWithResponse = error as { response?: { data?: { message?: string } } };
+        if (errorWithResponse.response?.data?.message) {
+          message = errorWithResponse.response.data.message;
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       toast.error(message);
     },
   });
@@ -96,8 +112,16 @@ export const useChangePassword = () => {
     onSuccess: (response) => {
       toast.success(response.message || 'Password berhasil diubah');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Gagal mengubah password';
+    onError: (error: unknown) => {
+      let message = 'Gagal mengubah password';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorWithResponse = error as { response?: { data?: { message?: string } } };
+        if (errorWithResponse.response?.data?.message) {
+          message = errorWithResponse.response.data.message;
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       toast.error(message);
     },
   });

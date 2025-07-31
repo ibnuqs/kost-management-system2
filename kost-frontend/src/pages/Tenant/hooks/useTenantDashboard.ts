@@ -1,7 +1,6 @@
 // Optimized Tenant Dashboard Hook - Performance Focused
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useCallback } from 'react';
-import { tenantQueryKeys } from '../config/apiConfig';
 import { tenantService } from '../services/tenantService';
 import { DashboardData } from '../types/dashboard';
 import { TENANT_CONSTANTS } from '../config/constants';

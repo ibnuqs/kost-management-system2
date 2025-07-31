@@ -1,25 +1,20 @@
 // File: src/pages/Admin/pages/SmartAccessManagement.tsx
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from '../components/ui/Card';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '../components/ui/Forms/Button';
-import { 
-  RfidTable, 
-  RfidStats
+import {
+  RfidTable,
+  RfidRealTimeMonitor,
+  AdminDoorControl,
 } from '../components/feature/rfid';
 import { RfidFormNew } from '../components/feature/rfid/RfidFormNew';
-import { SafeRealTimeMonitor } from '../components/feature/rfid/SafeRealTimeMonitor';
-import { SimpleDoorControl } from '../components/feature/rfid/SimpleDoorControl';
 import { WorkingAnalytics } from '../components/feature/rfid/WorkingAnalytics';
-import { AdminDoorControl } from '../components/feature/rfid/AdminDoorControl';
-import { RfidScanner } from '../components/feature/rfid/RfidScanner';
-import { Shield, CreditCard, Activity, DoorOpen, BarChart3 } from 'lucide-react';
+import { Shield, CreditCard, Activity, DoorOpen, BarChart3, Plus } from 'lucide-react';
 import { useRfidEvents } from '../../../hooks';
+import { useHttpRfidPolling } from '../../../hooks/useHttpRfidPolling';
 import { esp32Service } from '../services/esp32Service';
-import { iotService } from '../services/iotService';
-import api from '../../../utils/api';
-import type { RfidCard, RfidFormData } from '../types/rfid';
+import { roomService } from '../services/roomService';
+import type { RfidCard, RfidFormData, AdminDoorControlRequest } from '../types/rfid';
 import type { Room } from '../types/room';
-import type { IoTDevice } from '../types/iot';
 
 type TabType = 'cards' | 'monitor' | 'door-control' | 'logs';
 
@@ -29,9 +24,16 @@ export const SmartAccessManagement: React.FC = () => {
   const [selectedCard, setSelectedCard] = useState<RfidCard | null>(null);
   const [cards, setCards] = useState<RfidCard[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [devices, setDevices] = useState<IoTDevice[]>([]);
+  const [devices, setDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cardsLoading, setCardsLoading] = useState(true);
+  const [roomsLoading, setRoomsLoading] = useState(true);
+  const [devicesLoading, setDevicesLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Add caching
+  const [lastLoadTime, setLastLoadTime] = useState<number>(0);
+  const CACHE_DURATION = 30000; // 30 seconds
   const [stats, setStats] = useState({
     totalCards: 0,
     activeCards: 0,
@@ -42,42 +44,187 @@ export const SmartAccessManagement: React.FC = () => {
     successRate: 0
   });
 
-  // Real-time MQTT data
-  const { recentScans, deviceStatuses, isConnected } = useRfidEvents();
+  // Real-time MQTT data (fallback to HTTP polling if MQTT disabled)
+  const mqttData = useRfidEvents();
+  const httpData = useHttpRfidPolling();
+  
+  // Use MQTT data if available, otherwise fallback to HTTP polling
+  const { recentScans, deviceStatuses, isConnected } = import.meta.env.VITE_MQTT_ENABLED === 'false' 
+    ? httpData 
+    : mqttData;
+
 
   useEffect(() => {
     loadData();
   }, []);
 
+  // ULTRA-OPTIMIZED: Pre-computed room-device mapping with caching & memoization
+  const availableRoomsForDoorControl = useMemo(() => {
+    // Early return if no data
+    if (!rooms.length || !deviceStatuses?.size) {
+      return [];
+    }
+
+    const now = Date.now();
+    const twoMinutesAgo = now - (2 * 60 * 1000); // Increase tolerance for better ESP32 detection
+
+    // BLAZING FAST: Pre-build optimized lookup structures
+    const onlineDeviceSet = new Set();
+    const roomToDeviceMap = new Map();
+    const deviceMetadata = new Map(); // Cache device info for reuse
+    
+    // Single optimized pass through devices
+    for (const [deviceId, status] of deviceStatuses.entries()) {
+      // Optimized online check with better tolerance
+      const isOnline = status?.last_seen && 
+        new Date(status.last_seen).getTime() > twoMinutesAgo;
+      
+      if (isOnline) {
+        onlineDeviceSet.add(deviceId);
+        
+        // Enhanced regex for better ESP32 device matching
+        const roomMatch = deviceId.match(/(?:ROOM[_-]?(\d+)|R(\d+)|ESP32[_-]?(\d+)|KOST[_-]?(\d+))/i);
+        if (roomMatch) {
+          const roomNum = parseInt(roomMatch[1] || roomMatch[2] || roomMatch[3] || roomMatch[4]);
+          if (roomNum && !isNaN(roomNum)) {
+            roomToDeviceMap.set(roomNum, deviceId);
+            deviceMetadata.set(deviceId, {
+              last_seen: status.last_seen,
+              wifi_connected: status?.wifi_connected,
+              mqtt_connected: status?.mqtt_connected
+            });
+          }
+        }
+      }
+    }
+
+    // OPTIMIZED: Multi-strategy room filtering with priority
+    const filteredRooms = rooms.filter(room => {
+      // Strategy 1: Direct MQTT device mapping (fastest)
+      if (roomToDeviceMap.has(room.room_number)) {
+        return true;
+      }
+      
+      // Strategy 2: Backend device mapping (fallback)
+      const hasBackendDevice = devices.some(d => {
+        const deviceOnline = onlineDeviceSet.has(d.device_id);
+        const roomMatches = d.room_id === room.id || 
+                           d.room_number === room.room_number ||
+                           (d.device_name && d.device_name.includes(room.room_number.toString()));
+        return deviceOnline && roomMatches;
+      });
+      
+      return hasBackendDevice;
+    })
+    .sort((a, b) => {
+      // Sort by room number for consistent UI
+      return a.room_number - b.room_number;
+    });
+
+    
+    return filteredRooms;
+  }, [rooms, deviceStatuses, devices]);
+
+  // WorkingAnalytics is always mounted (hidden) to maintain MQTT connection
+
+  // Optimized tab rendering - avoid re-renders when switching tabs
+  const renderActiveTab = () => {
+    switch (activeTab) {
+      case 'monitor':
+        return (
+          <div className="animate-fadeIn">
+            <RfidRealTimeMonitor />
+          </div>
+        );
+      case 'cards':
+        return (
+          <div className="animate-fadeIn">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-purple-600" />
+                      Manajemen Kartu RFID
+                    </h3>
+                    <p className="text-gray-600 mt-1">Tambah, edit, dan kelola kartu akses</p>
+                  </div>
+                  <Button
+                    onClick={() => setShowCardForm(true)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Tambah Kartu Baru
+                  </Button>
+                </div>
+              </div>
+              <div className="p-6">
+                <RfidTable 
+                  cards={cards.filter(card => 
+                    !searchTerm || 
+                    card.uid.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    card.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    card.user?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    card.room?.room_number?.toString().includes(searchTerm)
+                  )}
+                  loading={cardsLoading}
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  onEdit={handleEditCard}
+                  onDelete={handleDeleteCard}
+                  onToggleStatus={async (cardId) => {
+                    const card = cards.find(c => c.id === cardId);
+                    if (card) {
+                      await esp32Service.updateRfidCard(card.id, {
+                        ...card,
+                        status: card.status === 'active' ? 'inactive' : 'active'
+                      });
+                      loadData(true);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      case 'door-control':
+        return (
+          <div className="animate-fadeIn">
+            <AdminDoorControl 
+              rooms={availableRoomsForDoorControl}
+              onDoorControl={handleDoorControl}
+            />
+          </div>
+        );
+      case 'logs':
+        return (
+          <div className="animate-fadeIn">
+            <WorkingAnalytics />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   // Update stats when MQTT data changes  
   useEffect(() => {
-    console.log('🔍 SmartAccess: MQTT data update:', {
-      recentScans: recentScans?.length || 0,
-      isArray: Array.isArray(recentScans),
-      firstScan: recentScans?.[0]
-    });
-    
     // Load from backend if no MQTT data available
     const loadAccessStats = async () => {
       try {
-        // Try to get access logs from backend as fallback
         const { accessLogService } = await import('../services/accessLogService');
-        const response = await accessLogService.getLogs({ per_page: 50 });
+        const response = await accessLogService.getLogs({ per_page: 100 }); // Balanced performance and data coverage
         
         if (response?.logs && Array.isArray(response.logs)) {
+          const today = new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
           const todayScans = response.logs.filter(log => 
-            new Date(log.accessed_at).toDateString() === new Date().toDateString()
+            new Date(log.accessed_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }) === today
           );
-          const grantedToday = todayScans.filter(log => log.access_granted).length;
+          const grantedToday = todayScans.filter(log => {
+            return log.access_granted === true || log.access_granted === 'true' || log.access_granted === 1 || log.access_granted === '1';
+          }).length;
           const totalAccessToday = todayScans.length;
           const successRate = totalAccessToday > 0 ? Math.round((grantedToday / totalAccessToday) * 100) : 0;
-
-          console.log('📊 SmartAccess: Backend access stats:', {
-            todayScans: todayScans.length,
-            grantedToday,
-            totalAccessToday,
-            successRate
-          });
 
           setStats(prev => ({
             ...prev,
@@ -86,28 +233,22 @@ export const SmartAccessManagement: React.FC = () => {
             successRate
           }));
         }
-      } catch (error) {
-        console.warn('⚠️ Could not load access stats from backend:', error);
-        // Keep default stats - let backend provide real data
-        console.log('📊 Using default access stats - no backend data available');
+      } catch (error: unknown) {
+        // Fallback to default stats
       }
     };
     
     if (recentScans && Array.isArray(recentScans) && recentScans.length > 0) {
       // Use MQTT data if available
+      const today = new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
       const todayScans = recentScans.filter(s => 
-        new Date(s.timestamp).toDateString() === new Date().toDateString()
+        new Date(s.timestamp).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }) === today
       );
-      const grantedToday = todayScans.filter(s => s.access_granted).length;
+      const grantedToday = todayScans.filter(s => {
+        return s.access_granted === true || s.access_granted === 'true' || s.access_granted === 1 || s.access_granted === '1';
+      }).length;
       const totalAccessToday = todayScans.length;
       const successRate = totalAccessToday > 0 ? Math.round((grantedToday / totalAccessToday) * 100) : 0;
-
-      console.log('📊 SmartAccess: MQTT access stats:', {
-        todayScans: todayScans.length,
-        grantedToday,
-        totalAccessToday,
-        successRate
-      });
 
       setStats(prev => ({
         ...prev,
@@ -117,79 +258,110 @@ export const SmartAccessManagement: React.FC = () => {
       }));
     } else {
       // Fallback to backend data
-      console.log('⚠️ No MQTT data, loading from backend...');
       loadAccessStats();
     }
   }, [recentScans]);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      
-      // Load cards and rooms first (priority data)
-      console.log('🔄 Loading RFID data...');
-      
-      const [cardsData, roomsData] = await Promise.all([
-        esp32Service.getRfidCards(),
-        iotService.getRooms()
-      ]);
-
-      console.log('📋 Cards loaded:', cardsData?.length || 0);
-      console.log('🏠 Rooms loaded:', roomsData?.length || 0);
-
-      setCards(Array.isArray(cardsData) ? cardsData : []);
-      setRooms(Array.isArray(roomsData) ? roomsData : []);
-
-      // Load devices from correct API endpoint
-      try {
-        console.log('📡 Loading devices...');
-        const devicesResponse = await iotService.getDevices();
-        const devicesData = devicesResponse?.devices || [];
-        setDevices(Array.isArray(devicesData) ? devicesData : []);
-        console.log('📡 Devices loaded:', devicesData?.length || 0);
-        
-      } catch (deviceError) {
-        console.warn('⚠️ Device loading failed, continuing without them:', deviceError);
-        setDevices([]);
-      }
-
-      // Update card stats only (access stats will be updated by MQTT useEffect)
-      const totalCards = Array.isArray(cardsData) ? cardsData.length : 0;
-      const activeCount = Array.isArray(cardsData) ? cardsData.filter(c => c.status === 'active').length : 0;
-      const inactiveCount = totalCards - activeCount;
-
-      setStats(prev => ({
-        ...prev,
-        totalCards,
-        activeCards: activeCount,
-        inactiveCards: inactiveCount
-      }));
-
-    } catch (error) {
-      console.error('❌ SmartAccessManagement: Error loading data:', error);
-      
-      // Try to load at least cards even if other data fails
-      try {
-        console.log('🔄 Fallback: Loading cards only...');
-        const fallbackCards = await esp32Service.getRfidCards();
-        setCards(Array.isArray(fallbackCards) ? fallbackCards : []);
-        console.log('✅ Fallback cards loaded:', fallbackCards?.length || 0);
-      } catch (fallbackError) {
-        console.error('❌ Even fallback failed:', fallbackError);
-        setCards([]);
-      }
-      
-      // Set empty arrays for failed data
-      setRooms([]);
-      setDevices([]);
-    } finally {
-      setLoading(false);
+  const loadData = async (forceRefresh = false) => {
+    const now = Date.now();
+    
+    // Skip loading if recently loaded (unless forced)
+    if (!forceRefresh && now - lastLoadTime < CACHE_DURATION && (cards.length > 0 || rooms.length > 0)) {
+      return;
     }
+
+    setLoading(true);
+
+    // INSTANT: Load MQTT device data (no API call needed)
+    const mqttDevices = Array.from(deviceStatuses?.entries() || []).map(([deviceId, status]) => ({
+      device_id: deviceId,
+      id: deviceId,
+      device_name: deviceId,
+      status: 'online',
+      wifi_connected: true,
+      mqtt_connected: true,
+      last_seen: status.last_seen
+    }));
+    
+    if (mqttDevices.length > 0) {
+      setDevices(mqttDevices);
+      setDevicesLoading(false);
+    }
+
+    // PARALLEL LOADING: Load all data simultaneously (non-blocking)
+    const loadPromises = [];
+
+    // Cards loading
+    setCardsLoading(true);
+    const cardsPromise = esp32Service.getRfidCards()
+      .then(cardsData => {
+        const cards = Array.isArray(cardsData) ? cardsData : [];
+        setCards(cards);
+        setCardsLoading(false);
+        
+        // Update stats immediately
+        const totalCards = cards.length;
+        const activeCount = cards.filter(c => c.status === 'active').length;
+        setStats(prev => ({
+          ...prev,
+          totalCards,
+          activeCards: activeCount,
+          inactiveCards: totalCards - activeCount
+        }));
+        
+        return cards;
+      })
+      .catch(error => {
+        setCards([]);
+        setCardsLoading(false);
+        return [];
+      });
+    loadPromises.push(cardsPromise);
+
+    // Rooms loading (PRIORITY: needed for door control)
+    setRoomsLoading(true);
+    const roomsPromise = roomService.getRooms()
+      .then(roomsData => {
+        const roomsArray = Array.isArray(roomsData) ? roomsData : (roomsData?.rooms || []);
+        setRooms(roomsArray);
+        setRoomsLoading(false);
+        return roomsArray;
+      })
+      .catch(error => {
+        setRooms([]);
+        setRoomsLoading(false);
+        return [];
+      });
+    loadPromises.push(roomsPromise);
+
+    // Backend devices (if MQTT not available)
+    if (mqttDevices.length === 0) {
+      setDevicesLoading(true);
+      const devicesPromise = esp32Service.getDevices()
+        .then(devicesData => {
+          const devices = Array.isArray(devicesData) ? devicesData : [];
+          setDevices(devices);
+          setDevicesLoading(false);
+          return devices;
+        })
+        .catch(error => {
+          setDevicesLoading(false);
+          return [];
+        });
+      loadPromises.push(devicesPromise);
+    }
+
+    // FAST: Hide loading as soon as rooms are ready (most critical for door control)
+    roomsPromise.finally(() => {
+      setLoading(false);
+      setLastLoadTime(now);
+    });
+
+    // Wait for all non-critical data in background
+    Promise.allSettled(loadPromises);
   };
 
   const handleCardSubmit = async (data: RfidFormData) => {
-    console.log('📝 Submitting RFID card data:', data);
-    
     try {
       let result;
       
@@ -200,7 +372,6 @@ export const SmartAccessManagement: React.FC = () => {
           ...data,
           status: data.status || selectedCard.status || 'active'
         };
-        console.log('🔄 Updating card:', updateData);
         result = await esp32Service.updateRfidCard(selectedCard.id, updateData);
       } else {
         // Create new card
@@ -208,22 +379,18 @@ export const SmartAccessManagement: React.FC = () => {
           ...data,
           status: data.status || 'active'
         };
-        console.log('✨ Creating new card:', createData);
         result = await esp32Service.createRfidCard(createData);
       }
       
       if (result !== null) {
-        console.log('✅ Card operation successful:', result);
         setShowCardForm(false);
         setSelectedCard(null);
         loadData();
       } else {
-        console.error('❌ Card operation failed: null result');
-        alert('Failed to save RFID card. Please check the console for details.');
+        alert('Gagal menyimpan kartu RFID.');
       }
-    } catch (error) {
-      console.error('❌ Error saving card:', error);
-      alert(`Error saving card: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } catch (error: unknown) {
+      alert(`Gagal menyimpan kartu: ${error instanceof Error ? error.message : 'Kesalahan tidak dikenal'}`);
     }
   };
 
@@ -237,17 +404,130 @@ export const SmartAccessManagement: React.FC = () => {
       try {
         await esp32Service.deleteRfidCard(cardId);
         loadData();
-      } catch (error) {
-        console.error('Error deleting card:', error);
+      } catch (error: unknown) {
+        alert('Gagal menghapus kartu RFID.');
       }
     }
   };
 
+  const handleDoorControl = async (request: AdminDoorControlRequest): Promise<boolean> => {
+    try {
+      // Find the room to get associated IoT device
+      const room = rooms.find(r => r.id === request.room_id);
+      if (!room) {
+        return false;
+      }
+      
+      
+      // Find device that's actually online via MQTT for this room
+      let associatedDevice = null;
+      let mqttDeviceId = null;
+      
+      // Look for MQTT device first
+      for (const [deviceId, deviceStatus] of deviceStatuses?.entries() || []) {
+        const isAssociated = 
+          deviceId.includes(`ROOM_${room.room_number}`) ||
+          deviceId.includes(`R${room.room_number}`) ||
+          // More precise matching - avoid partial matches
+          (deviceId.includes(room.room_number) && 
+           (deviceId.includes('ROOM') || deviceId.includes('ESP32'))) ||
+          devices.some(backendDevice => 
+            (backendDevice.device_id === deviceId || backendDevice.id === deviceId) &&
+            (backendDevice.room_id === room.id || 
+             backendDevice.room_number === room.room_number ||
+             (backendDevice.device_name && backendDevice.device_name.includes(room.room_number)))
+          );
+        
+        const isRecentlySeen = (() => {
+          if (!deviceStatus?.last_seen) return false;
+          const lastSeenTime = new Date(deviceStatus.last_seen).getTime();
+          const now = Date.now();
+          const oneMinuteAgo = now - (1 * 60 * 1000);
+          return lastSeenTime > oneMinuteAgo;
+        })();
+        
+        if (isAssociated && isRecentlySeen) {
+          mqttDeviceId = deviceId;
+          // Find corresponding backend device for more info
+          associatedDevice = devices.find(d => d.device_id === deviceId || d.id === deviceId) || {
+            device_id: deviceId,
+            id: deviceId,
+            device_name: deviceId
+          };
+          break;
+        }
+      }
+      
+      if (!associatedDevice || !mqttDeviceId) {
+        alert(`Tidak ada device ESP32 yang online untuk kamar ${room.room_number}`);
+        return false;
+      }
+      
+      const deviceId = mqttDeviceId;
+      
+      // Send MQTT command to ESP32 device
+      if (request.action === 'open_door') {
+        esp32Service.sendDoorOpenCommand(deviceId);
+      } else if (request.action === 'close_door') {
+        esp32Service.sendDoorCloseCommand(deviceId);
+      }
+      
+      // Also try API endpoint as backup
+      try {
+        const apiResponse = await esp32Service.sendCommand(deviceId, request.action, {
+          room_id: request.room_id,
+          reason: request.reason
+        });
+      } catch (apiError) {
+        // API backup failed, but MQTT command was sent
+      }
+
+      // Send manual door control log via MQTT (same format as ESP32)
+      try {
+        const mqttService = (window as { mqttService?: { publish: (topic: string, message: string) => void } }).mqttService;
+        
+        if (mqttService) {
+          const logMessage = {
+            id: `manual-${Date.now()}`,
+            uid: 'MANUAL_ADMIN',
+            device_id: deviceId,
+            access_granted: true,
+            reason: request.reason || `Manual ${request.action.replace('_', ' ')} by admin`,
+            user_name: 'Admin',
+            room_number: room.room_number,
+            timestamp: Date.now(),
+            accessed_at: new Date().toISOString(),
+            type: 'manual_door_control',
+            message: request.reason || `Manual ${request.action.replace('_', ' ')} by admin`,
+            user: {
+              name: 'Admin',
+              email: 'admin@system.local'
+            }
+          };
+          
+          // Publish to multiple topics to ensure WorkingAnalytics receives it
+          mqttService.publish('rfid/access_log', JSON.stringify(logMessage));
+          mqttService.publish('rfid/tags', JSON.stringify(logMessage));
+          mqttService.publish('rfid/manual_control', JSON.stringify(logMessage));
+          
+          // Force refresh WorkingAnalytics by triggering a window event
+          window.dispatchEvent(new CustomEvent('manual-door-log', { detail: logMessage }));
+        }
+      } catch (mqttLogError) {
+        // MQTT logging failed - continue without logging
+      }
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const tabs = [
-    { id: 'monitor' as TabType, label: '⚡ Monitor Langsung', description: 'Pemindaian RFID real-time', icon: Activity },
-    { id: 'cards' as TabType, label: '💳 Kartu RFID', description: 'Kelola kartu akses', icon: CreditCard },
-    { id: 'door-control' as TabType, label: '🚪 Kontrol Pintu', description: 'Akses pintu manual', icon: DoorOpen },
-    { id: 'logs' as TabType, label: '📊 Log Akses', description: 'Monitoring aktivitas', icon: BarChart3 }
+    { id: 'monitor' as TabType, label: 'Monitor Langsung', description: 'Pemindaian RFID real-time', icon: Activity },
+    { id: 'cards' as TabType, label: 'Kartu RFID', description: 'Kelola kartu akses', icon: CreditCard },
+    { id: 'door-control' as TabType, label: 'Kontrol Pintu', description: 'Akses pintu manual', icon: DoorOpen },
+    { id: 'logs' as TabType, label: 'Log Akses', description: 'Monitoring aktivitas', icon: BarChart3 }
   ];
 
   return (
@@ -260,32 +540,37 @@ export const SmartAccessManagement: React.FC = () => {
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Shield className="w-8 h-8 text-blue-600" />
               </div>
-              🔐 Manajemen Akses Pintar
+              Manajemen Akses Pintar
             </h1>
             <p className="text-gray-600 mt-1 text-sm lg:text-base">
               Sistem kontrol akses RFID, manajemen pintu, dan monitoring lengkap
             </p>
           </div>
           
-          <div className="flex gap-2 flex-wrap">
-            <Button 
-              variant="outline" 
-              onClick={loadData}
-              disabled={loading}
-              className="text-xs lg:text-sm"
-            >
-              🔄 Segarkan
-            </Button>
-          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => loadData(true)}
+            disabled={loading}
+            className="text-xs lg:text-sm"
+          >
+            Segarkan
+          </Button>
         </div>
 
         {/* Enhanced Quick Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Kartu</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalCards}</p>
+                {cardsLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-12 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalCards}</p>
+                )}
               </div>
               <div className="p-3 bg-blue-100 rounded-full">
                 <CreditCard className="w-6 h-6 text-blue-600" />
@@ -325,18 +610,6 @@ export const SmartAccessManagement: React.FC = () => {
               </div>
               <div className="p-3 bg-blue-100 rounded-full">
                 <Activity className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Tingkat Berhasil</p>
-                <p className="text-2xl font-bold text-green-600">{stats.successRate}%</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <BarChart3 className="w-6 h-6 text-green-600" />
               </div>
             </div>
           </div>
@@ -421,147 +694,12 @@ export const SmartAccessManagement: React.FC = () => {
 
         {/* Tab Content */}
         <div className="min-h-[600px]">
-          {activeTab === 'monitor' && (
-            <div className="animate-fadeIn">
-              {/* Real-time monitoring + Live activity only */}
-              <SafeRealTimeMonitor />
-            </div>
-          )}
+          {renderActiveTab()}
+        </div>
 
-          {activeTab === 'cards' && (
-            <div className="animate-fadeIn">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                <div className="p-6 border-b border-gray-100">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <CreditCard className="w-5 h-5 text-purple-600" />
-                        💳 Manajemen Kartu RFID
-                      </h3>
-                      <p className="text-gray-600 mt-1">Tambah, edit, dan kelola kartu akses</p>
-                    </div>
-                    <Button
-                      onClick={() => setShowCardForm(true)}
-                      className="bg-purple-600 hover:bg-purple-700 text-white"
-                    >
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Tambah Kartu Baru
-                    </Button>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <RfidTable 
-                    cards={cards.filter(card => 
-                      !searchTerm || 
-                      card.uid.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      card.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      card.user?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      card.room?.room_number?.toString().includes(searchTerm)
-                    )}
-                    loading={loading}
-                    searchTerm={searchTerm}
-                    onSearchChange={setSearchTerm}
-                    onEdit={handleEditCard}
-                    onDelete={handleDeleteCard}
-                    onToggleStatus={async (cardId) => {
-                      const card = cards.find(c => c.id === cardId);
-                      if (card) {
-                        await esp32Service.updateRfidCard(card.id, {
-                          ...card,
-                          status: card.status === 'active' ? 'inactive' : 'active'
-                        });
-                        loadData();
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'door-control' && (
-            <div className="animate-fadeIn">
-              {/* Manual control + Emergency access only */}
-              <SimpleDoorControl 
-                rooms={rooms}
-                devices={devices}
-                onDoorControl={async (request) => {
-                  // Find device_id for the room (same logic as RFID cards)
-                  const room = rooms.find(r => r.id === request.room_id);
-                  if (!room) {
-                    alert('❌ Room not found');
-                    return false;
-                  }
-                  
-                  // Find IoT device for this room
-                  const device = devices.find(d => d.room_id === room.id);
-                  const deviceId = device ? device.device_id : `ESP32-RFID-${String(room.id).padStart(2, '0')}`;
-                  
-                  // Try ESP32 service first (recommended approach)
-                  try {
-                    const result = request.action === 'open_door'
-                      ? await esp32Service.openDoor(deviceId, request.reason || 'Admin manual control')
-                      : await esp32Service.closeDoor(deviceId, request.reason || 'Admin manual control');
-                    
-                    if (result && (result.success || result.status === 'sent')) {
-                      alert(`✅ Door ${request.action.replace('_', ' ')} command sent successfully!`);
-                      return true;
-                    }
-                  } catch (error) {
-                    console.warn('ESP32 service failed, trying MQTT fallback:', error);
-                  }
-                  
-                  // Fallback to direct MQTT with dynamic device_id
-                  try {
-                    if ((window as any).mqttService && (window as any).mqttService.publish) {
-                      const command = {
-                        command: request.action,
-                        device_id: deviceId,
-                        timestamp: Date.now(),
-                        reason: request.reason || 'Admin manual control',
-                        from: 'admin_dashboard'
-                      };
-                      
-                      const success = (window as any).mqttService.publish('rfid/command', JSON.stringify(command));
-                      
-                      if (success) {
-                        alert(`📡 MQTT door ${request.action.replace('_', ' ')} command sent!`);
-                        return true;
-                      }
-                    }
-                  } catch (mqttError) {
-                    console.error('MQTT fallback failed:', mqttError);
-                  }
-                  
-                  // Final fallback: API call with dynamic device_id
-                  try {
-                    const response = await api.post('/test-door-control-frontend', {
-                      device_id: deviceId,
-                      command: request.action,
-                      reason: request.reason || 'Admin manual control via API fallback'
-                    });
-                    
-                    if (response.data.success) {
-                      alert(`🌐 API door ${request.action.replace('_', ' ')} command sent!`);
-                      return true;
-                    }
-                  } catch (apiError) {
-                    console.error('API fallback failed:', apiError);
-                  }
-                  
-                  alert('❌ Door control failed. All methods failed.');
-                  return false;
-                }}
-              />
-            </div>
-          )}
-
-          {activeTab === 'logs' && (
-            <div className="animate-fadeIn">
-              {/* Historical data + Detailed analytics only */}
-              <WorkingAnalytics />
-            </div>
-          )}
+        {/* Hidden WorkingAnalytics - Always mounted to listen to MQTT */}
+        <div style={{ display: 'none', position: 'absolute', top: '-9999px' }}>
+          <WorkingAnalytics />
         </div>
 
         {/* RFID Card Form Modal */}
@@ -575,41 +713,6 @@ export const SmartAccessManagement: React.FC = () => {
           onSubmit={handleCardSubmit}
         />
 
-        {/* Enhanced System Status Footer */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="grid grid-cols-2 lg:flex lg:items-center gap-4 lg:gap-8">
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                <span className={`text-sm font-medium ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
-                  MQTT {isConnected ? 'Terhubung' : 'Terputus'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${deviceStatuses?.size > 0 ? 'bg-blue-400' : 'bg-gray-400'}`}></div>
-                <span className="text-sm text-gray-600">
-                  {deviceStatuses?.size || 0} ESP32 Aktif
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${stats.activeCards > 0 ? 'bg-purple-400' : 'bg-gray-400'}`}></div>
-                <span className="text-sm text-gray-600">
-                  {stats.activeCards} Kartu Aktif
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${recentScans?.length > 0 ? 'bg-orange-400' : 'bg-gray-400'}`}></div>
-                <span className="text-sm text-gray-600">
-                  {recentScans?.length || 0} Pemindaian Terkini
-                </span>
-              </div>
-            </div>
-            
-            <div className="text-xs text-gray-500 text-center lg:text-right">
-              Terakhir diperbarui: {new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' })}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

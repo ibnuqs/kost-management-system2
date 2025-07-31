@@ -1,4 +1,5 @@
 <?php
+
 // File: app/Http/Controllers/Api/Admin/PaymentController.php
 
 namespace App\Http\Controllers\Api\Admin;
@@ -36,21 +37,21 @@ class PaymentController extends Controller
             }
 
             // Filter by month
-            if (!empty($month)) {
+            if (! empty($month)) {
                 $query->where('payment_month', $month);
             }
 
             // Search functionality
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $query->where(function ($q) use ($search) {
                     $q->where('order_id', 'like', "%{$search}%")
-                      ->orWhereHas('tenant', function ($tenantQuery) use ($search) {
-                          $tenantQuery->where('tenant_code', 'like', "%{$search}%")
-                                     ->orWhereHas('user', function ($userQuery) use ($search) {
-                                         $userQuery->where('name', 'like', "%{$search}%")
-                                                  ->orWhere('email', 'like', "%{$search}%");
-                                     });
-                      });
+                        ->orWhereHas('tenant', function ($tenantQuery) use ($search) {
+                            $tenantQuery->where('tenant_code', 'like', "%{$search}%")
+                                ->orWhereHas('user', function ($userQuery) use ($search) {
+                                    $userQuery->where('name', 'like', "%{$search}%")
+                                        ->orWhere('email', 'like', "%{$search}%");
+                                });
+                        });
                 });
             }
 
@@ -64,7 +65,7 @@ class PaymentController extends Controller
 
             $paymentsData = $payments->getCollection()->map(function ($payment) {
                 $data = $payment->getApiData();
-                
+
                 // Add tenant info with proper structure for frontend
                 if ($payment->tenant) {
                     $data['tenant'] = [
@@ -88,7 +89,7 @@ class PaymentController extends Controller
                         ] : null,
                     ];
                 }
-                
+
                 return $data;
             });
 
@@ -110,14 +111,14 @@ class PaymentController extends Controller
                     'sort_by' => $sortBy,
                     'sort_order' => $sortOrder,
                 ],
-                'message' => 'Payments retrieved successfully'
+                'message' => 'Payments retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch payments', [
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id(),
-                'request_params' => $request->all()
+                'request_params' => $request->all(),
             ]);
 
             return response()->json([
@@ -143,18 +144,18 @@ class PaymentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $paymentMonth = $request->payment_month;
-            
+
             // Check if payments already exist for this month
             $existingPayments = Payment::where('payment_month', $paymentMonth)->count();
             if ($existingPayments > 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Payments for this month already exist'
+                    'message' => 'Payments for this month already exist',
                 ], 422);
             }
 
@@ -166,7 +167,7 @@ class PaymentController extends Controller
             if ($activeTenants->isEmpty()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No active tenants found'
+                    'message' => 'No active tenants found',
                 ], 422);
             }
 
@@ -190,7 +191,7 @@ class PaymentController extends Controller
             Log::info('Monthly payments generated successfully', [
                 'payment_month' => $paymentMonth,
                 'payments_count' => count($generatedPayments),
-                'generated_by' => Auth::id()
+                'generated_by' => Auth::id(),
             ]);
 
             return response()->json([
@@ -200,7 +201,7 @@ class PaymentController extends Controller
                     'payments_generated' => count($generatedPayments),
                     'total_amount' => array_sum(array_column($generatedPayments, 'amount')),
                 ],
-                'message' => 'Monthly payments generated successfully'
+                'message' => 'Monthly payments generated successfully',
             ], 201);
 
         } catch (\Exception $e) {
@@ -208,13 +209,13 @@ class PaymentController extends Controller
             Log::error('Failed to generate monthly payments', [
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to generate monthly payments',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -228,7 +229,7 @@ class PaymentController extends Controller
             $payment = Payment::with(['tenant.user', 'tenant.room'])->findOrFail($id);
 
             $paymentData = $payment->getApiData();
-            
+
             // Add detailed tenant info
             if ($payment->tenant) {
                 $paymentData['tenant_details'] = $payment->tenant->getApiData();
@@ -237,26 +238,26 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $paymentData,
-                'message' => 'Payment details retrieved successfully'
+                'message' => 'Payment details retrieved successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Payment not found'
+                'message' => 'Payment not found',
             ], 404);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch payment details', [
                 'payment_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve payment details',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -270,7 +271,7 @@ class PaymentController extends Controller
             $payment = Payment::findOrFail($id);
 
             $validator = Validator::make($request->all(), [
-                'status' => 'required|in:' . implode(',', [Payment::STATUS_PENDING, Payment::STATUS_PAID, Payment::STATUS_OVERDUE]),
+                'status' => 'required|in:'.implode(',', [Payment::STATUS_PENDING, Payment::STATUS_PAID, Payment::STATUS_OVERDUE]),
                 'payment_method' => 'sometimes|string|max:50',
                 'notes' => 'nullable|string|max:255',
             ]);
@@ -279,7 +280,7 @@ class PaymentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -304,19 +305,19 @@ class PaymentController extends Controller
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
                 'updated_by' => Auth::id(),
-                'notes' => $request->notes
+                'notes' => $request->notes,
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $payment->fresh()->getApiData(),
-                'message' => 'Payment status updated successfully'
+                'message' => 'Payment status updated successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Payment not found'
+                'message' => 'Payment not found',
             ], 404);
 
         } catch (\Exception $e) {
@@ -324,13 +325,13 @@ class PaymentController extends Controller
                 'payment_id' => $id,
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update payment status',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -349,12 +350,12 @@ class PaymentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $cutoffDate = $request->cutoff_date;
-            
+
             $overduePayments = Payment::where('status', Payment::STATUS_PENDING)
                 ->where('created_at', '<', $cutoffDate)
                 ->update(['status' => Payment::STATUS_OVERDUE]);
@@ -362,7 +363,7 @@ class PaymentController extends Controller
             Log::info('Payments marked as overdue', [
                 'cutoff_date' => $cutoffDate,
                 'affected_payments' => $overduePayments,
-                'marked_by' => Auth::id()
+                'marked_by' => Auth::id(),
             ]);
 
             return response()->json([
@@ -371,20 +372,20 @@ class PaymentController extends Controller
                     'cutoff_date' => $cutoffDate,
                     'payments_marked_overdue' => $overduePayments,
                 ],
-                'message' => 'Overdue payments marked successfully'
+                'message' => 'Overdue payments marked successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to mark overdue payments', [
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to mark overdue payments',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -396,7 +397,7 @@ class PaymentController extends Controller
     {
         try {
             $month = $request->get('month', now()->format('Y-m'));
-            
+
             $stats = [
                 'current_month' => [
                     'month' => $month,
@@ -421,19 +422,19 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $stats,
-                'message' => 'Payment statistics retrieved successfully'
+                'message' => 'Payment statistics retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch payment statistics', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve payment statistics',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -444,7 +445,7 @@ class PaymentController extends Controller
     private function generateOrderId(): string
     {
         do {
-            $orderId = 'PAY' . now()->format('ymd') . strtoupper(Str::random(6));
+            $orderId = 'PAY'.now()->format('ymd').strtoupper(Str::random(6));
         } while (Payment::where('order_id', $orderId)->exists());
 
         return $orderId;
@@ -459,7 +460,7 @@ class PaymentController extends Controller
         $paidPayments = Payment::where('payment_month', $month)
             ->where('status', Payment::STATUS_PAID)
             ->count();
-        
+
         return $totalPayments > 0 ? round(($paidPayments / $totalPayments) * 100, 2) : 0.0;
     }
 
@@ -491,7 +492,7 @@ class PaymentController extends Controller
         try {
             $hoursThreshold = $request->get('hours_threshold', 6);
             $cutoffTime = now()->subHours($hoursThreshold);
-            
+
             $stuckPayments = Payment::with(['tenant.user', 'tenant.room'])
                 ->where('status', Payment::STATUS_PENDING)
                 ->where('created_at', '<', $cutoffTime)
@@ -501,7 +502,7 @@ class PaymentController extends Controller
                     $data['stuck_duration'] = now()->diffInHours($payment->created_at);
                     $data['last_sync_attempt'] = $payment->updated_at->format('c');
                     $data['auto_sync_failed'] = now()->diffInHours($payment->updated_at) > 1;
-                    
+
                     if ($payment->tenant) {
                         $data['tenant'] = [
                             'id' => $payment->tenant->id,
@@ -514,29 +515,29 @@ class PaymentController extends Controller
                                 'id' => $payment->tenant->user->id,
                                 'name' => $payment->tenant->user->name,
                                 'email' => $payment->tenant->user->email,
-                            ]
+                            ],
                         ];
                     }
-                    
+
                     return $data;
                 });
 
             return response()->json([
                 'success' => true,
                 'data' => $stuckPayments,
-                'message' => 'Stuck payments retrieved successfully'
+                'message' => 'Stuck payments retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch stuck payments', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve stuck payments',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -548,39 +549,39 @@ class PaymentController extends Controller
     {
         try {
             $payment = Payment::findOrFail($id);
-            
+
             // Here you would implement actual sync with Midtrans
             // For now, we'll just update the updated_at timestamp
             $payment->touch();
-            
+
             Log::info('Payment status synced', [
                 'payment_id' => $payment->id,
                 'order_id' => $payment->order_id,
-                'synced_by' => Auth::id()
+                'synced_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $payment->fresh()->getApiData(),
-                'message' => 'Payment status synced successfully'
+                'message' => 'Payment status synced successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Payment not found'
+                'message' => 'Payment not found',
             ], 404);
         } catch (\Exception $e) {
             Log::error('Failed to sync payment status', [
                 'payment_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to sync payment status',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -594,7 +595,7 @@ class PaymentController extends Controller
             $payment = Payment::findOrFail($id);
 
             $validator = Validator::make($request->all(), [
-                'status' => 'required|in:' . implode(',', [Payment::STATUS_PENDING, Payment::STATUS_PAID, Payment::STATUS_OVERDUE]),
+                'status' => 'required|in:'.implode(',', [Payment::STATUS_PENDING, Payment::STATUS_PAID, Payment::STATUS_OVERDUE]),
                 'reason' => 'required|string|max:255',
             ]);
 
@@ -602,7 +603,7 @@ class PaymentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -625,31 +626,31 @@ class PaymentController extends Controller
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
                 'reason' => $reason,
-                'overridden_by' => Auth::id()
+                'overridden_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $payment->fresh()->getApiData(),
-                'message' => 'Payment status overridden successfully'
+                'message' => 'Payment status overridden successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Payment not found'
+                'message' => 'Payment not found',
             ], 404);
         } catch (\Exception $e) {
             Log::error('Failed to override payment status', [
                 'payment_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to override payment status',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -669,12 +670,12 @@ class PaymentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $query = Payment::query();
-            
+
             if ($request->has('payment_ids')) {
                 $query->whereIn('id', $request->payment_ids);
             } else {
@@ -695,28 +696,28 @@ class PaymentController extends Controller
             Log::info('Bulk payment sync completed', [
                 'synced_count' => $syncedCount,
                 'payment_ids' => $request->payment_ids ?? 'all_pending',
-                'synced_by' => Auth::id()
+                'synced_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'synced_count' => $syncedCount,
-                    'total_payments' => $payments->count()
+                    'total_payments' => $payments->count(),
                 ],
-                'message' => 'Bulk sync completed successfully'
+                'message' => 'Bulk sync completed successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to bulk sync payments', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to bulk sync payments',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -735,18 +736,18 @@ class PaymentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $month = $request->month;
-            
+
             // Check active tenants
             $activeTenantsCount = Tenant::where('status', Tenant::STATUS_ACTIVE)->count();
-            
+
             // Check for duplicate payments
             $duplicatePayments = Payment::where('payment_month', $month)->count();
-            
+
             // Check for invalid tenant data
             $invalidTenants = Tenant::where('status', Tenant::STATUS_ACTIVE)
                 ->whereNull('monthly_rent')
@@ -765,7 +766,7 @@ class PaymentController extends Controller
             }
 
             if ($activeTenantsCount === 0) {
-                $errors[] = "Tidak ada tenant aktif untuk generate pembayaran";
+                $errors[] = 'Tidak ada tenant aktif untuk generate pembayaran';
             }
 
             $valid = empty($errors) && $duplicatePayments === 0;
@@ -778,21 +779,21 @@ class PaymentController extends Controller
                     'duplicatePayments' => $duplicatePayments,
                     'invalidData' => $invalidTenants,
                     'warnings' => $warnings,
-                    'errors' => $errors
+                    'errors' => $errors,
                 ],
-                'message' => 'Pre-check completed successfully'
+                'message' => 'Pre-check completed successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to perform pre-check', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to perform pre-check',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -811,21 +812,21 @@ class PaymentController extends Controller
                 $query->where('status', $filters['status']);
             }
 
-            if (isset($filters['month']) && !empty($filters['month'])) {
+            if (isset($filters['month']) && ! empty($filters['month'])) {
                 $query->where('payment_month', $filters['month']);
             }
 
-            if (isset($filters['search']) && !empty($filters['search'])) {
+            if (isset($filters['search']) && ! empty($filters['search'])) {
                 $search = $filters['search'];
                 $query->where(function ($q) use ($search) {
                     $q->where('order_id', 'like', "%{$search}%")
-                      ->orWhereHas('tenant', function ($tenantQuery) use ($search) {
-                          $tenantQuery->where('tenant_code', 'like', "%{$search}%")
-                                     ->orWhereHas('user', function ($userQuery) use ($search) {
-                                         $userQuery->where('name', 'like', "%{$search}%")
-                                                  ->orWhere('email', 'like', "%{$search}%");
-                                     });
-                      });
+                        ->orWhereHas('tenant', function ($tenantQuery) use ($search) {
+                            $tenantQuery->where('tenant_code', 'like', "%{$search}%")
+                                ->orWhereHas('user', function ($userQuery) use ($search) {
+                                    $userQuery->where('name', 'like', "%{$search}%")
+                                        ->orWhere('email', 'like', "%{$search}%");
+                                });
+                        });
                 });
             }
 
@@ -833,43 +834,43 @@ class PaymentController extends Controller
 
             // Create CSV content
             $csvContent = "ID,Order ID,Tenant,Amount,Status,Payment Month,Paid At\n";
-            
+
             foreach ($payments as $payment) {
                 $tenantName = $payment->tenant && $payment->tenant->user ? $payment->tenant->user->name : 'N/A';
                 $paidAt = $payment->paid_at ? $payment->paid_at->format('Y-m-d H:i:s') : '';
-                
+
                 $csvContent .= implode(',', [
                     $payment->id,
                     $payment->order_id,
-                    '"' . str_replace('"', '""', $tenantName) . '"',
+                    '"'.str_replace('"', '""', $tenantName).'"',
                     $payment->amount,
                     $payment->status,
                     $payment->payment_month,
-                    $paidAt
-                ]) . "\n";
+                    $paidAt,
+                ])."\n";
             }
 
             Log::info('Payments exported', [
                 'total_exported' => $payments->count(),
                 'filters' => $filters,
-                'exported_by' => Auth::id()
+                'exported_by' => Auth::id(),
             ]);
 
             return response($csvContent, 200, [
                 'Content-Type' => 'text/csv',
-                'Content-Disposition' => 'attachment; filename="payments-export-' . now()->format('Y-m-d') . '.csv"'
+                'Content-Disposition' => 'attachment; filename="payments-export-'.now()->format('Y-m-d').'.csv"',
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to export payments', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to export payments',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -884,24 +885,24 @@ class PaymentController extends Controller
                 'tenant_id' => 'required|integer|exists:tenants,id',
                 'payment_month' => 'required|date_format:Y-m',
                 'prorate_from_date' => 'sometimes|date',
-                'send_notification' => 'sometimes|boolean'
+                'send_notification' => 'sometimes|boolean',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $tenant = Tenant::with(['user', 'room'])->findOrFail($request->tenant_id);
-            
+
             // Check if tenant is active
             if ($tenant->status !== Tenant::STATUS_ACTIVE) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tenant is not active'
+                    'message' => 'Tenant is not active',
                 ], 422);
             }
 
@@ -914,25 +915,25 @@ class PaymentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Payment already exists for this tenant and month',
-                    'data' => $existingPayment->getApiData()
+                    'data' => $existingPayment->getApiData(),
                 ], 422);
             }
 
             // Calculate payment amount (with prorating if specified)
             $amount = $tenant->monthly_rent;
-            $description = "Sewa Kamar Bulan " . date('F Y', strtotime($request->payment_month . '-01'));
-            
+            $description = 'Sewa Kamar Bulan '.date('F Y', strtotime($request->payment_month.'-01'));
+
             if ($request->has('prorate_from_date')) {
                 $prorateDate = \Carbon\Carbon::parse($request->prorate_from_date);
-                $monthStart = \Carbon\Carbon::parse($request->payment_month . '-01');
+                $monthStart = \Carbon\Carbon::parse($request->payment_month.'-01');
                 $monthEnd = $monthStart->copy()->endOfMonth();
-                
+
                 $daysInMonth = $monthStart->daysInMonth;
                 $remainingDays = $daysInMonth - $prorateDate->day + 1;
-                
+
                 $dailyRate = $tenant->monthly_rent / $daysInMonth;
                 $amount = round($dailyRate * $remainingDays, 2);
-                
+
                 $description .= " (Prorata {$remainingDays} hari)";
             }
 
@@ -948,7 +949,7 @@ class PaymentController extends Controller
                 'status' => Payment::STATUS_PENDING,
                 'description' => $description,
                 'generation_type' => 'manual',
-                'generated_by_user_id' => Auth::id()
+                'generated_by_user_id' => Auth::id(),
             ]);
 
             // Send notification if requested
@@ -957,13 +958,13 @@ class PaymentController extends Controller
                 \App\Models\Notification::create([
                     'user_id' => $tenant->user_id,
                     'title' => 'Tagihan Baru',
-                    'message' => "Tagihan pembayaran sewa untuk bulan " . date('F Y', strtotime($request->payment_month . '-01')) . " telah dibuat. Jumlah: Rp " . number_format($amount, 0, ',', '.'),
+                    'message' => 'Tagihan pembayaran sewa untuk bulan '.date('F Y', strtotime($request->payment_month.'-01')).' telah dibuat. Jumlah: Rp '.number_format($amount, 0, ',', '.'),
                     'type' => 'payment_generated',
                     'data' => json_encode([
                         'payment_id' => $payment->id,
                         'order_id' => $orderId,
-                        'amount' => $amount
-                    ])
+                        'amount' => $amount,
+                    ]),
                 ]);
 
                 // TODO: Add email notification here if needed
@@ -977,31 +978,31 @@ class PaymentController extends Controller
                 'amount' => $amount,
                 'payment_month' => $request->payment_month,
                 'generated_by' => Auth::id(),
-                'prorated' => $request->has('prorate_from_date')
+                'prorated' => $request->has('prorate_from_date'),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $payment->fresh()->getApiData(),
-                'message' => 'Payment generated successfully'
+                'message' => 'Payment generated successfully',
             ], 201);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tenant not found'
+                'message' => 'Tenant not found',
             ], 404);
         } catch (\Exception $e) {
             Log::error('Failed to generate individual payment', [
                 'tenant_id' => $request->tenant_id ?? null,
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to generate payment',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -1013,16 +1014,16 @@ class PaymentController extends Controller
     {
         try {
             $payment = Payment::findOrFail($id);
-            
+
             // Check if payment can be regenerated
-            if (!$payment->canRegenerate()) {
+            if (! $payment->canRegenerate()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Payment cannot be regenerated',
                     'data' => [
                         'current_status' => $payment->status,
-                        'is_expired' => $payment->isExpired()
-                    ]
+                        'is_expired' => $payment->isExpired(),
+                    ],
                 ], 422);
             }
 
@@ -1031,7 +1032,7 @@ class PaymentController extends Controller
             // Mark old payment as cancelled
             $payment->update([
                 'status' => Payment::STATUS_CANCELLED,
-                'notes' => 'Cancelled due to regeneration by admin on ' . now()->format('Y-m-d H:i:s')
+                'notes' => 'Cancelled due to regeneration by admin on '.now()->format('Y-m-d H:i:s'),
             ]);
 
             // Create new payment
@@ -1041,7 +1042,7 @@ class PaymentController extends Controller
                 'payment_month' => $payment->payment_month,
                 'amount' => $payment->amount,
                 'status' => Payment::STATUS_PENDING,
-                'notes' => 'Regenerated from expired payment #' . $payment->id
+                'notes' => 'Regenerated from expired payment #'.$payment->id,
             ]);
 
             DB::commit();
@@ -1049,35 +1050,35 @@ class PaymentController extends Controller
             Log::info('Payment regenerated successfully', [
                 'old_payment_id' => $payment->id,
                 'new_payment_id' => $newPayment->id,
-                'regenerated_by' => Auth::id()
+                'regenerated_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'old_payment' => $payment->fresh()->getApiData(),
-                    'new_payment' => $newPayment->fresh()->getApiData()
+                    'new_payment' => $newPayment->fresh()->getApiData(),
                 ],
-                'message' => 'Payment regenerated successfully'
+                'message' => 'Payment regenerated successfully',
             ], 201);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Payment not found'
+                'message' => 'Payment not found',
             ], 404);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to regenerate expired payment', [
                 'payment_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to regenerate payment',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -1089,26 +1090,26 @@ class PaymentController extends Controller
     {
         try {
             $perPage = min(50, max(5, (int) $request->get('per_page', 15)));
-            
+
             $query = Payment::with(['tenant.user', 'tenant.room'])
                 ->where(function ($q) {
                     $q->where('status', Payment::STATUS_EXPIRED)
-                      ->orWhere(function ($subQuery) {
-                          $subQuery->where('status', Payment::STATUS_PENDING)
-                                   ->where(function ($expiredQuery) {
-                                       // Snap token expired (24 hours)
-                                       $expiredQuery->where('snap_token_created_at', '<', now()->subHours(24))
-                                                   // OR payment is old (7 days)
-                                                   ->orWhere('created_at', '<', now()->subDays(7));
-                                   });
-                      });
+                        ->orWhere(function ($subQuery) {
+                            $subQuery->where('status', Payment::STATUS_PENDING)
+                                ->where(function ($expiredQuery) {
+                                    // Snap token expired (24 hours)
+                                    $expiredQuery->where('snap_token_created_at', '<', now()->subHours(24))
+                                                // OR payment is old (7 days)
+                                        ->orWhere('created_at', '<', now()->subDays(7));
+                                });
+                        });
                 });
 
             $expiredPayments = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
             $paymentsData = $expiredPayments->getCollection()->map(function ($payment) {
                 $data = $payment->getApiData();
-                
+
                 // Add tenant info with proper structure for frontend
                 if ($payment->tenant) {
                     $data['tenant'] = [
@@ -1132,7 +1133,7 @@ class PaymentController extends Controller
                         ] : null,
                     ];
                 }
-                
+
                 return $data;
             });
 
@@ -1147,19 +1148,19 @@ class PaymentController extends Controller
                     'from' => $expiredPayments->firstItem(),
                     'to' => $expiredPayments->lastItem(),
                 ],
-                'message' => 'Expired payments retrieved successfully'
+                'message' => 'Expired payments retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch expired payments', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve expired payments',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }

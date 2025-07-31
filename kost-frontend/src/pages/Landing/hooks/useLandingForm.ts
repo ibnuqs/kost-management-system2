@@ -6,14 +6,14 @@ interface FormErrors {
 }
 
 // ✅ FIX: Simplified validator function type
-type ValidatorFunction = (value: any) => string | null;
+type ValidatorFunction = (value: unknown) => string | null;
 
 // ✅ FIX: Simplified validators interface
 interface FormValidators {
   [key: string]: ValidatorFunction;
 }
 
-export const useLandingForm = <T extends Record<string, any>>(
+export const useLandingForm = <T extends Record<string, unknown>>(
   initialValues: T,
   validators: FormValidators = {}
 ) => {
@@ -29,15 +29,16 @@ export const useLandingForm = <T extends Record<string, any>>(
       acc[key] = validators[key];
       return acc;
     }, {} as FormValidators);
-  }, []); // Empty dependency - validators should be stable from parent
+  }, [validators]); // Include validators dependency
 
-  const setValue = useCallback((name: keyof T, value: any) => {
+  const setValue = useCallback((name: keyof T, value: unknown) => {
     setValues(prev => ({ ...prev, [name]: value }));
     
     // Clear error when user starts typing
     setErrors(prev => {
       if (prev[name as string]) {
-        const { [name as string]: removedError, ...rest } = prev;
+        const { [name as string]: _, ...rest } = prev;
+        void _; // Explicitly use the variable
         return rest;
       }
       return prev;
@@ -48,7 +49,7 @@ export const useLandingForm = <T extends Record<string, any>>(
     setTouched(prev => ({ ...prev, [name]: isTouched }));
   }, []);
 
-  const validateField = useCallback((name: keyof T, value: any): string | null => {
+  const validateField = useCallback((name: keyof T, value: unknown): string | null => {
     // ✅ FIX: Use memoized validators
     const validator = memoizedValidators[name as string];
     if (validator) {
@@ -117,7 +118,7 @@ export const useLandingForm = <T extends Record<string, any>>(
     try {
       await onSubmit(values);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Form submission error:', error);
       return false;
     } finally {

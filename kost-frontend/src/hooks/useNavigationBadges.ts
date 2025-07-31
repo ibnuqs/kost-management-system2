@@ -10,11 +10,6 @@ interface BadgeData {
   unread_notifications?: number;
 }
 
-interface NavigationBadgesResponse {
-  admin: BadgeData;
-  tenant: BadgeData;
-}
-
 // Mock API function - replace with real API call
 const fetchNavigationBadges = async (userRole: 'admin' | 'tenant'): Promise<BadgeData> => {
   // Simulate API delay

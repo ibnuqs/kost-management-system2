@@ -1,8 +1,8 @@
 // src/pages/Landing/components/sections/index.ts
-export { default as HeroSection } from './HeroSection';
-export { default as RoomGallerySection } from './RoomGallerySection';
+export { HeroSection } from './HeroSection';
+export { RoomGallerySection } from './RoomGallerySection';
 export { default as FeaturesSection } from './FeaturesSection';
-export { default as PricingSection } from './PricingSection';
-export { default as TestimonialsSection } from './TestimonialsSection';
-export { default as CTASection } from './CTASection';
-export { default as FooterSection } from './FooterSection';
+export { PricingSection } from './PricingSection';
+export { TestimonialsSection } from './TestimonialsSection';
+export { CTASection } from './CTASection';
+export { FooterSection } from './FooterSection';

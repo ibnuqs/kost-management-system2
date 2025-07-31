@@ -3,8 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { tenantQueryKeys } from '../config/apiConfig';
 import { tenantService } from '../services/tenantService';
-import { Notification, NotificationFilters } from '../types/notification';
-import { PaginatedResponse } from '../types/common';
+import { NotificationFilters } from '../types/notification';
 import { TENANT_CONSTANTS } from '../config/constants';
 
 interface UseNotificationsParams extends NotificationFilters {
@@ -114,28 +113,30 @@ export const useMarkNotificationAsRead = () => {
       const previousNotifications = queryClient.getQueryData(tenantQueryKeys.notifications());
       
       // Update notification status optimistically
-      queryClient.setQueryData(tenantQueryKeys.notifications(), (old: any) => {
-        if (!old) return old;
+      queryClient.setQueryData(tenantQueryKeys.notifications(), (old: unknown) => {
+        if (!old || typeof old !== 'object') return old;
+        
+        const oldData = old as { notifications?: { id: number; status: string }[] };
         
         return {
-          ...old,
-          notifications: old.notifications.map((notification: any) => 
+          ...oldData,
+          notifications: oldData.notifications?.map((notification) => 
             notification.id === id 
               ? { ...notification, status: 'read' }
               : notification
-          )
+          ) || []
         };
       });
       
       // Update unread count optimistically
-      queryClient.setQueryData(tenantQueryKeys.unreadCount(), (old: any) => {
+      queryClient.setQueryData(tenantQueryKeys.unreadCount(), (old: unknown) => {
         const currentCount = old || 0;
         return Math.max(0, currentCount - 1);
       });
       
       return { previousNotifications };
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       // Show success message
       toast.success('Notifikasi ditandai sebagai sudah dibaca');
       
@@ -147,7 +148,7 @@ export const useMarkNotificationAsRead = () => {
         queryKey: tenantQueryKeys.unreadCount(),
       });
     },
-    onError: (error: any, notificationId, context) => {
+    onError: (error: unknown, notificationId, context) => {
       // Rollback optimistic update
       if (context?.previousNotifications) {
         queryClient.setQueryData(tenantQueryKeys.notifications(), context.previousNotifications);
@@ -172,15 +173,17 @@ export const useMarkAllNotificationsAsRead = () => {
       const previousNotifications = queryClient.getQueryData(tenantQueryKeys.notifications());
       
       // Update all notifications status optimistically
-      queryClient.setQueryData(tenantQueryKeys.notifications(), (old: any) => {
-        if (!old) return old;
+      queryClient.setQueryData(tenantQueryKeys.notifications(), (old: unknown) => {
+        if (!old || typeof old !== 'object') return old;
+        
+        const oldData = old as { notifications?: { status: string }[] };
         
         return {
-          ...old,
-          notifications: old.notifications.map((notification: any) => ({
+          ...oldData,
+          notifications: oldData.notifications?.map((notification) => ({
             ...notification,
             status: 'read'
-          }))
+          })) || []
         };
       });
       
@@ -189,7 +192,7 @@ export const useMarkAllNotificationsAsRead = () => {
       
       return { previousNotifications };
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success('Semua notifikasi ditandai sebagai sudah dibaca');
       
       // Refresh data from server
@@ -200,7 +203,7 @@ export const useMarkAllNotificationsAsRead = () => {
         queryKey: tenantQueryKeys.unreadCount(),
       });
     },
-    onError: (error: any, variables, context) => {
+    onError: (error: unknown, variables, context) => {
       // Rollback optimistic update
       if (context?.previousNotifications) {
         queryClient.setQueryData(tenantQueryKeys.notifications(), context.previousNotifications);

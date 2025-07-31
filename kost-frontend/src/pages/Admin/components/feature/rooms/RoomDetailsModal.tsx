@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   X, Home, User, DollarSign, Calendar, MapPin, 
-  Edit, UserPlus, Tag, Archive, ArchiveRestore, CheckCircle, Clock 
+  Edit, UserPlus, Archive, ArchiveRestore, CheckCircle 
 } from 'lucide-react';
 import { StatusBadge } from '../../ui';
 import type { Room } from '../../../types/room';
@@ -24,35 +24,6 @@ const formatCurrency = (amount: string): string => {
   return `Rp ${numAmount.toLocaleString('id-ID')}`;
 };
 
-// Helper function to get status styling
-const getStatusStyling = (status: string) => {
-  switch (status) {
-    case 'available':
-      return {
-        bg: 'bg-green-100',
-        text: 'text-green-800',
-        border: 'border-green-200'
-      };
-    case 'occupied':
-      return {
-        bg: 'bg-blue-100',
-        text: 'text-blue-800',
-        border: 'border-blue-200'
-      };
-    case 'maintenance':
-      return {
-        bg: 'bg-orange-100',
-        text: 'text-orange-800',
-        border: 'border-orange-200'
-      };
-    default:
-      return {
-        bg: 'bg-gray-100',
-        text: 'text-gray-800',
-        border: 'border-gray-200'
-      };
-  }
-};
 
 export const RoomDetailsModal: React.FC<RoomDetailsModalProps> = ({
   isOpen,
@@ -64,8 +35,6 @@ export const RoomDetailsModal: React.FC<RoomDetailsModalProps> = ({
   onUnarchive,
 }) => {
   if (!isOpen || !room) return null;
-
-  const statusStyling = getStatusStyling(room.status);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

@@ -1,7 +1,6 @@
 // File: src/pages/Admin/components/ui/Chart/ChartContainer.tsx
 import React from 'react';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import { chartTheme } from '../../../utils/chartTheme';
 
 interface ChartContainerProps {
   title: string;

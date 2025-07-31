@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/Tenant.php (Updated dengan Helper Methods)
 
 namespace App\Models;
@@ -13,7 +14,9 @@ class Tenant extends Model
     use HasFactory;
 
     const STATUS_ACTIVE = 'active';
+
     const STATUS_MOVED_OUT = 'moved_out';
+
     const STATUS_SUSPENDED = 'suspended';
 
     protected $fillable = [
@@ -33,7 +36,6 @@ class Tenant extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
-
 
     // Relationships
     public function user(): BelongsTo

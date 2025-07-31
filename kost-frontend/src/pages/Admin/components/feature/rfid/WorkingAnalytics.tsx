@@ -1,28 +1,20 @@
 // File: src/pages/Admin/components/feature/rfid/WorkingAnalytics.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardContent } from '../../ui/Card';
-import { BarChart3, Activity, Clock, Shield, Filter, Search, Calendar } from 'lucide-react';
+import { BarChart3, Activity, Clock, Shield, Filter, Search, ChevronFirst, ChevronLeft, ChevronRight, ChevronLast } from 'lucide-react';
 import { formatTimeForDisplay } from '../../../../../utils/dateUtils';
-
-interface AccessLog {
-  id: number;
-  device_id: string;
-  rfid_uid: string;
-  access_granted: boolean;
-  reason: string;
-  accessed_at: string;
-  room_id?: number;
-  user?: {
-    name: string;
-    email: string;
-  };
-  room?: {
-    room_number: string;
-    room_name: string;
-  };
-}
+import { AccessLog } from '../../../types/accessLog';
+import { useRfidEvents } from '../../../../../hooks';
 
 export const WorkingAnalytics: React.FC = () => {
+  // Component initialization - debug logs removed for production
+  useEffect(() => {
+    // Component mounted and ready to receive MQTT data
+    return () => {
+      // Component unmounting - cleanup
+    };
+  }, []);
+  
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<AccessLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +24,50 @@ export const WorkingAnalytics: React.FC = () => {
     failedAccess: 0,
     todayAccess: 0
   });
+
+  // Add caching for faster subsequent loads
+  const [lastLoadTime, setLastLoadTime] = useState<number>(0);
+  const CACHE_DURATION = 30000; // 30 seconds cache
+
+  // Get MQTT real-time data
+  const { recentScans } = useRfidEvents();
+  
+  // Listen for manual door control events
+  useEffect(() => {
+    const handleManualDoorLog = (event: CustomEvent) => {
+      // Manual door log event received
+      
+      // Add the manual log to our access logs
+      const manualLog: AccessLog = {
+        id: event.detail.id,
+        rfid_uid: event.detail.uid,
+        device_id: event.detail.device_id,
+        access_granted: event.detail.access_granted,
+        reason: event.detail.reason,
+        accessed_at: event.detail.accessed_at,
+        tenant_name: event.detail.user_name,
+        room_number: event.detail.room_number,
+        user: event.detail.user,
+        room: event.detail.room_number ? {
+          id: 0,
+          room_number: event.detail.room_number,
+          room_name: `Room ${event.detail.room_number}`
+        } : undefined
+      };
+      
+      setAccessLogs(prev => {
+        const updated = [manualLog, ...prev];
+        // Updated logs with manual entry
+        return updated;
+      });
+    };
+    
+    window.addEventListener('manual-door-log', handleManualDoorLog as EventListener);
+    
+    return () => {
+      window.removeEventListener('manual-door-log', handleManualDoorLog as EventListener);
+    };
+  }, []);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -54,45 +90,113 @@ export const WorkingAnalytics: React.FC = () => {
   // Paginated data
   const [paginatedLogs, setPaginatedLogs] = useState<AccessLog[]>([]);
 
-  useEffect(() => {
-    loadAccessLogs();
-  }, []);
+  // Define loadAccessLogs first - optimized for speed
+  const loadAccessLogs = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
+    
+    // Skip loading if recently loaded (unless forced refresh)
+    if (!forceRefresh && now - lastLoadTime < CACHE_DURATION && accessLogs.length > 0) {
+      return;
+    }
 
-  // Apply filters whenever filters change or logs are updated
-  useEffect(() => {
-    applyFilters();
-  }, [accessLogs, filters]);
-
-  // Apply pagination whenever filtered logs or pagination settings change
-  useEffect(() => {
-    applyPagination();
-  }, [filteredLogs, pagination.currentPage, pagination.perPage]);
-
-  const loadAccessLogs = async () => {
     try {
       setLoading(true);
       
-      // Try to load from access logs service - get more data for client-side pagination
-      const { accessLogService } = await import('../../../services/accessLogService');
-      const response = await accessLogService.getLogs({ per_page: 500 }); // Get more data (backend max: 500)
+      // Convert MQTT real-time scans FIRST (instant, no API call needed)
+      // Processing MQTT scans data
       
-      console.log('📊 Access logs response:', response);
-      
-      if (response?.logs && Array.isArray(response.logs)) {
-        setAccessLogs(response.logs);
-      } else {
-        console.warn('No access logs data available');
-        setAccessLogs([]);
+      const mqttLogs: AccessLog[] = (recentScans || []).map(scan => {
+        const log = {
+          id: scan.id,
+          rfid_uid: scan.uid,
+          device_id: scan.device_id,
+          access_granted: scan.access_granted ?? true,
+          reason: scan.message || 'Real-time access',
+          accessed_at: new Date(scan.timestamp).toISOString(),
+          tenant_name: scan.user_name,
+          room_number: scan.room_number,
+          user: scan.user ? {
+            id: 0,
+            name: scan.user.name,
+            email: scan.user.email
+          } : undefined,
+          room: scan.room_number ? {
+            id: 0,
+            room_number: scan.room_number,
+            room_name: `Room ${scan.room_number}`
+          } : undefined
+        };
+        return log;
+      });
+
+      // Show MQTT data immediately if available
+      if (mqttLogs.length > 0) {
+        setAccessLogs(mqttLogs);
+        setLoading(false); // Hide spinner immediately
       }
-    } catch (error) {
-      console.error('Error loading access logs:', error);
-      setAccessLogs([]);
+
+      // Parallel backend loading with timeout
+      const backendPromise = Promise.race([
+        (async () => {
+          const { accessLogService } = await import('../../../services/accessLogService');
+          return await accessLogService.getLogs({ per_page: 100 }); // Balanced performance and data coverage
+        })(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000) // 5s timeout
+        )
+      ]) as Promise<any>;
+
+      try {
+        const response = await backendPromise;
+        let backendLogs: AccessLog[] = [];
+        if (response?.logs && Array.isArray(response.logs)) {
+          backendLogs = response.logs;
+        }
+
+        // Only combine if we got backend data
+        if (backendLogs.length > 0) {
+          const combinedLogs = [...mqttLogs, ...backendLogs];
+          const uniqueLogs = combinedLogs.filter((log, index, self) => 
+            index === self.findIndex(l => l.id === log.id)
+          );
+          uniqueLogs.sort((a, b) => new Date(b.accessed_at).getTime() - new Date(a.accessed_at).getTime());
+          setAccessLogs(uniqueLogs);
+        }
+      } catch {
+        // Backend timeout - continue with MQTT data only
+      }
+
+      setLastLoadTime(now);
+    } catch {
+      // Complete fallback: show MQTT data only
+      const mqttLogs: AccessLog[] = (recentScans || []).map(scan => ({
+        id: scan.id,
+        rfid_uid: scan.uid,
+        device_id: scan.device_id,  
+        access_granted: scan.access_granted ?? true,
+        reason: scan.message || 'Real-time access',
+        accessed_at: new Date(scan.timestamp).toISOString(),
+        tenant_name: scan.user_name,
+        room_number: scan.room_number,
+        user: scan.user ? {
+          id: 0,
+          name: scan.user.name,
+          email: scan.user.email
+        } : undefined,
+        room: scan.room_number ? {
+          id: 0,
+          room_number: scan.room_number,
+          room_name: `Room ${scan.room_number}`
+        } : undefined
+      }));
+      setAccessLogs(mqttLogs);
     } finally {
       setLoading(false);
     }
-  };
+  }, [recentScans, lastLoadTime, accessLogs.length]);
 
-  const applyFilters = () => {
+  // Define filter and pagination functions after loadAccessLogs
+  const applyFilters = useCallback(() => {
     let filtered = [...accessLogs];
 
     // Date range filter
@@ -106,26 +210,21 @@ export const WorkingAnalytics: React.FC = () => {
         switch (filters.dateRange) {
           case 'today':
             return logDate >= today;
-          case 'yesterday':
+          case 'yesterday': {
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             return logDate >= yesterday && logDate < today;
-          case '7days':
+          }
+          case '7days': {
             const week = new Date(today);
             week.setDate(week.getDate() - 7);
             return logDate >= week;
-          case '30days':
+          }
+          case '30days': {
             const month = new Date(today);
             month.setDate(month.getDate() - 30);
             return logDate >= month;
-          case 'custom':
-            if (filters.customStartDate && filters.customEndDate) {
-              const start = new Date(filters.customStartDate);
-              const end = new Date(filters.customEndDate);
-              end.setHours(23, 59, 59, 999); // End of day
-              return logDate >= start && logDate <= end;
-            }
-            return true;
+          }
           default:
             return true;
         }
@@ -143,52 +242,82 @@ export const WorkingAnalytics: React.FC = () => {
 
     // Room filter
     if (filters.roomId) {
-      filtered = filtered.filter(log => 
-        log.room_id === parseInt(filters.roomId)
-      );
+      filtered = filtered.filter(log => log.room_id?.toString() === filters.roomId);
     }
 
-    // Search filter (RFID UID, User name, Reason)
+    // Search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter(log => 
-        log.rfid_uid.toLowerCase().includes(searchLower) ||
-        log.user?.name.toLowerCase().includes(searchLower) ||
-        log.reason.toLowerCase().includes(searchLower)
+        log.tenant_name?.toLowerCase().includes(searchLower) ||
+        log.room_number?.toLowerCase().includes(searchLower) ||
+        log.uid?.toLowerCase().includes(searchLower)
       );
     }
 
     setFilteredLogs(filtered);
-
-    // Calculate stats based on filtered data
-    const total = filtered.length;
-    const successful = filtered.filter(log => log.access_granted).length;
-    const failed = total - successful;
-    const today = filtered.filter(log => {
-      const logDate = new Date(log.accessed_at);
-      const todayDate = new Date();
-      return logDate.toDateString() === todayDate.toDateString();
-    }).length;
     
-    setStats({
-      totalAccess: total,
-      successfulAccess: successful,
-      failedAccess: failed,
-      todayAccess: today
-    });
-  };
+    // Reset to first page when filters change
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  }, [accessLogs, filters]);
 
-  const applyPagination = () => {
+  const applyPagination = useCallback(() => {
+    // Optimize: Only calculate if there are logs to paginate
+    if (filteredLogs.length === 0) {
+      setPaginatedLogs([]);
+      setPagination(prev => ({ ...prev, totalPages: 1 }));
+      return;
+    }
+
     const startIndex = (pagination.currentPage - 1) * pagination.perPage;
     const endIndex = startIndex + pagination.perPage;
     const currentPageLogs = filteredLogs.slice(startIndex, endIndex);
     
     setPaginatedLogs(currentPageLogs);
     
-    // Update total pages
+    // Update total pages only if changed
     const totalPages = Math.ceil(filteredLogs.length / pagination.perPage);
-    setPagination(prev => ({ ...prev, totalPages }));
-  };
+    if (pagination.totalPages !== totalPages) {
+      setPagination(prev => ({ ...prev, totalPages }));
+    }
+  }, [filteredLogs, pagination.currentPage, pagination.perPage, pagination.totalPages]);
+
+  useEffect(() => {
+    loadAccessLogs();
+  }, [loadAccessLogs]);
+
+
+
+  // Apply filters whenever filters change or logs are updated
+  useEffect(() => {
+    applyFilters();
+  }, [accessLogs, filters, applyFilters]);
+
+  // Update stats whenever access logs change
+  useEffect(() => {
+    const totalAccess = accessLogs.length;
+    const successfulAccess = accessLogs.filter(log => {
+      return log.access_granted === true || log.access_granted === 'true' || log.access_granted === 1 || log.access_granted === '1';
+    }).length;
+    const failedAccess = totalAccess - successfulAccess;
+    
+    const today = new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
+    const todayAccess = accessLogs.filter(log => 
+      new Date(log.accessed_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }) === today
+    ).length;
+
+    setStats({
+      totalAccess,
+      successfulAccess,
+      failedAccess,
+      todayAccess
+    });
+  }, [accessLogs]);
+
+  // Apply pagination whenever filtered logs or pagination settings change
+  useEffect(() => {
+    applyPagination();
+  }, [filteredLogs, pagination.currentPage, pagination.perPage, applyPagination]);
 
   const resetFilters = () => {
     setFilters({
@@ -241,15 +370,37 @@ export const WorkingAnalytics: React.FC = () => {
     return { start, end };
   };
 
-  if (loading) {
+  if (loading && accessLogs.length === 0) {
     return (
       <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div>
+          <div className="h-7 bg-gray-200 rounded w-64 mb-2 animate-pulse"></div>
+          <div className="h-4 bg-gray-200 rounded w-80 animate-pulse"></div>
+        </div>
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-16 mb-2"></div>
+                  <div className="h-8 bg-gray-200 rounded w-12"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Quick Loading Message */}
         <Card>
           <CardContent>
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading access logs...</p>
+                <p className="text-gray-600 mb-2">Memuat data real-time...</p>
+                <p className="text-sm text-gray-500">Data MQTT dimuat instan • Data backend mungkin butuh waktu</p>
               </div>
             </div>
           </CardContent>
@@ -264,26 +415,13 @@ export const WorkingAnalytics: React.FC = () => {
       <div>
         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
           <BarChart3 className="w-6 h-6 text-purple-600" />
-          📊 Log Akses & Analytics
+          Log Akses & Analytics
         </h2>
-        <p className="text-sm text-gray-600">Historical access data and analytics</p>
+        <p className="text-sm text-gray-600">Data akses historis dan log MQTT real-time</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Akses</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalAccess}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Activity className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-4">
 
         <Card>
           <CardContent className="p-4">
@@ -313,19 +451,6 @@ export const WorkingAnalytics: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Hari Ini</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.todayAccess}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Clock className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters Section */}
@@ -334,14 +459,14 @@ export const WorkingAnalytics: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Filter className="w-5 h-5 text-orange-600" />
-              Filters & Search
+              Filter & Pencarian
             </h3>
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="px-4 py-2 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center gap-2"
             >
               <Filter className="w-4 h-4" />
-              {showFilters ? 'Hide Filters' : 'Show Filters'}
+{showFilters ? 'Sembunyikan Filter' : 'Tampilkan Filter'}
             </button>
           </div>
         </CardHeader>
@@ -351,49 +476,49 @@ export const WorkingAnalytics: React.FC = () => {
               {/* Date Range Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  📅 Date Range
+                  Rentang Tanggal
                 </label>
                 <select
                   value={filters.dateRange}
                   onChange={(e) => setFilters({...filters, dateRange: e.target.value})}
                   className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="all">All Time</option>
-                  <option value="today">Today</option>
-                  <option value="yesterday">Yesterday</option>
-                  <option value="7days">Last 7 Days</option>
-                  <option value="30days">Last 30 Days</option>
-                  <option value="custom">Custom Range</option>
+                  <option value="all">Semua Waktu</option>
+                  <option value="today">Hari Ini</option>
+                  <option value="yesterday">Kemarin</option>
+                  <option value="7days">7 Hari Terakhir</option>
+                  <option value="30days">30 Hari Terakhir</option>
+                  <option value="custom">Rentang Kustom</option>
                 </select>
               </div>
 
               {/* Status Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ✅ Status
+                  Status
                 </label>
                 <select
                   value={filters.status}
                   onChange={(e) => setFilters({...filters, status: e.target.value})}
                   className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="all">All Status</option>
-                  <option value="granted">Granted Only</option>
-                  <option value="denied">Denied Only</option>
+                  <option value="all">Semua Status</option>
+                  <option value="granted">Berhasil Saja</option>
+                  <option value="denied">Ditolak Saja</option>
                 </select>
               </div>
 
               {/* Room Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  🏠 Room
+                  Kamar
                 </label>
                 <select
                   value={filters.roomId}
                   onChange={(e) => setFilters({...filters, roomId: e.target.value})}
                   className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">All Rooms</option>
+                  <option value="">Semua Kamar</option>
                   {getUniqueRooms().map(room => (
                     <option key={room.id} value={room.id}>
                       Room {room.room_number} - {room.room_name}
@@ -405,7 +530,7 @@ export const WorkingAnalytics: React.FC = () => {
               {/* Search */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  🔍 Search
+                  Pencarian
                 </label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -413,7 +538,7 @@ export const WorkingAnalytics: React.FC = () => {
                     type="text"
                     value={filters.search}
                     onChange={(e) => setFilters({...filters, search: e.target.value})}
-                    placeholder="RFID UID, User, Reason..."
+                    placeholder="RFID UID, Pengguna, Alasan..."
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -425,7 +550,7 @@ export const WorkingAnalytics: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date
+                    Tanggal Mulai
                   </label>
                   <input
                     type="date"
@@ -436,7 +561,7 @@ export const WorkingAnalytics: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Date
+                    Tanggal Selesai
                   </label>
                   <input
                     type="date"
@@ -455,13 +580,13 @@ export const WorkingAnalytics: React.FC = () => {
                   onClick={resetFilters}
                   className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                 >
-                  🔄 Reset Filters
+Reset Filter
                 </button>
               </div>
               
               {/* Per Page Selector */}
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>Show</span>
+                <span>Tampilkan</span>
                 <select
                   value={pagination.perPage}
                   onChange={(e) => handlePerPageChange(Number(e.target.value))}
@@ -470,11 +595,8 @@ export const WorkingAnalytics: React.FC = () => {
                   <option value={10}>10</option>
                   <option value={25}>25</option>
                   <option value={50}>50</option>
-                  <option value={100}>100</option>
-                  <option value={200}>200</option>
-                  <option value={500}>500</option>
                 </select>
-                <span>per page</span>
+                <span>per halaman</span>
               </div>
             </div>
           </CardContent>
@@ -488,25 +610,25 @@ export const WorkingAnalytics: React.FC = () => {
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Activity className="w-5 h-5 text-blue-600" />
-                Access Logs
+                Log Akses
               </h3>
               <div className="text-sm text-gray-600 mt-1">
                 {(() => {
                   const { start, end } = getPaginationInfo();
                   return filteredLogs.length > 0 
-                    ? `Showing ${start}-${end} of ${filteredLogs.length} logs`
-                    : `${filteredLogs.length} logs found`;
+                    ? `Menampilkan ${start}-${end} dari ${filteredLogs.length} log`
+                    : `${filteredLogs.length} log ditemukan`;
                 })()}
                 {filteredLogs.length !== accessLogs.length && (
-                  <span className="text-orange-600 ml-1">(filtered from {accessLogs.length} total)</span>
+                  <span className="text-orange-600 ml-1">(difilter dari {accessLogs.length} total)</span>
                 )}
               </div>
             </div>
             <button
-              onClick={loadAccessLogs}
+              onClick={() => loadAccessLogs(true)}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              🔄 Refresh
+Segarkan
             </button>
           </div>
         </CardHeader>
@@ -516,8 +638,8 @@ export const WorkingAnalytics: React.FC = () => {
               <Activity className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <div>
                 {accessLogs.length === 0 
-                  ? 'No access logs available' 
-                  : 'No logs match the current filters'
+                  ? 'Tidak ada log akses tersedia' 
+                  : 'Tidak ada log yang sesuai dengan filter saat ini'
                 }
               </div>
               {accessLogs.length > 0 && filteredLogs.length === 0 && (
@@ -525,22 +647,23 @@ export const WorkingAnalytics: React.FC = () => {
                   onClick={resetFilters}
                   className="mt-4 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Reset Filters
+Reset Filter
                 </button>
               )}
             </div>
           ) : (
             <div className="overflow-x-auto">
+              
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Time</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Device</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Room</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Waktu</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Perangkat</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Kamar</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">RFID UID</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">User</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Pengguna</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Reason</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Alasan</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -564,7 +687,7 @@ export const WorkingAnalytics: React.FC = () => {
                             <div className="text-xs text-gray-500">{log.room.room_name}</div>
                           </div>
                         ) : (
-                          <span className="text-gray-400 italic">No room</span>
+                          <span className="text-gray-400 italic">Tidak ada kamar</span>
                         )}
                       </td>
                       <td className="py-3 px-4">
@@ -586,7 +709,7 @@ export const WorkingAnalytics: React.FC = () => {
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {log.access_granted ? '✅ Granted' : '❌ Denied'}
+{log.access_granted ? 'Berhasil' : 'Ditolak'}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -606,7 +729,7 @@ export const WorkingAnalytics: React.FC = () => {
               <div className="text-sm text-gray-600">
                 {(() => {
                   const { start, end } = getPaginationInfo();
-                  return `Showing ${start}-${end} of ${filteredLogs.length} logs`;
+                  return `Menampilkan ${start}-${end} dari ${filteredLogs.length} log`;
                 })()}
               </div>
               
@@ -615,16 +738,16 @@ export const WorkingAnalytics: React.FC = () => {
                 <button
                   onClick={() => handlePageChange(1)}
                   disabled={pagination.currentPage === 1}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  ⏮️ First
+                  <ChevronFirst className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handlePageChange(pagination.currentPage - 1)}
                   disabled={pagination.currentPage === 1}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  ⬅️ Prev
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
                 
                 {/* Page Numbers */}
@@ -657,16 +780,16 @@ export const WorkingAnalytics: React.FC = () => {
                 <button
                   onClick={() => handlePageChange(pagination.currentPage + 1)}
                   disabled={pagination.currentPage === pagination.totalPages}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  Next ➡️
+                  <ChevronRight className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handlePageChange(pagination.totalPages)}
                   disabled={pagination.currentPage === pagination.totalPages}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  Last ⏭️
+                  <ChevronLast className="w-4 h-4" />
                 </button>
               </div>
             </div>

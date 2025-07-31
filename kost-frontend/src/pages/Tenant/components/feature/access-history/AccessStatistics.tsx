@@ -2,8 +2,7 @@
 import React from 'react';
 import { TrendingUp, Key, Clock, AlertCircle, CheckCircle, BarChart3 } from 'lucide-react';
 import { AccessStats } from '../../../types/access';
-import { StatCard, Card } from '../../ui/Card';
-import { ProgressBar } from '../../ui/Status';
+import { Card } from '../../ui/Card';
 import { formatCompactNumber } from '../../../utils/formatters';
 import { mergeClasses, getResponsiveColumns } from '../../../utils/helpers';
 

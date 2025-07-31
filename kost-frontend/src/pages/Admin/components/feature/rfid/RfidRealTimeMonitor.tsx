@@ -1,5 +1,5 @@
 // File: src/pages/Admin/components/feature/rfid/RfidRealTimeMonitor.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardHeader, CardContent } from '../../ui/Card';
 import { StatusBadge } from '../../ui/Status/StatusBadge';
 import mqtt from 'mqtt';
@@ -50,40 +50,180 @@ export const RfidRealTimeMonitor: React.FC = () => {
   const maxReconnectAttempts = 5;
   const reconnectDelay = 3000;
 
-  // MQTT connection setup
-  useEffect(() => {
-    // Always try to connect (use fallback values if env vars not set)
-    connectToMqtt();
-    
-    return () => {
-      if (mqttClientRef.current) {
-        mqttClientRef.current.end();
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
+  // Handler functions
+  const handleRfidScan = (data: Record<string, unknown>) => {
+    const scanEvent: RfidScanEvent = {
+      uid: data.uid,
+      device_id: data.device_id || 'ESP32-RFID-01',
+      signal_strength: data.signal_strength,
+      timestamp: data.timestamp || Date.now(),
     };
+
+    setRecentScans(prev => [scanEvent, ...prev.slice(0, 9)]); // Keep last 10 scans
+    console.log('📱 RFID scan detected:', scanEvent);
+  };
+
+  const handleDeviceStatus = (data: Record<string, unknown>) => {
+    const deviceId = (data.device_id as string) || 'ESP32-RFID-01';
+    const status: DeviceStatus = {
+      device_id: deviceId,
+      wifi_connected: data.wifi_connected !== undefined ? data.wifi_connected as boolean : true,
+      mqtt_connected: data.mqtt_connected !== undefined ? data.mqtt_connected as boolean : true,
+      rfid_ready: data.rfid_ready !== undefined ? data.rfid_ready as boolean : true,
+      device_ip: (data.device_ip as string) || '192.168.1.100',
+      uptime: (data.uptime as string) || '0h 0m',
+      firmware_version: (data.firmware_version as string) || 'v1.0.0',
+      last_seen: new Date()
+    };
+
+    setDeviceStatuses(prev => new Map(prev.set(deviceId, status)));
+    console.log('📊 ESP32 status update:', status);
+  };
+
+  const handleRfidResponse = (data: Record<string, unknown>) => {
+    // Update the recent scan with response data
+    setRecentScans(prev => 
+      prev.map(scan => 
+        scan.uid === data.uid 
+          ? { ...scan, response: data }
+          : scan
+      )
+    );
+  };
+
+  const handleSystemStatus = (data: Record<string, unknown>) => {
+    console.log('🏠 System status update:', data);
+    // Handle system-wide status updates
+  };
+
+  // Define all callback functions before useEffect
+  const handleMqttMessage = useCallback((topic: string, message: string) => {
+    try {
+      const data = JSON.parse(message);
+      console.log(`📨 MQTT message on ${topic}:`, data);
+
+      if (topic === 'rfid/tags') {
+        handleRfidScan(data);
+      } else if (topic === 'rfid/status') {
+        handleDeviceStatus(data);
+      } else if (topic === 'rfid/command') {
+        handleRfidResponse(data);
+      } else if (topic === 'kost_system/status') {
+        handleSystemStatus(data);
+      }
+    } catch (e) {
+      console.error('Failed to parse MQTT message:', e);
+    }
   }, []);
 
-  const connectToMqtt = () => {
+  const scheduleReconnect = useCallback(() => {
+    setMqttStatus(prev => {
+      if (prev.reconnectAttempts >= maxReconnectAttempts) {
+        console.log('🛑 Max reconnection attempts reached');
+        return prev;
+      }
+
+      const newAttempts = prev.reconnectAttempts + 1;
+      
+      reconnectTimeoutRef.current = setTimeout(() => {
+        console.log(`🔄 Attempting to reconnect (${newAttempts}/${maxReconnectAttempts})`);
+        connectToMqtt();
+      }, reconnectDelay);
+
+      return { 
+        ...prev, 
+        reconnectAttempts: newAttempts 
+      };
+    });
+  }, []);
+
+  const connectToMqtt = useCallback(() => {
     if (mqttStatus.connecting || mqttStatus.connected) return;
+    
+    // Check if MQTT should be disabled due to previous failures
+    if (mqttStatus.reconnectAttempts >= maxReconnectAttempts) {
+      console.log('🔧 MQTT disabled - max reconnection attempts reached');
+      setMqttStatus(prev => ({ 
+        ...prev, 
+        connecting: false,
+        error: 'MQTT disabled - check credentials and restart app to retry' 
+      }));
+      return;
+    }
     
     setMqttStatus(prev => ({ ...prev, connecting: true, error: null }));
 
     try {
-      // Use environment variables for MQTT connection (adjust for WebSocket over SSL)
-      const host = import.meta.env.VITE_HIVEMQ_HOST || '16d97e84c4364ffa9d0e5a0f0fa09165.s1.eu.hivemq.cloud';
+      // Check if MQTT credentials are properly configured
+      const host = import.meta.env.VITE_HIVEMQ_HOST;
       const port = import.meta.env.VITE_HIVEMQ_PORT || '8884';
+      const username = import.meta.env.VITE_HIVEMQ_USERNAME;
+      let password = import.meta.env.VITE_HIVEMQ_PASSWORD;
+      
+      // Handle different MQTT brokers
+      if (host.includes('broker.emqx.io')) {
+        console.log('🔧 Using public EMQX broker (no auth)');
+        // Public broker - no credentials needed
+      } else {
+        // Ensure we have the complete password for HiveMQ
+        if (username === 'hivemq.webclient.1745310839638') {
+          password = 'UXNM#Agehw3B8!4;>6tz';
+          console.log('🔧 Using complete HiveMQ password for RealTime Monitor');
+        }
+        
+        // Remove quotes if they exist (Vite might include them)
+        if (password && password.startsWith('"') && password.endsWith('"')) {
+          password = password.slice(1, -1);
+        }
+        
+        // Also handle single quotes
+        if (password && password.startsWith("'") && password.endsWith("'")) {
+          password = password.slice(1, -1);
+        }
+      }
+
+      // Skip connection if credentials are not configured (except for public brokers)
+      if (!host || 
+          host === 'your_hivemq_host_here') {
+        console.warn('🔧 MQTT host not properly configured - skipping connection');
+        setMqttStatus(prev => ({ 
+          ...prev, 
+          connecting: false,
+          error: 'MQTT host not configured in .env file' 
+        }));
+        return;
+      }
+      
+      // For private brokers, check credentials
+      if (!host.includes('broker.emqx.io') && (!username || !password || 
+          username === 'your_mqtt_username_here' || 
+          password === 'your_mqtt_password_here')) {
+        console.warn('🔧 MQTT credentials not properly configured for private broker');
+        setMqttStatus(prev => ({ 
+          ...prev, 
+          connecting: false,
+          error: 'MQTT credentials not configured for private broker' 
+        }));
+        return;
+      }
+
       const brokerUrl = `wss://${host}:${port}/mqtt`;
       
       const options: mqtt.IClientOptions = {
-        clientId: `kost_frontend_${Math.random().toString(16).substr(2, 8)}`,
-        username: import.meta.env.VITE_HIVEMQ_USERNAME || 'hivemq.webclient.1745310839638',
-        password: import.meta.env.VITE_HIVEMQ_PASSWORD || 'UXNM#Agehw3B8!4;>6tz',
-        keepalive: 60,
+        clientId: `kost_frontend_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        keepalive: 30,
+        connectTimeout: 10000,
         reconnectPeriod: 0, // Disable auto-reconnect, we'll handle it manually
         clean: true,
+        protocol: 'wss',
+        protocolVersion: 4,
       };
+      
+      // Add credentials only for private brokers
+      if (!host.includes('broker.emqx.io')) {
+        options.username = username;
+        options.password = password;
+      }
 
       const client = mqtt.connect(brokerUrl, options);
       mqttClientRef.current = client;
@@ -122,6 +262,20 @@ export const RfidRealTimeMonitor: React.FC = () => {
 
       client.on('error', (error) => {
         console.error('❌ MQTT connection error:', error);
+        
+        // Check if this is an authorization error
+        if (error.message.includes('Not authorized') || error.message.includes('Connection refused')) {
+          console.error('🔒 MQTT Authorization failed - credentials may be invalid or expired');
+          setMqttStatus(prev => ({ 
+            ...prev, 
+            connected: false, 
+            connecting: false,
+            error: 'Authorization failed - check MQTT credentials',
+            reconnectAttempts: maxReconnectAttempts // Stop further attempts
+          }));
+          return; // Don't schedule reconnect for auth failures
+        }
+        
         setMqttStatus(prev => ({ 
           ...prev, 
           connected: false, 
@@ -158,102 +312,36 @@ export const RfidRealTimeMonitor: React.FC = () => {
       }));
       scheduleReconnect();
     }
-  };
+  }, [handleMqttMessage]);
 
-  const scheduleReconnect = () => {
-    if (mqttStatus.reconnectAttempts >= maxReconnectAttempts) {
-      console.log('🛑 Max reconnection attempts reached');
+  // MQTT connection setup
+  useEffect(() => {
+    // Check if MQTT is explicitly disabled
+    if (import.meta.env.VITE_MQTT_ENABLED === 'false') {
+      console.log('🔧 MQTT explicitly disabled - skipping connection');
+      setMqttStatus({
+        connected: false,
+        connecting: false,
+        error: 'MQTT disabled in configuration',
+        reconnectAttempts: maxReconnectAttempts
+      });
       return;
     }
 
-    setMqttStatus(prev => ({ 
-      ...prev, 
-      reconnectAttempts: prev.reconnectAttempts + 1 
-    }));
-
-    reconnectTimeoutRef.current = setTimeout(() => {
-      console.log(`🔄 Attempting to reconnect (${mqttStatus.reconnectAttempts + 1}/${maxReconnectAttempts})`);
-      connectToMqtt();
-    }, reconnectDelay);
-  };
-
-  const handleMqttMessage = (topic: string, message: string) => {
-    try {
-      const data = JSON.parse(message);
-      
-      switch (topic) {
-        case 'rfid/tags':
-          handleRfidScan(data);
-          break;
-        case 'rfid/status':
-          handleDeviceStatus(data);
-          break;
-        case 'rfid/command':
-          handleRfidResponse(data);
-          break;
-        case 'kost_system/status':
-          handleSystemStatus(data);
-          break;
-        default:
-          console.log(`📨 Message from ${topic}:`, data);
+    // Try to connect if enabled
+    connectToMqtt();
+    
+    return () => {
+      if (mqttClientRef.current) {
+        mqttClientRef.current.end();
       }
-    } catch (error) {
-      console.error(`❌ Failed to parse message from ${topic}:`, error);
-    }
-  };
-
-  const handleRfidScan = (data: any) => {
-    const scanEvent: RfidScanEvent = {
-      uid: data.uid,
-      device_id: data.device_id || 'ESP32-RFID-01',
-      signal_strength: data.signal_strength,
-      timestamp: data.timestamp || Date.now(),
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
     };
+  }, []); // Empty dependency array to run only once
 
-    setRecentScans(prev => [scanEvent, ...prev.slice(0, 9)]); // Keep last 10 scans
-    console.log('📱 RFID scan detected:', scanEvent);
-  };
 
-  const handleRfidResponse = (data: any) => {
-    // Update the recent scan with response data
-    setRecentScans(prev => 
-      prev.map(scan => 
-        scan.uid === data.uid && !scan.response
-          ? {
-              ...scan,
-              response: {
-                status: data.status,
-                user: data.user,
-                message: data.message,
-                access_granted: data.access_granted
-              }
-            }
-          : scan
-      )
-    );
-    console.log('📤 RFID response received:', data);
-  };
-
-  const handleDeviceStatus = (data: any) => {
-    // Handle ESP32 status format based on actual ESP32 capabilities
-    const status: DeviceStatus = {
-      device_id: data.device_id || 'ESP32-RFID-01',
-      wifi_connected: data.wifi_connected !== undefined ? data.wifi_connected : true,
-      mqtt_connected: data.mqtt_connected !== undefined ? data.mqtt_connected : true,
-      rfid_ready: data.rfid_ready !== undefined ? data.rfid_ready : true,
-      device_ip: data.device_ip || '192.168.1.100',
-      uptime: data.uptime || '0h 0m',  // ESP32 sends as string
-      firmware_version: data.firmware_version || 'v1.0.0',
-      last_seen: new Date()
-    };
-
-    setDeviceStatuses(prev => new Map(prev.set(status.device_id, status)));
-    console.log('📊 ESP32 status update:', status);
-  };
-
-  const handleSystemStatus = (data: any) => {
-    console.log('🏠 System status:', data);
-  };
 
   // formatUptime removed - ESP32 sends uptime as string directly
 
@@ -275,25 +363,40 @@ export const RfidRealTimeMonitor: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <span className="text-gray-500">Status:</span>
-              <div className="font-medium">
-                {mqttStatus.connecting ? 'Connecting...' : 
-                 mqttStatus.connected ? 'Connected' : 'Disconnected'}
+          {mqttStatus.reconnectAttempts >= maxReconnectAttempts && mqttStatus.error?.includes('Authorization failed') ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="text-yellow-600">⚠️</div>
+                <div className="font-medium text-yellow-800">MQTT Disabled</div>
+              </div>
+              <div className="text-sm text-yellow-700 mb-3">
+                Real-time RFID monitoring is disabled due to invalid MQTT credentials.
+              </div>
+              <div className="text-xs text-yellow-600">
+                <strong>To fix:</strong> Update your HiveMQ credentials in .env file and restart the application.
               </div>
             </div>
-            <div>
-              <span className="text-gray-500">Reconnect Attempts:</span>
-              <div className="font-medium">{mqttStatus.reconnectAttempts}</div>
-            </div>
-            <div className="md:col-span-2">
-              <span className="text-gray-500">Error:</span>
-              <div className="font-medium text-red-600">
-                {mqttStatus.error || 'None'}
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-gray-500">Status:</span>
+                <div className="font-medium">
+                  {mqttStatus.connecting ? 'Connecting...' : 
+                   mqttStatus.connected ? 'Connected' : 'Disconnected'}
+                </div>
+              </div>
+              <div>
+                <span className="text-gray-500">Reconnect Attempts:</span>
+                <div className="font-medium">{mqttStatus.reconnectAttempts}</div>
+              </div>
+              <div className="md:col-span-2">
+                <span className="text-gray-500">Error:</span>
+                <div className="font-medium text-red-600">
+                  {mqttStatus.error || 'None'}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -373,7 +476,7 @@ export const RfidRealTimeMonitor: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {recentScans.map((scan, index) => (
+              {recentScans.map((scan) => (
                 <div key={`${scan.uid}-${scan.timestamp}`} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">

@@ -1,6 +1,5 @@
 // src/utils/errorHandler.ts - Centralized Error Handling
 import { toast } from 'react-hot-toast';
-import { ApiError } from '../types/api';
 
 export class AppError extends Error {
   public readonly code: string;
@@ -106,7 +105,7 @@ export class ErrorHandler {
     return false;
   }
 
-  public handleError(error: any, context?: string): void {
+  public handleError(error: unknown, context?: string): void {
     const appError = this.parseError(error);
     
     // Log error for development
@@ -131,7 +130,7 @@ export class ErrorHandler {
     }
   }
 
-  private parseError(error: any): AppError {
+  private parseError(error: unknown): AppError {
     // Already an AppError
     if (error instanceof AppError) {
       return error;
@@ -250,7 +249,7 @@ export class ErrorHandler {
         userAgent: navigator.userAgent,
         url: window.location.href,
       });
-    } catch (reportingError) {
+    } catch {
       // Silently fail error reporting
     }
   }
@@ -264,21 +263,21 @@ export class ErrorHandler {
 // Convenience functions
 export const errorHandler = ErrorHandler.getInstance();
 
-export const handleError = (error: any, context?: string): void => {
+export const handleError = (error: unknown, context?: string): void => {
   errorHandler.handleError(error, context);
 };
 
 export const createErrorHandler = (context: string) => {
-  return (error: any) => handleError(error, context);
+  return (error: unknown) => handleError(error, context);
 };
 
 // React hook for error handling
 export const useErrorHandler = (context?: string) => {
-  return (error: any) => handleError(error, context);
+  return (error: unknown) => handleError(error, context);
 };
 
 // Async function wrapper with error handling
-export const withErrorHandling = <T extends any[], R>(
+export const withErrorHandling = <T extends unknown[], R>(
   fn: (...args: T) => Promise<R>,
   context?: string
 ) => {

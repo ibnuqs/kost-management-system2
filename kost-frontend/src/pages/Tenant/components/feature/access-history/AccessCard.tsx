@@ -1,7 +1,7 @@
 // File: src/pages/Tenant/components/feature/access-history/AccessCard.tsx
 import React from 'react';
 import { Key, MapPin, Clock, AlertCircle, CheckCircle, Smartphone, CreditCard } from 'lucide-react';
-import { AccessLog, getAccessStatusColor, getAccessMethodLabel } from '../../../types/access';
+import { AccessLog, getAccessMethodLabel } from '../../../types/access';
 import { Card } from '../../ui/Card';
 import { StatusBadge } from '../../ui/Status';
 import { formatDateTime, formatTime } from '../../../utils/formatters';

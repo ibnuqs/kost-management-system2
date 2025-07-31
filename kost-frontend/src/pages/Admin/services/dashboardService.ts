@@ -1,6 +1,90 @@
 // File: src/pages/Admin/services/dashboardService.ts
 import api from '../../../utils/api';
 import type { DashboardStats, ActivityItem, RevenueData } from '../types';
+import type { IoTDevice, DeviceStats } from '../types/iot';
+
+// API Response interfaces
+interface DashboardApiResponse {
+  success: boolean;
+  data: {
+    rooms?: {
+      total?: number;
+      occupied?: number;
+      available?: number;
+      maintenance?: number;
+      occupancy_rate?: number;
+    };
+    finance?: {
+      monthly_revenue?: number;
+      yearly_revenue?: number;
+      pending_amount?: number;
+      overdue_amount?: number;
+      collection_rate?: number;
+      revenue_growth?: number;
+    };
+    tenants?: {
+      total_active?: number;
+      total_users?: number;
+      new_this_month?: number;
+      moved_out_this_month?: number;
+    };
+    payments?: {
+      pending_count?: number;
+      overdue_count?: number;
+      paid_this_month?: number;
+      total_this_month?: number;
+    };
+    rfid?: {
+      total_cards?: number;
+      active_cards?: number;
+      assigned_cards?: number;
+      unassigned_cards?: number;
+    };
+    access?: {
+      total_today?: number;
+      total_this_week?: number;
+      unique_users_today?: number;
+      peak_hour?: string;
+    };
+    devices?: {
+      total?: number;
+      online?: number;
+    };
+    iot?: {
+      total_devices?: number;
+      online_devices?: number;
+    };
+  };
+  message?: string;
+}
+
+interface DevicesApiResponse {
+  success: boolean;
+  data: IoTDevice[];
+  message?: string;
+}
+
+
+interface RevenueAnalyticsResponse {
+  success: boolean;
+  data: unknown[] | {
+    revenue_analytics?: unknown[];
+    analytics?: unknown[];
+  };
+  message?: string;
+}
+
+interface RevenueDataItem {
+  month?: string;
+  period?: string;
+  year?: number;
+  revenue?: number | string;
+  total_revenue?: number | string;
+  payments?: number | string;
+  payment_count?: number | string;
+  avg_payment?: number | string;
+  average_payment?: number | string;
+}
 
 export const dashboardService = {
   async getDashboardData(): Promise<{
@@ -13,36 +97,40 @@ export const dashboardService = {
         api.get('/admin/dashboard/activities')
       ]);
       
+      const statsResponse = statsRes.data as DashboardApiResponse;
+      const activitiesResponse = activitiesRes.data as { success: boolean; data: ActivityItem[]; message?: string };
+      
       // Get device data separately with fresh variable name
-      let deviceApiResponse = null;
+      let deviceApiResponse: DevicesApiResponse | null = null;
       try {
-        deviceApiResponse = await api.get('/admin/iot-devices');
+        const response = await api.get('/admin/iot-devices');
+        deviceApiResponse = response.data as DevicesApiResponse;
         console.log('🔥 FRESH API Response:', deviceApiResponse);
         console.log('🔥 Response Data:', deviceApiResponse?.data);
-      } catch (error) {
+      } catch (error: unknown) {
         console.log('Failed to fetch device data:', error);
-        deviceApiResponse = { data: { success: false } };
+        deviceApiResponse = { data: [], success: false };
       }
 
-      if (!statsRes.data.success) {
-        throw new Error(statsRes.data.message || 'Failed to load dashboard stats');
+      if (!statsResponse.success) {
+        throw new Error(statsResponse.message || 'Failed to load dashboard stats');
       }
 
       // Map backend nested structure to frontend flat structure
-      const backendData = statsRes.data.data;
+      const backendData = statsResponse.data;
       
       // Calculate device stats from fresh API response
-      let deviceStats = { total: 0, online: 0, offline: 0, door_locks: 0, card_scanners: 0 };
+      let deviceStats: DeviceStats = { total: 0, online: 0, offline: 0, door_locks: 0, card_scanners: 0 };
       
-      if (deviceApiResponse?.data?.success && deviceApiResponse.data.data) {
-        const devices = deviceApiResponse.data.data;
+      if (deviceApiResponse?.success && deviceApiResponse.data) {
+        const devices = deviceApiResponse.data;
         console.log('🔥 Devices array:', devices);
         deviceStats = {
           total: devices.length,
-          online: devices.filter((d: any) => d.status === 'online').length,
-          offline: devices.filter((d: any) => d.status === 'offline').length,
-          door_locks: devices.filter((d: any) => d.device_type === 'door_lock').length,
-          card_scanners: devices.filter((d: any) => d.device_type === 'card_scanner').length
+          online: devices.filter((device) => device.status === 'online').length,
+          offline: devices.filter((device) => device.status === 'offline').length,
+          door_locks: devices.filter((device) => device.device_type === 'door_lock').length,
+          card_scanners: devices.filter((device) => device.device_type === 'card_scanner').length
         };
       }
       
@@ -95,16 +183,16 @@ export const dashboardService = {
         // Device stats (real data from IoT endpoint, consistent with IoT management page)
         online_devices: deviceStats?.online || backendData.devices?.online || backendData.iot?.online_devices || 0,
         total_devices: deviceStats?.total || backendData.devices?.total || backendData.iot?.total_devices || 0,
-        device_uptime_percentage: (deviceStats?.total || backendData.devices?.total || backendData.iot?.total_devices || 0) > 0
+        device_uptime_percentage: (deviceStats?.total || backendData.devices?.total || backendData.iot?.total_devices || 0)
           ? Math.round(((deviceStats?.online || backendData.devices?.online || backendData.iot?.online_devices || 0) / (deviceStats?.total || backendData.devices?.total || backendData.iot?.total_devices || 1)) * 100)
           : 0
       };
 
       return {
         stats,
-        activities: activitiesRes.data.success ? activitiesRes.data.data || [] : []
+        activities: activitiesResponse.success ? activitiesResponse.data || [] : []
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Dashboard service error:', error);
       throw error;
     }
@@ -115,13 +203,15 @@ export const dashboardService = {
       const response = await api.get('/admin/dashboard/analytics', {
         params: { period }
       });
+      
+      const apiResponse = response.data as RevenueAnalyticsResponse;
 
-      if (!response.data.success) {
+      if (!apiResponse.success) {
         console.warn('No revenue data available from API');
         return []; // Return empty array instead of throwing error
       }
 
-      const rawData = response.data.data || [];
+      const rawData = apiResponse.data || [];
       
       // Handle both nested and flat response structures
       let processedData = rawData;
@@ -138,20 +228,23 @@ export const dashboardService = {
       }
       
       // Validate and process data safely
-      return processedData.map((item: any) => ({
-        month: item.month || item.period || item.year?.toString() || 'Unknown',
-        year: item.year?.toString() || new Date().getFullYear().toString(),
-        revenue: typeof item.revenue === 'number' ? item.revenue : 
-                typeof item.total_revenue === 'number' ? item.total_revenue :
-                parseFloat(item.revenue || item.total_revenue) || 0,
-        payments: typeof item.payments === 'number' ? item.payments : 
-                 typeof item.payment_count === 'number' ? item.payment_count :
-                 parseInt(item.payments || item.payment_count) || 0,
-        avg_payment: typeof item.avg_payment === 'number' ? item.avg_payment : 
-                    typeof item.average_payment === 'number' ? item.average_payment :
-                    parseFloat(item.avg_payment || item.average_payment) || 0,
-      })).filter(item => item.revenue >= 0); // Filter out invalid entries
-    } catch (error) {
+      return processedData.map((item: unknown): RevenueData => {
+        const revenueItem = item as RevenueDataItem;
+        return {
+          month: revenueItem.month || revenueItem.period || revenueItem.year?.toString() || 'Unknown',
+          year: revenueItem.year?.toString() || new Date().getFullYear().toString(),
+          revenue: typeof revenueItem.revenue === 'number' ? revenueItem.revenue : 
+                  typeof revenueItem.total_revenue === 'number' ? revenueItem.total_revenue :
+                  parseFloat(String(revenueItem.revenue || revenueItem.total_revenue || 0)) || 0,
+          payments: typeof revenueItem.payments === 'number' ? revenueItem.payments : 
+                   typeof revenueItem.payment_count === 'number' ? revenueItem.payment_count :
+                   parseInt(String(revenueItem.payments || revenueItem.payment_count || 0), 10) || 0,
+          avg_payment: typeof revenueItem.avg_payment === 'number' ? revenueItem.avg_payment : 
+                      typeof revenueItem.average_payment === 'number' ? revenueItem.average_payment :
+                      parseFloat(String(revenueItem.avg_payment || revenueItem.average_payment || 0)) || 0,
+        };
+      }).filter(item => item.revenue >= 0); // Filter out invalid entries
+    } catch (error: unknown) {
       console.error('Revenue data service error:', error);
       // Return empty array instead of throwing error to prevent dashboard crashes
       return [];
@@ -165,22 +258,25 @@ export const dashboardService = {
       const response = await api.get('/admin/dashboard/activities', {
         params: { per_page: perPage }
       });
+      
+      const apiResponse = response.data as { success: boolean; data: ActivityItem[]; message?: string };
 
-      if (!response.data.success) {
+      if (!apiResponse.success) {
         console.warn('Activities data not available');
         return [];
       }
 
-      const activities = response.data.data || [];
+      const activities = apiResponse.data || [];
       
       // Validate activity data structure
-      return activities.filter((activity: any) => 
-        activity && 
-        typeof activity === 'object' && 
-        activity.id &&
-        activity.title
-      );
-    } catch (error) {
+      return activities.filter((activity: unknown): activity is ActivityItem => {
+        const item = activity as Partial<ActivityItem>;
+        return !!(item && 
+          typeof activity === 'object' && 
+          item.id &&
+          item.title);
+      });
+    } catch (error: unknown) {
       console.error('Activities service error:', error);
       // Return empty array instead of throwing
       return [];
@@ -191,40 +287,42 @@ export const dashboardService = {
     try {
       // Just refresh the data without throwing errors
       await this.getDashboardData();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Dashboard refresh error:', error);
       // Don't throw error to prevent UI crashes
     }
   },
 
-  async getAccessHistoryData(): Promise<any[]> {
+  async getAccessHistoryData(): Promise<Record<string, unknown>[]> {
     try {
       const response = await api.get('/admin/dashboard/access-history');
+      const apiResponse = response.data as { success: boolean; data: Record<string, unknown>[]; message?: string };
       
-      if (!response.data.success) {
+      if (!apiResponse.success) {
         console.warn('Access history data not available');
         return []; // Return empty array instead of fake data
       }
 
-      return response.data.data || [];
-    } catch (error) {
+      return apiResponse.data || [];
+    } catch (error: unknown) {
       console.error('Access history service error:', error);
       // Return empty array instead of fake data
       return [];
     }
   },
 
-  async getPaymentTrendsData(): Promise<any[]> {
+  async getPaymentTrendsData(): Promise<Record<string, unknown>[]> {
     try {
       const response = await api.get('/admin/dashboard/payment-trends');
+      const apiResponse = response.data as { success: boolean; data: Record<string, unknown>[]; message?: string };
       
-      if (!response.data.success) {
+      if (!apiResponse.success) {
         console.warn('Payment trends data not available');
         return []; // Return empty array instead of fake data
       }
 
-      return response.data.data || [];
-    } catch (error) {
+      return apiResponse.data || [];
+    } catch (error: unknown) {
       console.error('Payment trends service error:', error);
       // Return empty array instead of fake data
       return [];

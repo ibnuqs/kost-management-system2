@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 interface PaymentSuccessPageProps {
-  paymentResult: any;
+  paymentResult: { status_code: string; transaction_status: string; order_id: string; gross_amount?: string };
   paymentData: {
     order_id: string;
     amount: number;

@@ -3,17 +3,19 @@ import React, { memo } from 'react';
 import { Bell, ChevronRight, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
 import { formatTimeAgo } from '../../utils/formatters';
-import { getNotificationTypeLabel, getNotificationTypeIcon } from '../../types/notification';
+import { getNotificationTypeLabel } from '../../types/notification';
 import { Notification } from '../../types/notification';
-import { tenantService } from '../../services/tenantService';
 
 interface NotificationsListProps {
   limit?: number;
   className?: string;
 }
 
-const NotificationsList: React.FC<NotificationsListProps> = memo(({ limit = 5, className = '' }) => {
-  const { notifications, isLoading, isError } = useNotifications({ 
+const NotificationsList: React.FC<NotificationsListProps> = memo(({
+  limit = 5,
+  className = ''
+}) => {
+  const { notifications, isLoading } = useNotifications({ 
     enabled: true,
     sort_by: 'created_at',
     sort_order: 'desc'
@@ -33,7 +35,7 @@ const NotificationsList: React.FC<NotificationsListProps> = memo(({ limit = 5, c
       }
 
       return formatTimeAgo(dateValue);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error formatting notification date:', error, 'Notification:', notification);
       return 'Waktu tidak diketahui';
     }

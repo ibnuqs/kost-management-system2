@@ -40,7 +40,7 @@ class CleanupOldExpiredPayments extends Command
 
         // Find expired payments older than specified days
         $cutoffDate = now()->subDays($days);
-        
+
         $oldExpiredPayments = Payment::where('status', 'expired')
             ->where('expired_at', '<', $cutoffDate)
             ->orderBy('expired_at', 'asc');
@@ -49,6 +49,7 @@ class CleanupOldExpiredPayments extends Command
 
         if ($count === 0) {
             $this->info('✅ No old expired payments found to cleanup.');
+
             return self::SUCCESS;
         }
 
@@ -59,30 +60,31 @@ class CleanupOldExpiredPayments extends Command
         foreach ($examples as $payment) {
             $amount = (float) $payment->amount;
             $expiredDaysAgo = Carbon::parse($payment->expired_at)->diffInDays(now());
-            
-            $this->line("  📋 Payment #{$payment->id} - Rp " . number_format($amount, 0, ',', '.') . 
+
+            $this->line("  📋 Payment #{$payment->id} - Rp ".number_format($amount, 0, ',', '.').
                        " (Expired {$expiredDaysAgo} days ago)");
         }
 
         if ($count > 5) {
-            $this->line("  ... and " . ($count - 5) . " more payments");
+            $this->line('  ... and '.($count - 5).' more payments');
         }
 
         // Confirmation
-        if (!$isDryRun && !$isForced) {
-            if (!$this->confirm("Are you sure you want to delete {$count} old expired payments?")) {
+        if (! $isDryRun && ! $isForced) {
+            if (! $this->confirm("Are you sure you want to delete {$count} old expired payments?")) {
                 $this->info('❌ Cleanup cancelled.');
+
                 return self::SUCCESS;
             }
         }
 
         if ($isDryRun) {
-            $this->warn("🔄 DRY RUN MODE: No payments will be deleted");
+            $this->warn('🔄 DRY RUN MODE: No payments will be deleted');
             $this->info("Would delete {$count} expired payments older than {$days} days");
-            
+
             // Show statistics
             $this->showCleanupStatistics($oldExpiredPayments->get());
-            
+
             return self::SUCCESS;
         }
 
@@ -95,7 +97,7 @@ class CleanupOldExpiredPayments extends Command
 
             // Get payments to delete for logging
             $paymentsToDelete = $oldExpiredPayments->get();
-            
+
             // Log statistics before deletion
             $this->logCleanupStatistics($paymentsToDelete);
 
@@ -121,7 +123,7 @@ class CleanupOldExpiredPayments extends Command
                     $errors++;
                     \Illuminate\Support\Facades\Log::error('Failed to delete batch of expired payments', [
                         'batch' => $i + 1,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ]);
                 }
             }
@@ -131,9 +133,9 @@ class CleanupOldExpiredPayments extends Command
 
             DB::commit();
 
-            $this->info("✅ Cleanup completed successfully!");
+            $this->info('✅ Cleanup completed successfully!');
             $this->info("   Deleted: {$deletedCount} payments");
-            
+
             if ($errors > 0) {
                 $this->warn("   Errors: {$errors} batches failed");
             }
@@ -145,20 +147,20 @@ class CleanupOldExpiredPayments extends Command
                 'deleted_count' => $deletedCount,
                 'errors' => $errors,
                 'cutoff_date' => $cutoffDate->toDateTimeString(),
-                'completion_time' => now()->toDateTimeString()
+                'completion_time' => now()->toDateTimeString(),
             ]);
 
         } catch (\Exception $e) {
             DB::rollback();
-            
-            $this->error("❌ Cleanup failed: " . $e->getMessage());
-            
+
+            $this->error('❌ Cleanup failed: '.$e->getMessage());
+
             Log::error('Old expired payments cleanup failed', [
                 'error' => $e->getMessage(),
                 'days_threshold' => $days,
-                'cutoff_date' => $cutoffDate->toDateTimeString()
+                'cutoff_date' => $cutoffDate->toDateTimeString(),
             ]);
-            
+
             return self::FAILURE;
         }
 
@@ -176,12 +178,12 @@ class CleanupOldExpiredPayments extends Command
             'oldest_payment' => $payments->min('expired_at'),
             'newest_payment' => $payments->max('expired_at'),
             'tenants_affected' => $payments->pluck('tenant_id')->unique()->count(),
-            'months_affected' => $payments->pluck('payment_month')->unique()->count()
+            'months_affected' => $payments->pluck('payment_month')->unique()->count(),
         ];
 
         $this->info("\n📊 Cleanup Statistics:");
         $this->line("   Total Payments: {$stats['total_count']}");
-        $this->line("   Total Amount: Rp " . number_format((float)$stats['total_amount'], 0, ',', '.'));
+        $this->line('   Total Amount: Rp '.number_format((float) $stats['total_amount'], 0, ',', '.'));
         $this->line("   Tenants Affected: {$stats['tenants_affected']}");
         $this->line("   Payment Months: {$stats['months_affected']}");
         $this->line("   Date Range: {$stats['oldest_payment']} to {$stats['newest_payment']}");
@@ -199,7 +201,7 @@ class CleanupOldExpiredPayments extends Command
             'newest_payment' => $payments->max('expired_at'),
             'tenants_affected' => $payments->pluck('tenant_id')->unique()->count(),
             'months_affected' => $payments->pluck('payment_month')->unique()->count(),
-            'cleanup_initiated_at' => now()->toDateTimeString()
+            'cleanup_initiated_at' => now()->toDateTimeString(),
         ];
 
         Log::info('Old expired payments cleanup initiated', $stats);

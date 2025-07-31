@@ -3,7 +3,6 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { mergeClasses } from '../../../utils/helpers';
-import { MOBILE_OPTIMIZED_CLASSES } from '../../../utils/constants';
 
 interface ModalProps {
   isOpen: boolean;

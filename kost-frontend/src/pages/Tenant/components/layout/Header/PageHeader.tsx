@@ -1,13 +1,12 @@
 // File: src/pages/Tenant/components/layout/Header/PageHeader.tsx
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
-import { Button } from '../../ui/Buttons';
 import { mergeClasses } from '../../../utils/helpers';
 
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
-  icon?: LucideIcon;
+  icon?: LucideIcon | React.ComponentType<React.SVGProps<SVGSVGElement>>;
   actions?: React.ReactNode;
   breadcrumb?: { label: string; href?: string }[];
   className?: string;

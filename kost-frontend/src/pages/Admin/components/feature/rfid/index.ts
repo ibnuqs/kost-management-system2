@@ -3,28 +3,31 @@
 export { RfidStats } from './RfidStats';
 export { RfidTable } from './RfidTable';
 export { RfidScanner } from './RfidScanner';
-export { DoorControl } from './DoorControl';
+// DoorControl removed during cleanup
 export { RfidForm } from './RfidForm';
 export { RfidScanModal } from './RfidScanModal';
 export { RfidRealTimeMonitor } from './RfidRealTimeMonitor';
 export { RfidAccessControl } from './RfidAccessControl';
-export { SimpleRfidMonitor } from './SimpleRfidMonitor';
-export { CompactRfidDashboard } from './CompactRfidDashboard';
+// SimpleRfidMonitor removed during cleanup
+// CompactRfidDashboard removed during cleanup
 export { AdminDoorControl } from './AdminDoorControl';
-export { AccessAnalytics } from './AccessAnalytics';
-export { BackendHealthCheck } from './BackendHealthCheck';
+// AccessAnalytics removed during cleanup
+// BackendHealthCheck removed during cleanup
 export { default as RfidDeviceUpdater } from './RfidDeviceUpdater';
 
+// Working Analytics Component
+export { WorkingAnalytics } from './WorkingAnalytics';
+
 // Specialized Components for Option 2 Reorganization
-export { RealTimeMonitorOnly } from './RealTimeMonitorOnly';
-export { DoorControlOnly } from './DoorControlOnly';
-export { AnalyticsOnly } from './AnalyticsOnly';
+// RealTimeMonitorOnly removed during cleanup
+// DoorControlOnly removed during cleanup
+// AnalyticsOnly removed during cleanup
 
 // Simple Working Components
-export { SimpleRealTimeMonitor } from './SimpleRealTimeMonitor';
-export { SimpleDoorControl } from './SimpleDoorControl';
-export { SimpleAnalytics } from './SimpleAnalytics';
-export { SafeRealTimeMonitor } from './SafeRealTimeMonitor';
+// SimpleRealTimeMonitor removed during cleanup
+// SimpleDoorControl removed during cleanup
+// SimpleAnalytics removed during cleanup
+// SafeRealTimeMonitor removed during cleanup
 
 // Re-export types untuk kemudahan
 export type { 

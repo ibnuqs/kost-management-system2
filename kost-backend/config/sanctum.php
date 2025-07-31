@@ -1,4 +1,5 @@
 <?php
+
 // config/sanctum.php - FIXED VERSION
 
 use Laravel\Sanctum\Sanctum;

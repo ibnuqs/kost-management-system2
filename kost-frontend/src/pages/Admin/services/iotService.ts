@@ -2,6 +2,62 @@
 import api from '../../../utils/api';
 import { getLastSeenHuman, isDeviceOnline } from '../../../utils/dateUtils';
 import type { IoTDevice, DeviceStats, DeviceFormData, DeviceFilters } from '../types';
+import type { Room } from '../types/common';
+
+// API Response Interfaces - Removed unused PaginatedResponse interface
+
+interface PaginationInfo {
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
+interface RawDeviceData {
+  id: number;
+  device_id: string;
+  device_name: string;
+  device_type: string;
+  device_type_label?: string;
+  room_id?: number | null;
+  room?: Room | null;
+  status: string;
+  status_db?: string;
+  status_label?: string;
+  last_seen?: string | null;
+  last_seen_human?: string;
+  last_seen_date?: string;
+  updated_at?: string;
+  created_at: string;
+  is_online?: boolean;
+  minutes_since_last_seen?: number;
+}
+
+interface RoomWithTenant {
+  id: number;
+  room_number: string;
+  room_type?: string;
+  status: string;
+  room_name?: string;
+  label?: string;
+  tenant?: TenantData | null;
+  tenant_id?: number | null;
+  tenant_name?: string | null;
+  archived_at?: string | null;
+  is_archived?: boolean;
+  raw_data?: unknown;
+}
+
+interface TenantData {
+  id: number;
+  name?: string;
+  user_name?: string;
+  tenant_code?: string;
+}
+
+interface ProcessedDevice extends IoTDevice {
+  last_seen_date: string;
+}
 
 class IoTService {
   // Quick backend availability check - simplified version
@@ -22,7 +78,7 @@ class IoTService {
       
       clearTimeout(timeoutId);
       return response.ok;
-    } catch (error: any) {
+    } catch {
       // Silently fail and use mock data
       return false;
     }
@@ -31,7 +87,7 @@ class IoTService {
   async getDevices(filters?: DeviceFilters): Promise<{
     devices: IoTDevice[];
     stats: DeviceStats;
-    pagination: any;
+    pagination: PaginationInfo;
   }> {
     // Return empty data if backend not available
     const isBackendAvailable = await this.checkBackendAvailability();
@@ -59,7 +115,7 @@ class IoTService {
       let response;
       try {
         response = await api.get(`/admin/iot-devices?${params}`);
-      } catch (mainError: any) {
+      } catch {
         return {
           devices: [],
           stats: { total: 0, online: 0, offline: 0, door_locks: 0, card_scanners: 0 },
@@ -76,8 +132,9 @@ class IoTService {
       }
 
       // Process devices data and add missing fields
-      const rawDevices = response.data.data?.data || response.data.data || [];
-      const processedDevices = rawDevices.map((device: any) => {
+      const responseData = response.data.data as { data?: RawDeviceData[] } | RawDeviceData[];
+      const rawDevices = Array.isArray(responseData) ? responseData : responseData.data || [];
+      const processedDevices = rawDevices.map((device: RawDeviceData): ProcessedDevice => {
         // Debug logging for timestamp issues
         console.debug('Processing device timestamps:', {
           device_id: device.device_id,
@@ -118,31 +175,47 @@ class IoTService {
         const statusFromDB = device.status || 'offline';
 
         return {
-          ...device,
-          last_seen: validLastSeen, // Use validated timestamp
-          last_seen_human: device.last_seen_human || lastSeenHuman,
+          id: device.id,
+          device_id: device.device_id,
+          device_name: device.device_name,
+          device_type: device.device_type as 'door_lock' | 'card_scanner' | 'rfid_reader',
           device_type_label: device.device_type_label || (device.device_type === 'door_lock' ? 'Door Lock' : 'Card Scanner'),
-          status: calculatedStatus, // Use calculated status based on last_seen
-          status_db: statusFromDB, // Keep original DB status for reference
+          room: device.room,
+          room_id: device.room_id,
+          status: calculatedStatus as 'online' | 'offline',
+          status_db: statusFromDB as 'online' | 'offline',
           status_label: calculatedStatus === 'online' ? 'Online' : 'Offline',
+          last_seen: validLastSeen,
+          last_seen_human: device.last_seen_human || lastSeenHuman,
+          last_seen_date: validLastSeen || validUpdatedAt || device.created_at,
+          minutes_since_last_seen: device.minutes_since_last_seen,
           is_online: isReallyOnline,
-          last_seen_date: validLastSeen || validUpdatedAt || device.created_at
-        };
+          created_at: device.created_at,
+          updated_at: device.updated_at || device.created_at
+        } as ProcessedDevice;
       });
 
       return {
         devices: processedDevices,
-        stats: response.data.stats || {
+        stats: (response.data as { stats?: DeviceStats }).stats || {
           total: 0,
           online: 0,
           offline: 0,
           door_locks: 0,
           card_scanners: 0
         },
-        pagination: response.data.pagination || response.data.data || { current_page: 1, last_page: 1, per_page: 15, total: 0 }
+        pagination: (response.data as { pagination?: PaginationInfo }).pagination || 
+                   (Array.isArray(responseData) ? 
+                     { current_page: 1, last_page: 1, per_page: 15, total: 0 } : 
+                     {
+                       current_page: (responseData as { current_page?: number }).current_page || 1,
+                       last_page: (responseData as { last_page?: number }).last_page || 1,
+                       per_page: (responseData as { per_page?: number }).per_page || 15,
+                       total: (responseData as { total?: number }).total || 0
+                     })
       };
 
-    } catch (error: any) {
+    } catch {
       return {
         devices: [],
         stats: { total: 0, online: 0, offline: 0, door_locks: 0, card_scanners: 0 },
@@ -152,7 +225,7 @@ class IoTService {
   }
 
 
-  async getRooms(): Promise<any[]> {
+  async getRooms(): Promise<RoomWithTenant[]> {
     try {
       // Use EXACT same approach as Room Management
       const params = new URLSearchParams();
@@ -167,67 +240,84 @@ class IoTService {
         console.error('❌ Failed to fetch rooms:', response.data.message);
         return [];
       }
-      
+
       const roomsData = response.data.data || [];
       console.log('🏠 Raw rooms received:', roomsData.length);
       
       // Filter out archived rooms on frontend as extra safety
-      const activeRooms = roomsData.filter((room: any) => 
-        room.status !== 'archived' && 
-        !room.archived_at && 
-        !room.is_archived
-      );
+      const activeRooms = roomsData.filter((room: unknown) => {
+        const roomData = room as { status?: string; archived_at?: string; is_archived?: boolean };
+        return roomData.status !== 'archived' && 
+               !roomData.archived_at && 
+               !roomData.is_archived;
+      });
       
       console.log('🏠 Active rooms after filtering:', activeRooms.length);
       console.log('🏠 Sample room with tenant:', activeRooms[0]);
       
       if (activeRooms.length > 0) {
-        const firstRoom = activeRooms[0];
+        const firstRoom = activeRooms[0] as { tenant?: TenantData };
         console.log('🏠 Tenant data check:', {
           firstRoom: firstRoom,
           hasTenant: !!firstRoom?.tenant,
           tenantName: firstRoom?.tenant?.name,
           tenantUserName: firstRoom?.tenant?.user_name,
           tenantStructure: firstRoom?.tenant,
-          roomsWithTenants: activeRooms.filter((r: any) => r.tenant).length,
-          roomsWithoutTenants: activeRooms.filter((r: any) => !r.tenant).length
+          roomsWithTenants: activeRooms.filter((r: unknown) => (r as { tenant?: TenantData }).tenant).length,
+          roomsWithoutTenants: activeRooms.filter((r: unknown) => !(r as { tenant?: TenantData }).tenant).length
         });
       }
       
-      return Array.isArray(activeRooms) ? activeRooms.map((room: any) => {
+      return Array.isArray(activeRooms) ? activeRooms.map((room: unknown): RoomWithTenant => {
+        const roomData = room as {
+          id: number;
+          room_number: string;
+          room_type?: string;
+          status: string;
+          room_name?: string;
+          tenant?: TenantData;
+          tenants?: TenantData[];
+          currentTenant?: TenantData;
+          occupant?: TenantData;
+          tenant_id?: number;
+          tenant_name?: string;
+          archived_at?: string;
+          is_archived?: boolean;
+        };
+        
         // Try multiple ways to extract tenant data
-        const tenantData = room.tenant || room.tenants?.[0] || room.currentTenant || room.occupant || null;
-        const tenantId = room.tenant_id || room.tenant?.id || tenantData?.id || null;
+        const tenantData = roomData.tenant || roomData.tenants?.[0] || roomData.currentTenant || roomData.occupant || null;
+        const tenantId = roomData.tenant_id || roomData.tenant?.id || tenantData?.id || null;
         // Backend uses 'user_name' field, not 'name'
-        const tenantName = room.tenant?.user_name || tenantData?.user_name || room.tenant?.name || tenantData?.name || room.tenant_name || null;
+        const tenantName = roomData.tenant?.user_name || tenantData?.user_name || roomData.tenant?.name || tenantData?.name || roomData.tenant_name || null;
         
         // Log only if tenant name extraction fails for debugging
         if (tenantData && !tenantName) {
-          console.log(`🏠 ⚠️ Room ${room.room_number} has tenant data but no name extracted:`, {
+          console.log(`🏠 ⚠️ Room ${roomData.room_number} has tenant data but no name extracted:`, {
             tenantData,
             availableFields: Object.keys(tenantData)
           });
         }
         
         return {
-          id: room.id,
-          room_number: room.room_number,
-          room_type: room.room_type || 'standard',
-          status: room.status || 'available',
-          label: `Room ${room.room_number}`,
-          room_name: room.room_name || `Room ${room.room_number}`,
+          id: roomData.id,
+          room_number: roomData.room_number,
+          room_type: roomData.room_type || 'standard',
+          status: roomData.status || 'available',
+          label: `Room ${roomData.room_number}`,
+          room_name: roomData.room_name || `Room ${roomData.room_number}`,
           // Include tenant data with multiple extraction methods
           tenant: tenantData,
           tenant_id: tenantId,
           tenant_name: tenantName,
           // Additional room info
-          archived_at: room.archived_at || null,
-          is_archived: room.is_archived || false,
+          archived_at: roomData.archived_at || null,
+          is_archived: roomData.is_archived || false,
           // Keep original data for debugging
           raw_data: room
         };
       }) : [];
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Error fetching rooms for IoT:', error);
       return [];
     }
@@ -253,7 +343,7 @@ class IoTService {
         throw new Error(response.data.message || 'Failed to create device');
       }
       return response.data.data;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error creating device:', error);
       throw error;
     }
@@ -278,7 +368,7 @@ class IoTService {
         throw new Error(response.data.message || 'Failed to update device');
       }
       return response.data.data;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating device:', error);
       throw error;
     }
@@ -297,7 +387,7 @@ class IoTService {
       if (!response.data.success) {
         throw new Error(response.data.message || 'Failed to delete device');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error deleting device:', error);
       throw error;
     }
@@ -316,7 +406,7 @@ class IoTService {
       if (!response.data.success) {
         throw new Error(response.data.message || 'Failed to update device status');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating device status:', error);
       throw error;
     }
@@ -344,7 +434,7 @@ class IoTService {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error exporting devices:', error);
       throw error;
     }

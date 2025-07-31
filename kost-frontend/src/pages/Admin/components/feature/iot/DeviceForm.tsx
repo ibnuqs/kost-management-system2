@@ -4,10 +4,20 @@ import { Input, Select } from '../../ui/Forms/';
 import { Modal } from '../../ui/Modal';
 import type { IoTDevice } from '../../../types/iot';
 
+interface RoomOption {
+  id: number;
+  room_number: string;
+  tenant?: {
+    user_name?: string;
+    name?: string;
+    tenant_name?: string;
+  };
+}
+
 interface DeviceFormProps {
   isOpen: boolean;
   device: IoTDevice | null;
-  rooms: any[];
+  rooms: RoomOption[];
   onClose: () => void;
   onSubmit: (data: { device_id: string; device_name: string; device_type: string; room_id?: string; status: string }) => void;
 }
@@ -107,7 +117,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({
                 name="device_type"
                 onChange={(value) => handleChange('device_type')(value)}
                 options={[
-                  { label: '🔐 Kunci Pintu', value: 'door_lock' },
+                  { label: 'Kunci Pintu', value: 'door_lock' },
                   { label: '💳 Pembaca Kartu', value: 'card_scanner' }
                 ]}
               />
@@ -137,7 +147,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({
           {/* Read-only device info for editing */}
           {device && (
             <div className="bg-gray-50 p-4 rounded-lg border">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">📋 Info Perangkat</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Info Perangkat</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">ID Perangkat:</span>
@@ -145,12 +155,12 @@ const DeviceForm: React.FC<DeviceFormProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tipe:</span>
-                  <span>{device.device_type === 'door_lock' ? '🔐 Kunci Pintu' : '💳 Pembaca Kartu'}</span>
+                  <span>{device.device_type === 'door_lock' ? 'Kunci Pintu' : 'Pembaca Kartu'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status:</span>
                   <span className={device.status === 'online' ? 'text-green-600' : 'text-red-600'}>
-                    {device.status === 'online' ? '✅ Terhubung' : '❌ Terputus'}
+{device.status === 'online' ? 'Terhubung' : 'Terputus'}
                   </span>
                 </div>
               </div>

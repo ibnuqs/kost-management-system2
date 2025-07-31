@@ -1,4 +1,3 @@
-// File: src/pages/Admin/components/features/access-logs/AccessLogStatistics.tsx
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Clock, Shield, AlertCircle } from 'lucide-react';
@@ -8,8 +7,6 @@ import type { AccessLogStatistics as StatisticsData } from '../../../types/acces
 interface AccessLogStatisticsProps {
   statistics: StatisticsData | null;
 }
-
-const COLORS = ['#10B981', '#EF4444', '#3B82F6', '#F59E0B', '#8B5CF6'];
 
 export const AccessLogStatistics: React.FC<AccessLogStatisticsProps> = ({ statistics }) => {
   if (!statistics) {
@@ -156,7 +153,7 @@ export const AccessLogStatistics: React.FC<AccessLogStatisticsProps> = ({ statis
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip 
                 labelFormatter={(hour) => `${hour}:00 - ${(hour + 1) % 24}:00`}
-                formatter={(value, name) => [value, 'Access Count']}
+                formatter={(value: number | string | Array<number | string>) => [value, 'Access Count']}
               />
               <Legend />
               <Line 

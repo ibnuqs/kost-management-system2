@@ -1,5 +1,5 @@
 // src/types/api.ts - Centralized API Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data: T;
   message?: string;
@@ -31,7 +31,7 @@ export interface QueryParams {
   search?: string;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
-  filter?: Record<string, any>;
+  filter?: Record<string, unknown>;
 }
 
 export interface UploadResponse {

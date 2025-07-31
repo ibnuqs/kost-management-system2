@@ -112,7 +112,7 @@ const DeviceStats: React.FC<DeviceStatsProps> = ({ stats }) => {
         {/* System Health */}
         <div className="bg-white rounded-xl border-2 border-gray-100 p-4 lg:p-6 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base lg:text-lg font-semibold text-gray-900">🎯 Kesehatan Sistem</h3>
+            <h3 className="text-base lg:text-lg font-semibold text-gray-900">Kesehatan Sistem</h3>
             <Activity className="w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
           </div>
           
@@ -146,7 +146,7 @@ const DeviceStats: React.FC<DeviceStatsProps> = ({ stats }) => {
         {/* Device Distribution */}
         <div className="bg-white rounded-xl border-2 border-gray-100 p-4 lg:p-6 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base lg:text-lg font-semibold text-gray-900">📱 Tipe Perangkat</h3>
+            <h3 className="text-base lg:text-lg font-semibold text-gray-900">Tipe Perangkat</h3>
             <Monitor className="w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
           </div>
           
@@ -200,7 +200,7 @@ const DeviceStats: React.FC<DeviceStatsProps> = ({ stats }) => {
         {/* Quick Stats - Enhanced */}
         <div className="bg-white rounded-xl border-2 border-gray-100 p-4 lg:p-6 hover:shadow-lg transition-all">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base lg:text-lg font-semibold text-gray-900">⚡ Statistik Cepat</h3>
+            <h3 className="text-base lg:text-lg font-semibold text-gray-900">Statistik Cepat</h3>
             <TrendingUp className="w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
           </div>
           
@@ -237,13 +237,13 @@ const DeviceStats: React.FC<DeviceStatsProps> = ({ stats }) => {
               <span className={`text-sm font-bold ${
                 stats.offline > 0 ? 'text-red-600' : 'text-green-600'
               }`}>
-                {stats.offline > 0 ? `${stats.offline} terputus` : 'Semua Baik ✅'}
+                {stats.offline > 0 ? `${stats.offline} terputus` : 'Semua Baik'}
               </span>
             </div>
             
             <div className="pt-3 border-t border-gray-100">
               <div className="text-xs text-gray-500 text-center bg-gray-50 py-2 rounded">
-                🕐 Terakhir diperbarui: {new Date().toLocaleTimeString('id-ID')}
+                Terakhir diperbarui: {new Date().toLocaleTimeString('id-ID')}
               </div>
             </div>
           </div>

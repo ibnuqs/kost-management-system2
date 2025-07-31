@@ -1,7 +1,8 @@
 // File: src/pages/Admin/components/feature/rfid/RfidFormNew.tsx
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, User, Home, Save, AlertCircle, Scan } from 'lucide-react';
+import { X, CreditCard, User, Save, AlertCircle, Scan } from 'lucide-react';
 import type { RfidCard, RfidFormData } from '../../../types/rfid';
+import type { Tenant } from '../../../types';
 import api from '../../../../../utils/api';
 import { RfidScanModal } from './RfidScanModal';
 
@@ -26,7 +27,7 @@ export const RfidFormNew: React.FC<RfidFormProps> = ({
   
   const [loading, setLoading] = useState(false);
   const [uidError, setUidError] = useState('');
-  const [tenants, setTenants] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
 
@@ -41,8 +42,8 @@ export const RfidFormNew: React.FC<RfidFormProps> = ({
       } else {
         setTenants([]);
       }
-    } catch (error) {
-      console.error('Error loading tenants:', error);
+    } catch (_error) {
+      console.error('Error loading tenants:', _error);
       setTenants([]);
     } finally {
       setLoadingData(false);
@@ -254,7 +255,7 @@ export const RfidFormNew: React.FC<RfidFormProps> = ({
                       name="card_type"
                       value={type}
                       checked={formData.card_type === type}
-                      onChange={(e) => setFormData(prev => ({ ...prev, card_type: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, card_type: e.target.value as 'primary' | 'backup' | 'temporary' }))}
                       className="mr-2"
                     />
                     <span className="text-sm">

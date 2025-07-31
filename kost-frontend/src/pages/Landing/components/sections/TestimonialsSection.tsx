@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Users, MessageCircle, Calendar } from 'lucide-react';
+import { Star, Users, MessageCircle } from 'lucide-react';
 
 interface TestimonialsSectionProps {
   className?: string;
@@ -67,5 +67,3 @@ export const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({
     </section>
   );
 };
-
-export default TestimonialsSection;

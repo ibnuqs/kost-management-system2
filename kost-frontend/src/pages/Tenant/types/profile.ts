@@ -1,7 +1,5 @@
 // File: src/pages/Tenant/types/profile.ts
 import { User, BaseEntity } from './common';
-import { RfidCard } from './rfid';
-import { Payment } from './payment';
 
 export interface TenantProfile extends BaseEntity {
   user_id: number;
@@ -25,6 +23,8 @@ export interface TenantProfile extends BaseEntity {
   profile_photo?: string;
   notes?: string;
   user?: User;
+  name?: string;
+  email?: string;
 }
 
 export interface ProfileUpdateData {
@@ -80,7 +80,7 @@ export interface AccountActivity {
   device?: string;
   location?: string;
   status: 'success' | 'failed' | 'pending';
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ProfileCompletion {

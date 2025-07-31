@@ -6,9 +6,8 @@ import { PageHeader } from '../components/layout/Header';
 import { Card } from '../components/ui/Card';
 import { Button, IconButton } from '../components/ui/Buttons';
 import { SearchInput, Select } from '../components/ui/Forms';
-import { StatusBadge, LoadingSpinner } from '../components/ui/Status';
 import { Modal } from '../components/ui/Modal';
-import { getNotificationTypeColor, getNotificationTypeIcon, getNotificationPriorityColor, NotificationType, NotificationStatus } from '../types/notification';
+import { getNotificationTypeColor, NotificationType, NotificationStatus } from '../types/notification';
 import { formatTimeAgo } from '../utils/formatters';
 import { mergeClasses, isMobile } from '../utils/helpers';
 import { MOBILE_SPECIFIC } from '../utils/constants';
@@ -53,19 +52,22 @@ const Notifications: React.FC = () => {
     if (unreadCount > previousUnreadCount && soundEnabled && previousUnreadCount > 0) {
       // Play notification beep sound
       try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        gainNode.gain.value = 0.1;
-        
-        oscillator.start();
-        oscillator.stop(audioContext.currentTime + 0.2);
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (AudioContextClass) {
+          const audioContext = new AudioContextClass();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.value = 800;
+          oscillator.type = 'sine';
+          gainNode.gain.value = 0.1;
+          
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + 0.2);
+        }
       } catch (e) {
         console.log('Could not play notification sound:', e);
       }
@@ -116,8 +118,7 @@ const Notifications: React.FC = () => {
     }
   };
 
-  const getNotificationIcon = (type: NotificationType) => {
-    const iconName = getNotificationTypeIcon(type);
+  const getNotificationIcon = () => {
     // Simple mapping for demo - in real app would use proper icon components
     return <Bell className="w-4 h-4" />;
   };
@@ -174,7 +175,7 @@ const Notifications: React.FC = () => {
         <PageHeader
           title="Notifikasi"
           subtitle={`${pagination?.total || 0} notifikasi • ${unreadCount || 0} belum dibaca`}
-          icon={() => <BellIconWithBadge className="w-6 h-6" />}
+          icon={BellIconWithBadge}
           actions={
             <div className="flex items-center gap-2">
               {/* Settings Button */}
@@ -454,7 +455,7 @@ const Notifications: React.FC = () => {
                     )}>
                       <div className={getNotificationTypeColor(notification.type).split(' ').slice(2).join(' ')}>
                         <div className="w-4 h-4 sm:w-5 sm:h-5">
-                          {getNotificationIcon(notification.type)}
+                          {getNotificationIcon()}
                         </div>
                       </div>
                       {/* Dot indicator untuk unread */}
@@ -605,19 +606,22 @@ const Notifications: React.FC = () => {
                 onClick={() => {
                   // Test sound
                   try {
-                    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-                    
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-                    
-                    oscillator.frequency.value = 800;
-                    oscillator.type = 'sine';
-                    gainNode.gain.value = 0.1;
-                    
-                    oscillator.start();
-                    oscillator.stop(audioContext.currentTime + 0.2);
+                    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+                    if (AudioContextClass) {
+                      const audioContext = new AudioContextClass();
+                      const oscillator = audioContext.createOscillator();
+                      const gainNode = audioContext.createGain();
+                      
+                      oscillator.connect(gainNode);
+                      gainNode.connect(audioContext.destination);
+                      
+                      oscillator.frequency.value = 800;
+                      oscillator.type = 'sine';
+                      gainNode.gain.value = 0.1;
+                      
+                      oscillator.start();
+                      oscillator.stop(audioContext.currentTime + 0.2);
+                    }
                   } catch (e) {
                     console.log('Could not play test sound:', e);
                   }

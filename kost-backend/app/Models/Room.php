@@ -14,9 +14,13 @@ class Room extends Model
     use HasFactory;
 
     const STATUS_AVAILABLE = 'available';
+
     const STATUS_OCCUPIED = 'occupied';
+
     const STATUS_MAINTENANCE = 'maintenance';
+
     const STATUS_RESERVED = 'reserved';
+
     const STATUS_ARCHIVED = 'archived';
 
     const ALLOWED_STATUSES = [
@@ -85,7 +89,7 @@ class Room extends Model
     public function getApiData(): array
     {
         $activeTenant = $this->getActiveTenant();
-        
+
         return [
             'id' => $this->id,
             'room_number' => $this->room_number,
@@ -117,16 +121,16 @@ class Room extends Model
 
         // Double-check room availability with fresh data from database
         $freshRoom = self::lockForUpdate()->find($this->id);
-        
-        if (!$freshRoom) {
-            throw new \Exception("Room not found.");
+
+        if (! $freshRoom) {
+            throw new \Exception('Room not found.');
         }
 
         if ($freshRoom->hasActiveTenant()) {
-            throw new \Exception("This room is already occupied by another tenant. Please refresh the page and select a different room.");
+            throw new \Exception('This room is already occupied by another tenant. Please refresh the page and select a different room.');
         }
 
-        if (!in_array($freshRoom->status, [self::STATUS_AVAILABLE, self::STATUS_RESERVED])) {
+        if (! in_array($freshRoom->status, [self::STATUS_AVAILABLE, self::STATUS_RESERVED])) {
             throw new \Exception("Room is not available for assignment. Current status: {$freshRoom->status}");
         }
 
@@ -151,7 +155,7 @@ class Room extends Model
                 'reserved_at' => null,
                 'reserved_until' => null,
                 'reserved_by' => null,
-                'reserved_reason' => null
+                'reserved_reason' => null,
             ]);
 
             \DB::commit();
@@ -163,21 +167,21 @@ class Room extends Model
                 'user_id' => $userId,
                 'monthly_rent' => $monthlyRent,
                 'start_date' => $startDate,
-                'assigned_by' => auth()->id()
+                'assigned_by' => auth()->id(),
             ]);
 
             return $tenant;
 
         } catch (\Exception $e) {
             \DB::rollBack();
-            
+
             Log::error('Failed to assign tenant', [
                 'room_id' => $this->id,
                 'user_id' => $userId,
                 'error' => $e->getMessage(),
-                'assigned_by' => auth()->id()
+                'assigned_by' => auth()->id(),
             ]);
-            
+
             throw $e;
         }
     }
@@ -186,13 +190,13 @@ class Room extends Model
     {
         $startDate = \Carbon\Carbon::parse($tenant->start_date);
         $currentMonth = $startDate->copy()->startOfMonth();
-        
+
         // Calculate prorated amount for first month
         $daysInMonth = $currentMonth->daysInMonth;
         $remainingDays = $daysInMonth - $startDate->day + 1;
         $dailyRate = $tenant->monthly_rent / $daysInMonth;
         $proratedAmount = $dailyRate * $remainingDays;
-        
+
         // Create first payment
         Payment::create([
             'tenant_id' => $tenant->id,
@@ -204,14 +208,14 @@ class Room extends Model
             'payment_method' => 'pending',
             'description' => "Sewa Bulanan (Prorata) - {$this->room_number} ({$this->room_name}) - {$currentMonth->format('F Y')} ({$remainingDays} hari)",
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
 
         Log::info('Initial prorated payment created', [
             'tenant_id' => $tenant->id,
             'amount' => $proratedAmount,
             'days_covered' => $remainingDays,
-            'total_days_in_month' => $daysInMonth
+            'total_days_in_month' => $daysInMonth,
         ]);
     }
 
@@ -227,7 +231,7 @@ class Room extends Model
         if ($activeTenant) {
             $activeTenant->update([
                 'status' => Tenant::STATUS_MOVED_OUT,
-                'end_date' => now()
+                'end_date' => now(),
             ]);
             $this->update(['status' => self::STATUS_AVAILABLE]);
         }
@@ -237,7 +241,7 @@ class Room extends Model
     {
         try {
             $activeTenant = $this->getActiveTenant();
-            
+
             return [
                 'total_tenants' => $this->tenants()->count(),
                 'active_tenant' => $this->hasActiveTenant(),
@@ -247,9 +251,9 @@ class Room extends Model
         } catch (\Exception $e) {
             \Log::warning('Error calculating basic stats', [
                 'room_id' => $this->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'total_tenants' => 0,
                 'active_tenant' => false,
@@ -263,16 +267,20 @@ class Room extends Model
     {
         try {
             $activeTenant = $this->getActiveTenant();
-            if (!$activeTenant || !$activeTenant->start_date) return null;
-            
+            if (! $activeTenant || ! $activeTenant->start_date) {
+                return null;
+            }
+
             $startDate = \Carbon\Carbon::parse($activeTenant->start_date);
             $duration = $startDate->diffForHumans(null, true);
+
             return $duration;
         } catch (\Exception $e) {
             \Log::warning('Error calculating occupancy duration', [
                 'room_id' => $this->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -285,7 +293,7 @@ class Room extends Model
                 'required',
                 'string',
                 'max:20',
-                \Illuminate\Validation\Rule::unique('rooms', 'room_number')->ignore($roomId)
+                \Illuminate\Validation\Rule::unique('rooms', 'room_number')->ignore($roomId),
             ],
             'room_name' => 'required|string|max:100',
             'monthly_price' => 'required|numeric|min:0|max:9999999999.99',
@@ -318,7 +326,7 @@ class Room extends Model
     {
         return $query->where(function ($q) use ($search) {
             $q->where('room_number', 'like', "%{$search}%")
-              ->orWhere('room_name', 'like', "%{$search}%");
+                ->orWhere('room_name', 'like', "%{$search}%");
         });
     }
 
@@ -332,6 +340,7 @@ class Room extends Model
         } catch (\Exception $e) {
             \Log::warning('RFID cards relationship not available', ['room_id' => $this->id]);
         }
+
         return null;
     }
 
@@ -344,11 +353,12 @@ class Room extends Model
         } catch (\Exception $e) {
             \Log::warning('Access logs relationship not available', ['room_id' => $this->id]);
         }
+
         return null;
     }
 
     // ✅ ARCHIVE FUNCTIONALITY (Support both enum status & soft archive)
-    public function archiveRoom(string $reason = null): void
+    public function archiveRoom(?string $reason = null): void
     {
         $this->update([
             'archived_at' => now(),
@@ -368,12 +378,12 @@ class Room extends Model
 
     public function isArchived(): bool
     {
-        return !is_null($this->archived_at);
+        return ! is_null($this->archived_at);
     }
 
     public function canBeArchived(): bool
     {
-        return !$this->hasActiveTenant() && !$this->isArchived();
+        return ! $this->hasActiveTenant() && ! $this->isArchived();
     }
 
     public function canBeUnarchived(): bool
@@ -382,23 +392,23 @@ class Room extends Model
     }
 
     // ✅ RESERVATION MANAGEMENT METHODS
-    
-    public function reserveRoom(string $reason = null, int $hoursValid = 24): void
+
+    public function reserveRoom(?string $reason = null, int $hoursValid = 24): void
     {
         $this->update([
             'status' => self::STATUS_RESERVED,
             'reserved_at' => now(),
             'reserved_until' => now()->addHours($hoursValid),
             'reserved_by' => auth()->id() ?? null,
-            'reserved_reason' => $reason ?? 'Room reserved for tenant assignment'
+            'reserved_reason' => $reason ?? 'Room reserved for tenant assignment',
         ]);
-        
+
         Log::info('Room reserved', [
             'room_id' => $this->id,
             'room_number' => $this->room_number,
             'reserved_by' => auth()->id(),
             'reserved_until' => $this->reserved_until,
-            'reason' => $reason
+            'reason' => $reason,
         ]);
     }
 
@@ -409,13 +419,13 @@ class Room extends Model
             'reserved_at' => null,
             'reserved_until' => null,
             'reserved_by' => null,
-            'reserved_reason' => null
+            'reserved_reason' => null,
         ]);
-        
+
         Log::info('Room reservation cancelled', [
             'room_id' => $this->id,
             'room_number' => $this->room_number,
-            'cancelled_by' => auth()->id()
+            'cancelled_by' => auth()->id(),
         ]);
     }
 
@@ -427,34 +437,34 @@ class Room extends Model
                 'reserved_at' => null,
                 'reserved_until' => null,
                 'reserved_by' => null,
-                'reserved_reason' => null
+                'reserved_reason' => null,
             ]);
-            
+
             Log::info('Room reservation confirmed', [
                 'room_id' => $this->id,
                 'room_number' => $this->room_number,
-                'confirmed_by' => auth()->id()
+                'confirmed_by' => auth()->id(),
             ]);
         }
     }
 
     public function isReserved(): bool
     {
-        return $this->status === self::STATUS_RESERVED && 
-               $this->reserved_until && 
+        return $this->status === self::STATUS_RESERVED &&
+               $this->reserved_until &&
                $this->reserved_until->isFuture();
     }
 
     public function isReservationExpired(): bool
     {
-        return $this->status === self::STATUS_RESERVED && 
-               $this->reserved_until && 
+        return $this->status === self::STATUS_RESERVED &&
+               $this->reserved_until &&
                $this->reserved_until->isPast();
     }
 
     public function getReservationInfo(): ?array
     {
-        if (!$this->isReserved()) {
+        if (! $this->isReserved()) {
             return null;
         }
 
@@ -464,7 +474,7 @@ class Room extends Model
             'reserved_by' => $this->reserved_by,
             'reserved_reason' => $this->reserved_reason,
             'expires_in_minutes' => $this->reserved_until ? now()->diffInMinutes($this->reserved_until, false) : null,
-            'is_expired' => $this->isReservationExpired()
+            'is_expired' => $this->isReservationExpired(),
         ];
     }
 
@@ -487,7 +497,7 @@ class Room extends Model
     // Get archive info
     public function getArchiveInfo(): ?array
     {
-        if (!$this->isArchived()) {
+        if (! $this->isArchived()) {
             return null;
         }
 

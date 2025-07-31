@@ -1,13 +1,52 @@
 // File: src/pages/Tenant/services/notificationService.ts
 import api, { endpoints, ApiResponse } from '../../../utils/api';
-import { FilterParams } from '../types/common';
 import { 
   Notification, 
   NotificationFilters,
   NotificationStats,
   NotificationPreferences,
-  PushNotificationPayload
+  NotificationTemplate
 } from '../types/notification';
+
+// Additional interfaces for notification operations
+export interface NotificationBulkResponse {
+  success: boolean;
+  processed_count: number;
+  failed_count: number;
+  message: string;
+}
+
+export interface NotificationArchiveResponse {
+  success: boolean;
+  archived_at: string;
+  message: string;
+}
+
+export interface NotificationDeleteResponse {
+  success: boolean;
+  deleted_at: string;
+  message: string;
+}
+
+export interface NotificationSnoozeResponse {
+  success: boolean;
+  snoozed_until: string;
+  message: string;
+}
+
+export interface PushDeviceRegistrationResponse {
+  success: boolean;
+  device_id: string;
+  registered_at: string;
+  message: string;
+}
+
+export interface NotificationDeliveryRetryResponse {
+  success: boolean;
+  channels_retried: string[];
+  retry_count: number;
+  message: string;
+}
 
 class NotificationService {
   /**
@@ -83,8 +122,8 @@ class NotificationService {
   /**
    * Mark multiple notifications as read
    */
-  async markMultipleAsRead(notificationIds: (number | string)[]): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/notifications/mark-read-bulk`, {
+  async markMultipleAsRead(notificationIds: (number | string)[]): Promise<NotificationBulkResponse> {
+    const response = await api.post<ApiResponse<NotificationBulkResponse>>(`/tenant/notifications/mark-read-bulk`, {
       notification_ids: notificationIds
     });
     return response.data.data;
@@ -93,16 +132,16 @@ class NotificationService {
   /**
    * Archive notification
    */
-  async archiveNotification(notificationId: number | string): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/notifications/${notificationId}/archive`);
+  async archiveNotification(notificationId: number | string): Promise<NotificationArchiveResponse> {
+    const response = await api.post<ApiResponse<NotificationArchiveResponse>>(`/tenant/notifications/${notificationId}/archive`);
     return response.data.data;
   }
 
   /**
    * Archive multiple notifications
    */
-  async archiveMultiple(notificationIds: (number | string)[]): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/notifications/archive-bulk`, {
+  async archiveMultiple(notificationIds: (number | string)[]): Promise<NotificationBulkResponse> {
+    const response = await api.post<ApiResponse<NotificationBulkResponse>>(`/tenant/notifications/archive-bulk`, {
       notification_ids: notificationIds
     });
     return response.data.data;
@@ -111,16 +150,16 @@ class NotificationService {
   /**
    * Delete notification
    */
-  async deleteNotification(notificationId: number | string): Promise<any> {
-    const response = await api.delete<ApiResponse<any>>(`/tenant/notifications/${notificationId}`);
+  async deleteNotification(notificationId: number | string): Promise<NotificationDeleteResponse> {
+    const response = await api.delete<ApiResponse<NotificationDeleteResponse>>(`/tenant/notifications/${notificationId}`);
     return response.data.data;
   }
 
   /**
    * Delete multiple notifications
    */
-  async deleteMultiple(notificationIds: (number | string)[]): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/notifications/delete-bulk`, {
+  async deleteMultiple(notificationIds: (number | string)[]): Promise<NotificationBulkResponse> {
+    const response = await api.post<ApiResponse<NotificationBulkResponse>>(`/tenant/notifications/delete-bulk`, {
       notification_ids: notificationIds
     });
     return response.data.data;
@@ -181,8 +220,8 @@ class NotificationService {
   /**
    * Snooze notification (hide temporarily)
    */
-  async snoozeNotification(notificationId: number | string, snoozeUntil: string): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/notifications/${notificationId}/snooze`, {
+  async snoozeNotification(notificationId: number | string, snoozeUntil: string): Promise<NotificationSnoozeResponse> {
+    const response = await api.post<ApiResponse<NotificationSnoozeResponse>>(`/tenant/notifications/${notificationId}/snooze`, {
       snooze_until: snoozeUntil
     });
     return response.data.data;
@@ -199,16 +238,16 @@ class NotificationService {
     };
     user_agent: string;
     device_type: 'desktop' | 'mobile' | 'tablet';
-  }): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/notifications/push/register`, registration);
+  }): Promise<PushDeviceRegistrationResponse> {
+    const response = await api.post<ApiResponse<PushDeviceRegistrationResponse>>(`/tenant/notifications/push/register`, registration);
     return response.data.data;
   }
 
   /**
    * Unregister device from push notifications
    */
-  async unregisterPushDevice(endpoint: string): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/notifications/push/unregister`, {
+  async unregisterPushDevice(endpoint: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.post<ApiResponse<{ success: boolean; message: string }>>(`/tenant/notifications/push/unregister`, {
       endpoint
     });
     return response.data.data;
@@ -217,8 +256,8 @@ class NotificationService {
   /**
    * Send test push notification
    */
-  async sendTestPushNotification(): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/notifications/push/test`);
+  async sendTestPushNotification(): Promise<{ success: boolean; message: string; sent_at: string }> {
+    const response = await api.post<ApiResponse<{ success: boolean; message: string; sent_at: string }>>(`/tenant/notifications/push/test`);
     return response.data.data;
   }
 
@@ -247,8 +286,8 @@ class NotificationService {
   /**
    * Retry failed notification delivery
    */
-  async retryDelivery(notificationId: number | string, channels: string[]): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/notifications/${notificationId}/retry`, {
+  async retryDelivery(notificationId: number | string, channels: string[]): Promise<NotificationDeliveryRetryResponse> {
+    const response = await api.post<ApiResponse<NotificationDeliveryRetryResponse>>(`/tenant/notifications/${notificationId}/retry`, {
       channels
     });
     return response.data.data;
@@ -268,8 +307,8 @@ class NotificationService {
   /**
    * Get notification templates available
    */
-  async getNotificationTemplates(): Promise<any[]> {
-    const response = await api.get<ApiResponse<any[]>>(`/tenant/notifications/templates`);
+  async getNotificationTemplates(): Promise<NotificationTemplate[]> {
+    const response = await api.get<ApiResponse<NotificationTemplate[]>>(`/tenant/notifications/templates`);
     return response.data.data;
   }
 

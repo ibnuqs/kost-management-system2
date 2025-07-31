@@ -39,10 +39,10 @@ export const tenantQueryKeys = {
   // Payments
   payments: () => ['tenant', 'payments'] as const,
   payment: (id: number | string) => ['tenant', 'payments', id] as const,
-  paymentHistory: (params?: any) => ['tenant', 'payments', 'history', params] as const,
+  paymentHistory: (params?: Record<string, unknown>) => ['tenant', 'payments', 'history', params] as const,
   
   // Access
-  accessHistory: (params?: any) => ['tenant', 'access-history', params] as const,
+  accessHistory: (params?: Record<string, unknown>) => ['tenant', 'access-history', params] as const,
   accessStats: () => ['tenant', 'access-stats'] as const,
   
   // RFID
@@ -55,6 +55,6 @@ export const tenantQueryKeys = {
   profile: () => ['tenant', 'profile'] as const,
   
   // Notifications
-  notifications: (params?: any) => ['tenant', 'notifications', params] as const,
+  notifications: (params?: Record<string, unknown>) => ['tenant', 'notifications', params] as const,
   unreadCount: () => ['tenant', 'notifications', 'unread-count'] as const,
 } as const;

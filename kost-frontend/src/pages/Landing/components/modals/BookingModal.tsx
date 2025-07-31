@@ -41,7 +41,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     roomType: (value: string) => validateRequired(value, 'Tipe kamar'),
     preferredDate: validateDate,
     duration: validateDuration,
-    message: (value: string) => null // Optional field
+    message: () => null // Optional field
   }), []);
 
   const {
@@ -66,7 +66,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     if (roomType && roomType !== values.roomType) {
       setValue('roomType', roomType);
     }
-  }, [roomType, setValue]); // Remove values.roomType from dependencies
+  }, [roomType, setValue, values.roomType]);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -120,7 +120,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       } else {
         toast.error('Gagal mengirim booking inquiry. Silakan coba lagi.');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Booking submission error:', error);
       toast.error('Terjadi kesalahan. Silakan coba lagi.');
     }
@@ -382,5 +382,3 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     </div>
   );
 };
-
-export default BookingModal;

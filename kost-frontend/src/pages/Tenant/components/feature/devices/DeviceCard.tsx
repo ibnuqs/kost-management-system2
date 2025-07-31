@@ -4,7 +4,7 @@ import {
   Wifi, WifiOff, Battery, Signal, Settings, AlertTriangle, 
   Lock, Camera, Thermometer, Lightbulb, Volume2, Activity, Cpu 
 } from 'lucide-react';
-import { Device, getDeviceStatusColor, getDeviceStatusLabel, getBatteryLevelColor, getSignalStrengthColor } from '../../../types/device';
+import { Device, getDeviceStatusLabel, getBatteryLevelColor, getSignalStrengthColor } from '../../../types/device';
 import { Card } from '../../ui/Card';
 import { StatusBadge } from '../../ui/Status';
 import { Button } from '../../ui/Buttons';

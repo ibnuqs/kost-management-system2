@@ -5,7 +5,7 @@ import type { TenantFilters as TenantFiltersType } from '../../../types/tenant';
 
 interface TenantFiltersProps {
   filters: TenantFiltersType;
-  onFilterChange: (key: keyof TenantFiltersType, value: any) => void;
+  onFilterChange: (key: keyof TenantFiltersType, value: TenantFiltersType[typeof key]) => void;
   resultCount?: number;
 }
 

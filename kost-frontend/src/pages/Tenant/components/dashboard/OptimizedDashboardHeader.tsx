@@ -1,21 +1,28 @@
 // Optimized Dashboard Header Component
 import React, { memo } from 'react';
-import { Bell, Settings, User, LogOut, Menu } from 'lucide-react';
+import { Bell, Settings, User, Menu } from 'lucide-react';
 import { useTenantDashboard } from '../../hooks/useTenantDashboard';
+
+// User type definition
+interface UserData {
+  name?: string;
+  avatar?: string;
+}
 
 // Memoized user avatar component
 const UserAvatar = memo<{
-  user: any;
+  user: unknown;
   className?: string;
 }>(({ user, className = '' }) => {
-  const initials = user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'T';
+  const userData = user as UserData;
+  const initials = userData?.name ? userData.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'T';
   
   return (
     <div className={`w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-medium ${className}`}>
-      {user?.avatar ? (
+      {userData?.avatar ? (
         <img 
-          src={user.avatar} 
-          alt={user.name}
+          src={userData.avatar} 
+          alt={userData.name || 'User'}
           className="w-full h-full rounded-full object-cover"
         />
       ) : (
@@ -89,7 +96,7 @@ const OptimizedDashboardHeader: React.FC = () => {
           <UserAvatar user={user} className="w-12 h-12" />
           <div>
             <h1 className="text-xl font-bold text-gray-900">
-              {getGreeting()}, {user?.name || 'Tenant'}!
+              {getGreeting()}, {(user as UserData)?.name || 'Tenant'}!
             </h1>
             <p className="text-sm text-gray-600">
               {roomInfo} • {tenantInfo?.status || 'Active'}

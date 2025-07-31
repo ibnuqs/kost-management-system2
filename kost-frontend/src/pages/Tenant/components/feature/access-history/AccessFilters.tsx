@@ -47,7 +47,7 @@ const AccessFilters: React.FC<AccessFiltersProps> = ({
     { value: 'asc', label: 'Terlama Dulu' },
   ];
 
-  const updateFilter = (key: keyof AccessFiltersType, value: any) => {
+  const updateFilter = (key: keyof AccessFiltersType, value: string | boolean | null) => {
     onFiltersChange({
       ...filters,
       [key]: value || undefined,
@@ -235,7 +235,7 @@ const AccessFilters: React.FC<AccessFiltersProps> = ({
           <p className="text-sm text-blue-800">
             <strong>Filter Aktif:</strong>{' '}
             {Object.entries(filters)
-              .filter(([_, value]) => value !== undefined && value !== '' && value !== 'all')
+              .filter(([, value]) => value !== undefined && value !== '' && value !== 'all')
               .map(([key, value]) => {
                 if (key === 'access_granted') {
                   return `${key}: ${value ? 'Diizinkan' : 'Ditolak'}`;

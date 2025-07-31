@@ -1,11 +1,11 @@
 <?php
+
 // File: app/Events/RfidAccessEvent.php
 
 namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -52,7 +52,7 @@ class RfidAccessEvent implements ShouldBroadcast
     {
         return [
             'type' => 'rfid_access',
-            'data' => $this->accessData
+            'data' => $this->accessData,
         ];
     }
 }

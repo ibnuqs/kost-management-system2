@@ -1,6 +1,5 @@
 // src/utils/validation.ts - Comprehensive Form Validation
-import React, { useState, useCallback } from 'react';
-import { ValidationError } from './errorHandler';
+import React from 'react';
 
 export interface ValidationRule {
   required?: boolean;
@@ -9,7 +8,7 @@ export interface ValidationRule {
   pattern?: RegExp;
   min?: number;
   max?: number;
-  custom?: (value: any) => string | null;
+  custom?: (value: unknown) => string | null;
   message?: string;
 }
 
@@ -28,7 +27,7 @@ export class Validator {
   private static phonePattern = /^(\+62|62|0)[0-9]{9,13}$/;
   private static strongPasswordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
 
-  public static validate(data: Record<string, any>, schema: ValidationSchema): ValidationResult {
+  public static validate(data: Record<string, unknown>, schema: ValidationSchema): ValidationResult {
     const errors: Record<string, string> = {};
 
     for (const [field, rules] of Object.entries(schema)) {
@@ -47,7 +46,7 @@ export class Validator {
     };
   }
 
-  public static validateField(value: any, rules: ValidationRule, fieldName: string): string | null {
+  public static validateField(value: unknown, rules: ValidationRule, fieldName: string): string | null {
     // Required validation
     if (rules.required && this.isEmpty(value)) {
       return rules.message || `${this.humanizeFieldName(fieldName)} is required`;
@@ -100,7 +99,7 @@ export class Validator {
     return null;
   }
 
-  private static isEmpty(value: any): boolean {
+  private static isEmpty(value: unknown): boolean {
     return value === null || 
            value === undefined || 
            value === '' || 
@@ -164,7 +163,7 @@ export class Validator {
     }),
 
     confirmPassword: (passwordField: string = 'password', message?: string): ValidationRule => ({
-      custom: (value: any, data?: Record<string, any>) => {
+      custom: (value: unknown, data?: Record<string, unknown>) => {
         if (data && value !== data[passwordField]) {
           return message || 'Passwords do not match';
         }
@@ -188,7 +187,7 @@ export class Validator {
     }),
 
     date: (message?: string): ValidationRule => ({
-      custom: (value: any) => {
+      custom: (value: unknown) => {
         const date = new Date(value);
         if (isNaN(date.getTime())) {
           return message || 'Please enter a valid date';
@@ -198,7 +197,7 @@ export class Validator {
     }),
 
     futureDate: (message?: string): ValidationRule => ({
-      custom: (value: any) => {
+      custom: (value: unknown) => {
         const date = new Date(value);
         const now = new Date();
         if (date <= now) {
@@ -209,7 +208,7 @@ export class Validator {
     }),
 
     pastDate: (message?: string): ValidationRule => ({
-      custom: (value: any) => {
+      custom: (value: unknown) => {
         const date = new Date(value);
         const now = new Date();
         if (date >= now) {
@@ -335,11 +334,11 @@ export const roomSchemas = {
 
 // React hook for form validation
 export const useFormValidation = (schema: ValidationSchema) => {
-  const validate = (data: Record<string, any>): ValidationResult => {
+  const validate = (data: Record<string, unknown>): ValidationResult => {
     return Validator.validate(data, schema);
   };
 
-  const validateField = (fieldName: string, value: any): string | null => {
+  const validateField = (fieldName: string, value: unknown): string | null => {
     const rules = schema[fieldName];
     if (!rules) return null;
     
@@ -354,10 +353,10 @@ export const useFormValidation = (schema: ValidationSchema) => {
 
 // Higher-order component for form validation
 export const withValidation = (
-  Component: React.ComponentType<any>,
+  Component: React.ComponentType<Record<string, unknown>>,
   schema: ValidationSchema
 ) => {
-  const WrappedComponent = (props: any) => {
+  const WrappedComponent = (props: Record<string, unknown>) => {
     const validation = useFormValidation(schema);
     
     return React.createElement(Component, {

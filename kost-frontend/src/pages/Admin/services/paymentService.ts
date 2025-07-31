@@ -89,7 +89,7 @@ export const paymentService = {
     }
   },
 
-  async exportPayments(filters?: any): Promise<Blob> {
+  async exportPayments(filters?: PaymentFilters): Promise<Blob> {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {

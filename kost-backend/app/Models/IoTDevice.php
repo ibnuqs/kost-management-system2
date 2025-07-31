@@ -1,4 +1,5 @@
 <?php
+
 // ===================================================================
 // app/Models/IoTDevice.php (Fixed)
 // ===================================================================
@@ -17,11 +18,14 @@ class IoTDevice extends Model
 
     // Device type constants
     const TYPE_DOOR_LOCK = 'door_lock';
+
     const TYPE_CARD_SCANNER = 'card_scanner';
+
     const TYPE_RFID_READER = 'rfid_reader';
 
     // Status constants
     const STATUS_ONLINE = 'online';
+
     const STATUS_OFFLINE = 'offline';
 
     const ALLOWED_TYPES = [
@@ -51,6 +55,7 @@ class IoTDevice extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
     // ✅ HELPER METHODS untuk DateTime Formatting
     protected function formatDateForApi($date): ?string
     {
@@ -61,6 +66,7 @@ class IoTDevice extends Model
     {
         return \App\Helpers\DateTimeHelper::toISOString($date);
     }
+
     // Relationships
     public function room(): BelongsTo
     {

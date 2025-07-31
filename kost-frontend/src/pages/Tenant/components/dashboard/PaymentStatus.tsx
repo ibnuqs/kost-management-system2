@@ -1,12 +1,12 @@
 // Optimized Payment Status Component
-import React, { memo, useCallback, useMemo } from 'react';
-import { CreditCard, AlertCircle, CheckCircle, Clock, ChevronRight, DollarSign } from 'lucide-react';
+import React, { memo, useCallback, useState } from 'react';
+import { AlertCircle, ChevronRight, DollarSign } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTenantDashboard } from '../../hooks/useTenantDashboard';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Buttons';
 import { StatusBadge } from '../ui/Status';
-import { getPaymentStatusColor, getPaymentStatusLabel } from '../../types/payment';
+import { getPaymentStatusLabel } from '../../types/payment';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { mergeClasses } from '../../utils/helpers';
 
@@ -19,6 +19,7 @@ const PaymentStatus: React.FC<PaymentStatusProps> = memo(({
 }) => {
   const { dashboardData, isLoading } = useTenantDashboard();
   const navigate = useNavigate();
+  const [isProcessing] = useState(false);
   
   const paymentInfo = dashboardData?.payment_info;
   const currentPaymentData = paymentInfo?.current;
@@ -27,17 +28,6 @@ const PaymentStatus: React.FC<PaymentStatusProps> = memo(({
   const summary = paymentInfo?.payment_history_summary;
 
   // Memoize helper functions
-  const getStatusIcon = useCallback((status: string) => {
-    switch (status) {
-      case 'paid':
-      case 'success':
-        return CheckCircle;
-      case 'pending':
-        return Clock;
-      default:
-        return AlertCircle;
-    }
-  }, []);
 
   const getStatusVariant = useCallback((status: string) => {
     if (['paid', 'success', 'settlement', 'capture'].includes(status)) return 'success';
@@ -47,13 +37,15 @@ const PaymentStatus: React.FC<PaymentStatusProps> = memo(({
 
   // Handle payment - redirect to payment page
   const handlePayment = useCallback((paymentId: string) => {
-    navigate('/tenant/payments', { 
-      state: { 
-        highlightPayment: paymentId,
-        autoOpenPayment: true 
-      } 
-    });
-  }, [navigate]);
+    if (!isProcessing) {
+      navigate('/tenant/payments', { 
+        state: { 
+          highlightPayment: paymentId,
+          autoOpenPayment: true 
+        } 
+      });
+    }
+  }, [isProcessing, navigate]);
 
   if (isLoading) {
     return (
@@ -88,11 +80,11 @@ const PaymentStatus: React.FC<PaymentStatusProps> = memo(({
       {/* Overdue Payments Alert */}
       {overduePayments.length > 0 && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-3">
             <AlertCircle className="w-4 h-4 text-red-600" />
-            <span className="text-sm font-medium text-red-800">
+            <h4 className="font-medium text-red-900">
               {overduePayments.length} Pembayaran Terlambat
-            </span>
+            </h4>
           </div>
           <p className="text-xs text-red-600 mb-2">
             Total: {formatCurrency(overduePayments.reduce((sum, p) => sum + p.amount, 0))}

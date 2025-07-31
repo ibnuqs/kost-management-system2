@@ -8,7 +8,6 @@ import { Select } from '../../ui/Forms/Select';
 import { Modal } from '../../ui/Modal';
 import { useRfidEvents } from '../../../../../hooks';
 import { esp32Service } from '../../../services/esp32Service';
-import type { RfidCard as AdminRfidCard } from '../../../types/rfid';
 
 interface LocalRfidCard {
   id: string;
@@ -43,7 +42,6 @@ export const RfidAccessControl: React.FC = () => {
   const [cards, setCards] = useState<LocalRfidCard[]>([]);
   const [accessAttempts, setAccessAttempts] = useState<AccessAttempt[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCard, setSelectedCard] = useState<LocalRfidCard | null>(null);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'access' | null>(null);
   const [newCardForm, setNewCardForm] = useState({
     card_uid: '',
@@ -53,29 +51,54 @@ export const RfidAccessControl: React.FC = () => {
   });
 
   // Use MQTT hook for real-time RFID events (with fallback for demo mode)
-  let recentScans: any[] = [];
-  let isConnected = false;
-  let connectionStatus = { connected: false, connecting: false, error: 'MQTT not configured - Demo mode' as string | null, reconnectAttempts: 0 };
-  let sendResponse = (_uid: string, _response: any) => false;
-  
-  try {
-    const mqttHook = useRfidEvents();
-    recentScans = mqttHook.recentScans;
-    isConnected = mqttHook.isConnected;
-    connectionStatus = mqttHook.connectionStatus;
-    // useRfidEvents doesn't provide sendResponse, so we'll use a placeholder
-    sendResponse = (_uid: string, _response: any) => {
-      console.log('Demo mode: would send response', _uid, _response);
+  const { recentScans, isConnected, sendRfidResponse } = useRfidEvents();
+
+  const sendResponse = useCallback((uid: string, response: unknown) => {
+    if (sendRfidResponse) {
+      return sendRfidResponse(uid, response);
+    } else {
+      console.log('Demo mode: would send response', uid, response);
       return false;
-    };
-  } catch (error) {
-    console.warn('MQTT hook not available, running in demo mode');
-  }
+    }
+  }, [sendRfidResponse]);
 
   useEffect(() => {
     fetchCards();
     fetchRecentAttempts();
   }, []);
+
+  const processRfidScan = useCallback(async (scan: RfidScan) => {
+    try {
+      console.log('🔍 Processing RFID scan with ESP32 service:', { scan });
+      
+      // Use ESP32 service to process scan (includes auto-registration and database logging)
+      const response = await esp32Service.processRfidScan({
+        uid: scan.uid,
+        device_id: scan.device_id,
+        signal_strength: scan.signal_strength
+      });
+      
+      console.log('✅ ESP32 service response:', response);
+
+      // Send response back to ESP32
+      sendResponse(scan.uid, response);
+
+      // Refresh data to show new cards/attempts
+      fetchCards();
+      fetchRecentAttempts();
+
+    } catch (error) {
+      console.error('❌ Error processing RFID scan:', error);
+      
+      // Send error response
+      sendResponse(scan.uid, {
+        status: 'error',
+        user: 'System',
+        message: 'System error occurred',
+        access_granted: false
+      });
+    }
+  }, [sendResponse]);
 
   // Handle real-time RFID scans
   useEffect(() => {
@@ -85,7 +108,7 @@ export const RfidAccessControl: React.FC = () => {
         processRfidScan(scan);
       }
     });
-  }, [recentScans]);
+  }, [recentScans, processRfidScan]);
 
   const fetchCards = async () => {
     try {
@@ -96,7 +119,7 @@ export const RfidAccessControl: React.FC = () => {
         id: card.id.toString(),
         card_uid: card.uid,
         user_id: card.user_id?.toString() || '',
-        room_id: card.room_id?.toString(),
+        room_id: card.tenant?.room?.id?.toString(),
         status: card.status === 'active' ? 'active' as const : 'inactive' as const,
         issued_at: card.created_at || new Date().toISOString(),
         expires_at: undefined,
@@ -104,9 +127,9 @@ export const RfidAccessControl: React.FC = () => {
           name: card.user.name,
           email: card.user.email
         } : undefined,
-        room: card.room ? {
-          room_number: card.room.room_number,
-          room_name: card.room.room_name || `Room ${card.room.room_number}`
+        room: card.tenant?.room ? {
+          room_number: card.tenant.room.room_number,
+          room_name: card.tenant.room.room_name || `Room ${card.tenant.room.room_number}`
         } : undefined
       })) : [];
       setCards(cardsArray);
@@ -172,8 +195,8 @@ export const RfidAccessControl: React.FC = () => {
       // Use real service with fallback to mock data
       const attempts = await esp32Service.getAccessAttempts(20);
       setAccessAttempts(attempts);
-    } catch (error) {
-      console.error('Error fetching access attempts:', error);
+    } catch (_error) {
+      console.error('Error fetching access attempts:', _error);
       // Fallback to mock data
       const mockAttempts: AccessAttempt[] = [
         {
@@ -197,39 +220,6 @@ export const RfidAccessControl: React.FC = () => {
       ];
       
       setAccessAttempts(mockAttempts);
-    }
-  };
-
-  const processRfidScan = async (scan: any) => {
-    try {
-      console.log('🔍 Processing RFID scan with ESP32 service:', { scan });
-      
-      // Use ESP32 service to process scan (includes auto-registration and database logging)
-      const response = await esp32Service.processRfidScan({
-        uid: scan.uid,
-        device_id: scan.device_id,
-        signal_strength: scan.signal_strength
-      });
-      
-      console.log('✅ ESP32 service response:', response);
-
-      // Send response back to ESP32
-      sendResponse(scan.uid, response);
-
-      // Refresh data to show new cards/attempts
-      fetchCards();
-      fetchRecentAttempts();
-
-    } catch (error) {
-      console.error('❌ Error processing RFID scan:', error);
-      
-      // Send error response
-      sendResponse(scan.uid, {
-        status: 'error',
-        user: 'System',
-        message: 'System error occurred',
-        access_granted: false
-      });
     }
   };
 
@@ -291,8 +281,8 @@ export const RfidAccessControl: React.FC = () => {
           }
           break;
       }
-    } catch (error) {
-      console.error(`Error ${action} card:`, error);
+    } catch {
+      console.error(`Error ${action} card:`);
     }
   };
 

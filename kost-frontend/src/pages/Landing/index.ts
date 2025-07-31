@@ -19,6 +19,6 @@ export * from './components';
 export * from './pages';
 
 // Main exports that will be used by App.tsx
-export { default as LandingPage } from './pages/LandingPage';
+export { LandingPage } from './pages/LandingPage';
 export { default as LandingLayout } from './components/LandingLayout';
 export { default as Navigation } from './components/Navigation';

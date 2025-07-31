@@ -1,6 +1,6 @@
 // File: src/pages/Admin/components/feature/rfid/RfidScanModal.tsx
 import React, { useEffect, useState } from 'react';
-import { X, Scan, Wifi, WifiOff, CheckCircle, AlertCircle, Clock, AlertTriangle } from 'lucide-react';
+import { X, Scan, WifiOff, CheckCircle, AlertCircle, Clock, AlertTriangle } from 'lucide-react';
 import { useRfidScanner } from '../../../../../hooks/useRfidScanner';
 import { esp32Service } from '../../../services/esp32Service';
 
@@ -122,7 +122,7 @@ export const RfidScanModal: React.FC<RfidScanModalProps> = ({
         stopScanning();
       }
     };
-  }, []);
+  }, [isScanning, stopScanning]);
 
   // Handle close
   const handleClose = () => {

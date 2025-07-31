@@ -1,13 +1,14 @@
 <?php
+
 // app/Models/User.php (Updated dengan Helper Methods)
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -85,7 +86,7 @@ class User extends Authenticatable
     public function getTenantSummaryAttribute(): array
     {
         $activeTenant = $this->tenants()->where('status', 'active')->first();
-        
+
         return [
             'is_active_tenant' => (bool) $activeTenant,
             'total_tenancies' => $this->tenants()->count(),
@@ -101,7 +102,7 @@ class User extends Authenticatable
             ->latest('accessed_at')
             ->limit($limit)
             ->get()
-            ->map(function($log) {
+            ->map(function ($log) {
                 return [
                     'id' => $log->id,
                     'accessed_at' => $this->formatDateForApi($log->accessed_at),
@@ -121,18 +122,18 @@ class User extends Authenticatable
             ->where('tenants.user_id', $this->id)
             ->select([
                 'payments.id',
-                'payments.order_id', 
+                'payments.order_id',
                 'payments.amount',
                 'payments.status',
                 'payments.payment_month',
                 'payments.paid_at',
-                'payments.created_at'
+                'payments.created_at',
             ])
             ->orderBy('payments.created_at', 'desc')
             ->limit($limit)
             ->get();
 
-        return $payments->map(function($payment) {
+        return $payments->map(function ($payment) {
             return [
                 'id' => $payment->id,
                 'order_id' => $payment->order_id,

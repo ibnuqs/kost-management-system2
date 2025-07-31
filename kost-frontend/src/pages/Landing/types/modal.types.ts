@@ -1,5 +1,4 @@
 // src/pages/Landing/types/modal.types.ts - FIXED
-import { RoomType } from './landing.types';
 import { BookingFormData, ContactFormData } from './form.types';
 
 export interface ModalProps {

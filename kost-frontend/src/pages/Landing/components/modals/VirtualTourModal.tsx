@@ -90,7 +90,7 @@ export const VirtualTourModal: React.FC<VirtualTourModalProps> = ({
     setIsLoading(true);
     const iframe = document.getElementById('virtual-tour-iframe') as HTMLIFrameElement;
     if (iframe) {
-      iframe.src = iframe.src;
+      iframe.src = currentTour.url; // Reload with original URL
     }
   };
 
@@ -106,7 +106,7 @@ export const VirtualTourModal: React.FC<VirtualTourModalProps> = ({
         await document.exitFullscreen();
         analyticsService.trackEvent('virtual_tour_control', 'engagement', 'exit_fullscreen', roomType);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Fullscreen error:', error);
     }
   };
@@ -326,5 +326,3 @@ export const VirtualTourModal: React.FC<VirtualTourModalProps> = ({
     </div>
   );
 };
-
-export default VirtualTourModal;

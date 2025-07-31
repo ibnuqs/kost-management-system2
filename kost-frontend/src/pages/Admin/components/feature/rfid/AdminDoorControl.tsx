@@ -1,50 +1,57 @@
 // File: src/pages/Admin/components/feature/rfid/AdminDoorControl.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardHeader, CardContent } from '../../ui/Card';
 import { Button } from '../../ui/Forms/Button';
-import { DoorOpen, DoorClosed, Home, Shield, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { DoorOpen, DoorClosed, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import type { Room } from '../../../types/room';
-import type { IoTDevice } from '../../../types/iot';
 import type { AdminDoorControlRequest } from '../../../types/rfid';
 
 interface AdminDoorControlProps {
-  rooms: Room[];
-  devices: IoTDevice[];
+  rooms?: Room[];
   onDoorControl: (request: AdminDoorControlRequest) => Promise<boolean>;
 }
 
-interface DoorStatus {
-  room_id: number;
-  device_id: string;
-  status: 'open' | 'closed' | 'unknown';
-  last_action: string;
-  timestamp: Date;
-}
+
 
 export const AdminDoorControl: React.FC<AdminDoorControlProps> = ({
-  rooms,
-  devices,
+  rooms = [],
   onDoorControl
 }) => {
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [loading, setLoading] = useState<number | null>(null);
   const [reason, setReason] = useState('');
   const [lastAction, setLastAction] = useState<{ room: string; action: string; time: Date } | null>(null);
-  const [doorStatuses, setDoorStatuses] = useState<Record<number, DoorStatus>>({});
-
-
-  // Use only real data from database
-  const availableRooms = rooms;
+  
+  // ULTRA-OPTIMIZED: Pre-computed room options with minimal re-computation
+  const roomOptions = useMemo(() => {
+    if (!rooms || rooms.length === 0) return [];
+    
+    
+    // Pre-compute all display strings in single pass
+    return rooms.map(room => {
+      const roomNum = room.room_number;
+      const tenantName = room.tenant?.user?.name;
+      
+      return {
+        id: room.id,
+        value: room.id,
+        // Optimized string concatenation
+        label: `Kamar ${roomNum}${tenantName ? ` - ${tenantName}` : ' - Kosong'}`,
+        room // Keep reference for fast lookup
+      };
+    });
+  }, [rooms]); // Only depend on rooms array
+  
+  // Fast room lookup by ID
+  const getRoomById = useMemo(() => {
+    const roomMap = new Map(rooms.map(room => [room.id, room]));
+    return (id: number) => roomMap.get(id);
+  }, [rooms]);
   
 
-  const getDeviceForRoom = (roomId: number) => {
-    return devices.find(device => 
-      device.room_id?.toString() === roomId?.toString() || device.room_id === roomId
-    );
-  };
 
   const handleDoorAction = async (roomId: number, action: 'open_door' | 'close_door') => {
-    const room = rooms.find(r => r.id === roomId);
+    const room = getRoomById(roomId); // Fast O(1) lookup
     if (!room) return;
 
     setLoading(roomId);
@@ -62,70 +69,55 @@ export const AdminDoorControl: React.FC<AdminDoorControlProps> = ({
           time: new Date()
         });
 
-        // Update door status locally
-        setDoorStatuses(prev => ({
-          ...prev,
-          [roomId]: {
-            room_id: roomId,
-            device_id: getDeviceForRoom(roomId)?.device_id || '',
-            status: action === 'open_door' ? 'open' : 'closed',
-            last_action: action === 'open_door' ? 'Opened by admin' : 'Closed by admin',
-            timestamp: new Date()
-          }
-        }));
+        
 
         setReason('');
       }
-    } catch (error) {
+    } catch {
       // Door control error will be shown in UI
     } finally {
       setLoading(null);
     }
   };
 
-  const formatTimeAgo = (date: Date) => {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    
-    return date.toLocaleDateString();
-  };
 
   return (
     <Card>
       <CardHeader>
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Shield className="w-5 h-5" />
-          🔐 Kontrol Pintu
+Kontrol Pintu
         </h3>
         <p className="text-gray-600">Buka atau tutup pintu kamar secara manual</p>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Room Selection */}
+          {/* Room Selection - Optimized */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Pilih Kamar
+              Pilih Kamar {roomOptions.length > 0 && (
+                <span className="text-green-600 text-xs ml-1">({roomOptions.length} kamar tersedia)</span>
+              )}
             </label>
-            <select
-              value={selectedRoom || ''}
-              onChange={(e) => setSelectedRoom(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Pilih kamar...</option>
-              {availableRooms.map(room => (
-                <option key={room.id} value={room.id}>
-                  Kamar {room.room_number} 
-                  {room.tenant?.user?.name ? ` - ${room.tenant.user.name}` : ' - Kosong'}
-                </option>
-              ))}
-            </select>
+            {roomOptions.length === 0 ? (
+              <div className="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-blue-50 text-blue-600 flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+Mencari ESP32 online... ({rooms?.length || 0} kamar ditemukan)
+              </div>
+            ) : (
+              <select
+                value={selectedRoom || ''}
+                onChange={(e) => setSelectedRoom(e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Pilih kamar...</option>
+                {roomOptions.map(option => (
+                  <option key={option.id} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Reason Input */}
@@ -187,11 +179,11 @@ export const AdminDoorControl: React.FC<AdminDoorControlProps> = ({
 
 
           {/* No rooms message */}
-          {availableRooms.length === 0 && (
+          {roomOptions.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Tidak ada data kamar</h3>
-              <p>Pastikan backend berjalan dan data kamar sudah diload</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Tidak ada kamar dengan ESP32 online</h3>
+              <p className="text-sm">Tunggu beberapa detik, sistem sedang mencari ESP32 yang online...</p>
             </div>
           )}
         </div>

@@ -18,14 +18,15 @@ export const useTenantDoorControl = () => {
   // Open door mutation
   const openDoorMutation = useMutation({
     mutationFn: (reason?: string) => tenantService.openMyRoomDoor(reason),
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success('Pintu berhasil dibuka! 🚪');
       // Refresh door status after opening
       queryClient.invalidateQueries({ queryKey: ['tenant', 'door-status'] });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Error opening door:', error);
-      toast.error(error.message || 'Gagal membuka pintu');
+      const message = error instanceof Error ? error.message : 'Gagal membuka pintu';
+      toast.error(message);
     },
   });
 

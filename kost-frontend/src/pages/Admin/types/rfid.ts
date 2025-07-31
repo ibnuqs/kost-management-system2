@@ -8,7 +8,10 @@ export interface RfidCard extends BaseEntity {
   tenant_id?: number | null;
   device_id?: string | null;
   card_type: 'primary' | 'backup' | 'temporary';
+  access_type?: 'room_only' | 'building' | 'master';
+  expires_at?: string;
   user?: User;
+  room?: Room;
   tenant?: {
     id: number;
     tenant_code: string;
@@ -28,8 +31,12 @@ export interface RfidStats {
 export interface RfidFormData {
   uid: string;
   tenant_id?: number;
+  user_id?: number;
+  room_id?: number;
+  device_id?: string;
   card_type: 'primary' | 'backup' | 'temporary';
   status?: 'active' | 'inactive';
+  access_type?: 'room_only' | 'building' | 'master';
 }
 
 export interface RfidAssignmentData {

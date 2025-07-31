@@ -10,7 +10,7 @@ import type {
   TenantProfile,
   IoTDevice
 } from '../services/tenantService';
-import type { ApiResponse, PaginatedResponse } from '../utils/api';
+import type { PaginatedResponse } from '../utils/api';
 import { toast } from 'react-hot-toast';
 
 // Query keys for React Query

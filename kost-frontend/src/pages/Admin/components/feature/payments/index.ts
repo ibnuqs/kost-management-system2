@@ -9,6 +9,6 @@ export { PaymentDashboard } from './PaymentDashboard';
 export { GeneratePaymentModalAdvanced } from './GeneratePaymentModalAdvanced';
 export { GenerateIndividualPaymentModal } from './GenerateIndividualPaymentModal';
 export { ManualOverrideModal } from './ManualOverrideModal';
-export { StuckPaymentDetector } from './StuckPaymentDetector';
+// StuckPaymentDetector removed during cleanup
 export { VoidPaymentModal } from './VoidPaymentModal';
 export { ExpiredPaymentModal } from './ExpiredPaymentModal';

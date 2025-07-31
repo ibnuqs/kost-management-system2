@@ -5,13 +5,22 @@ import type {
   TenantStats, 
   TenantFormData, 
   TenantFilters,
-  TenantsResponse,
-  TenantResponse,
-  TenantDetailResponse,
   MoveOutData,
   DashboardData
 } from '../types/tenant';
 import type { PaginationData } from '../types/common';
+
+// API Error interface
+interface ApiError {
+  response?: {
+    status?: number;
+    data?: {
+      message?: string;
+      errors?: Record<string, string[]>;
+    };
+  };
+  message?: string;
+}
 
 export const tenantService = {
   /**
@@ -68,9 +77,10 @@ export const tenantService = {
           total: pagination.total || 0
         }
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Failed to fetch tenants:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Failed to fetch tenants');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to fetch tenants');
     }
   },
 
@@ -98,12 +108,13 @@ export const tenantService = {
       }
       
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Failed to create tenant:', error);
       
       // Handle validation errors
-      if (error.response?.status === 422) {
-        const errors = error.response.data.errors;
+      if (apiError.response?.status === 422) {
+        const errors = apiError.response?.data.errors;
         if (errors) {
           const errorMessages = Object.values(errors).flat();
           throw new Error(errorMessages.join(', '));
@@ -111,11 +122,11 @@ export const tenantService = {
       }
 
       // Handle room availability error
-      if (error.response?.status === 400) {
-        throw new Error(error.response.data.message || 'Room is not available');
+      if (apiError.response?.status === 400) {
+        throw new Error(apiError.response?.data.message || 'Room is not available');
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to create tenant');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to create tenant');
     }
   },
 
@@ -145,19 +156,20 @@ export const tenantService = {
       
       console.log('✅ Tenant updated successfully:', response.data.data);
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Failed to update tenant:', error);
       
       // Handle validation errors
-      if (error.response?.status === 422) {
-        const errors = error.response.data.errors;
+      if (apiError.response?.status === 422) {
+        const errors = apiError.response?.data.errors;
         if (errors) {
           const errorMessages = Object.values(errors).flat();
           throw new Error(errorMessages.join(', '));
         }
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to update tenant');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to update tenant');
     }
   },
 
@@ -171,15 +183,16 @@ export const tenantService = {
       if (!response.data.success) {
         throw new Error(response.data.message || 'Failed to delete tenant');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Failed to delete tenant:', error);
       
       // Handle business logic errors (pending payments, etc.)
-      if (error.response?.status === 400) {
-        throw new Error(error.response.data.message || 'Cannot delete tenant');
+      if (apiError.response?.status === 400) {
+        throw new Error(apiError.response?.data.message || 'Cannot delete tenant');
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to delete tenant');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to delete tenant');
     }
   },
 
@@ -199,26 +212,27 @@ export const tenantService = {
       if (!response.data.success) {
         throw new Error(response.data.message || 'Failed to move out tenant');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Failed to move out tenant:', error);
       
       // Handle validation errors
-      if (error.response?.status === 422) {
-        const errors = error.response.data.errors;
+      if (apiError.response?.status === 422) {
+        const errors = apiError.response?.data.errors;
         if (errors) {
           const errorMessages = Object.values(errors).flat();
           throw new Error(errorMessages.join(', '));
         }
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to move out tenant');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to move out tenant');
     }
   },
 
   /**
    * Get tenant by ID with detailed stats
    */
-  async getTenant(id: number): Promise<{tenant: Tenant; stats: any}> {
+  async getTenant(id: number): Promise<{tenant: Tenant; stats: unknown}> {
     try {
       const response = await api.get(`/admin/tenants/${id}`);
       
@@ -230,14 +244,15 @@ export const tenantService = {
         tenant: response.data.data,
         stats: response.data.stats
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Failed to fetch tenant:', error);
       
-      if (error.response?.status === 404) {
+      if (apiError.response?.status === 404) {
         throw new Error('Tenant not found');
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to fetch tenant');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to fetch tenant');
     }
   },
 
@@ -253,9 +268,10 @@ export const tenantService = {
       }
       
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Failed to fetch dashboard data:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Failed to fetch dashboard data');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to fetch dashboard data');
     }
   },
 
@@ -281,9 +297,10 @@ export const tenantService = {
         average_rent: 0,
         occupancy_rate: 0
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Failed to fetch tenant stats:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Failed to fetch tenant stats');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to fetch tenant stats');
     }
   },
 
@@ -302,9 +319,10 @@ export const tenantService = {
       }
       
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Failed to suspend tenant:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Failed to suspend tenant');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to suspend tenant');
     }
   },
 
@@ -322,9 +340,10 @@ export const tenantService = {
       }
       
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
       console.error('Failed to reactivate tenant:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Failed to reactivate tenant');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to reactivate tenant');
     }
   }
 };

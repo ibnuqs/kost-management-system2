@@ -1,4 +1,5 @@
 <?php
+
 // config/broadcasting.php
 return [
     'default' => env('BROADCAST_DRIVER', 'null'),
@@ -18,7 +19,7 @@ return [
                 'curl_options' => [
                     CURLOPT_SSL_VERIFYHOST => 0,
                     CURLOPT_SSL_VERIFYPEER => 0,
-                ]
+                ],
             ],
         ],
 

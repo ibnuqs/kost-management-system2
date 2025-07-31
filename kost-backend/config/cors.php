@@ -1,4 +1,5 @@
 <?php
+
 // config/cors.php - FIXED VERSION
 
 return [
@@ -9,12 +10,12 @@ return [
     'allowed_origins' => env('APP_ENV') === 'production' ? [
         env('APP_URL', 'https://your-domain.com'),
         'https://your-domain.com',
-        'https://www.your-domain.com'
+        'https://www.your-domain.com',
     ] : [
-        'http://localhost:3000', 
+        'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:5173',
-        'http://127.0.0.1:5173'
+        'http://127.0.0.1:5173',
     ],
 
     'allowed_origins_patterns' => [],

@@ -1,23 +1,13 @@
 // File: src/pages/Admin/components/feature/iot/ESP32CommandCenter.tsx
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from '../../ui/Card';
-import { Button } from '../../ui/Forms/Button';
-import { Input } from '../../ui/Forms/Input';
-import { Select } from '../../ui/Forms/Select';
-import { Modal } from '../../ui/Modal';
-import { StatusBadge } from '../../ui/Status';
-import { esp32Service, ESP32Device } from '../../../services/esp32Service';
-import { useMqtt } from '../../../../../hooks/useMqtt';
-
 interface CommandHistory {
   id: string;
   command: string;
   device_id: string;
-  payload?: any;
+  payload?: Record<string, unknown>;
   status: 'sent' | 'delivered' | 'acknowledged' | 'failed' | 'timeout';
   sent_at: string;
   response_at?: string;
-  response?: any;
+  response?: Record<string, unknown>;
   error?: string;
 }
 
@@ -26,7 +16,7 @@ interface CommandTemplate {
   command: string;
   description: string;
   requiresPayload: boolean;
-  payloadSchema?: any;
+  payloadSchema?: Record<string, string>;
   category: 'system' | 'config' | 'rfid' | 'network' | 'debug';
 }
 
@@ -137,17 +127,7 @@ export const ESP32CommandCenter: React.FC = () => {
   // MQTT connection for sending commands and receiving responses
   const { isConnected, publish, subscribe, unsubscribe } = useMqtt();
 
-  useEffect(() => {
-    fetchDevices();
-    setupCommandResponseHandler();
-    
-    return () => {
-      // Cleanup subscriptions
-      unsubscribe('rfid/command/response');
-    };
-  }, []);
-
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async () => {
     try {
       const deviceList = await esp32Service.getDevices();
       setDevices(deviceList);
@@ -157,9 +137,9 @@ export const ESP32CommandCenter: React.FC = () => {
     } catch (error) {
       console.error('Error fetching devices:', error);
     }
-  };
+  }, [selectedDevice]);
 
-  const setupCommandResponseHandler = () => {
+  const setupCommandResponseHandler = useCallback(() => {
     // Subscribe to command responses from ESP32
     subscribe('rfid/command/response', (topic, message) => {
       try {
@@ -185,9 +165,21 @@ export const ESP32CommandCenter: React.FC = () => {
         console.error('Error parsing command response:', error);
       }
     });
-  };
+  }, [subscribe]);
 
-  const sendCommand = async (template: CommandTemplate, customPayload?: any) => {
+  useEffect(() => {
+    fetchDevices();
+    setupCommandResponseHandler();
+    
+    return () => {
+      // Cleanup subscriptions
+      unsubscribe('rfid/command/response');
+    };
+  }, [fetchDevices, setupCommandResponseHandler, unsubscribe]);
+
+  
+
+  const sendCommand = async (template: CommandTemplate, customPayload?: Record<string, unknown>) => {
     if (!selectedDevice) {
       alert('Please select a device first');
       return;
@@ -196,7 +188,7 @@ export const ESP32CommandCenter: React.FC = () => {
     setLoading(true);
 
     try {
-      let commandPayload = {};
+      let commandPayload: Record<string, unknown> = {};
       
       if (template.requiresPayload) {
         if (customPayload) {
@@ -205,7 +197,7 @@ export const ESP32CommandCenter: React.FC = () => {
           // Parse payload from form input
           try {
             commandPayload = JSON.parse(payload);
-          } catch (error) {
+          } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
             alert('Invalid JSON payload');
             setLoading(false);
             return;
@@ -222,7 +214,6 @@ export const ESP32CommandCenter: React.FC = () => {
         request_id: `cmd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       };
 
-      console.log('📤 Sending ESP32 command:', commandData);
 
       // Send via MQTT
       const success = publish('rfid/command', JSON.stringify(commandData));
@@ -288,7 +279,7 @@ export const ESP32CommandCenter: React.FC = () => {
     if (template.requiresPayload) {
       // Set default payload based on schema
       if (template.payloadSchema) {
-        const defaultPayload: any = {};
+        const defaultPayload: Record<string, unknown> = {};
         Object.entries(template.payloadSchema).forEach(([key, type]) => {
           switch (type) {
             case 'string':
@@ -350,7 +341,7 @@ export const ESP32CommandCenter: React.FC = () => {
             MQTT {isConnected ? 'Connected' : 'Disconnected'}
           </StatusBadge>
           <Button onClick={fetchDevices} variant="outline">
-            🔄 Refresh
+Refresh
           </Button>
         </div>
       </div>
@@ -366,23 +357,23 @@ export const ESP32CommandCenter: React.FC = () => {
               <label className="block text-sm font-medium mb-1">ESP32 Device</label>
               <Select
                 value={selectedDevice}
-                onChange={(e) => setSelectedDevice(e.target.value)}
-              >
-                <option value="">Select Device</option>
-                {devices.map(device => (
-                  <option key={device.id} value={device.device_id}>
-                    {device.device_name} ({device.device_id}) - {device.status}
-                  </option>
-                ))}
-              </Select>
+                onChange={(value) => setSelectedDevice(value)}
+                options={[
+                  { value: "", label: "Select Device" },
+                  ...devices.map(device => ({
+                    value: device.device_id,
+                    label: `${device.device_name} (${device.device_id}) - ${device.status}`
+                  }))
+                ]}
+              />
             </div>
             <div className="flex items-end">
               {selectedDevice && (
                 <div className="text-sm text-gray-600">
                   {devices.find(d => d.device_id === selectedDevice)?.status === 'online' ? (
-                    <span className="text-green-600">✅ Device Online</span>
+                    <span className="text-green-600">Device Online</span>
                   ) : (
-                    <span className="text-red-600">❌ Device Offline</span>
+                    <span className="text-red-600">Device Offline</span>
                   )}
                 </div>
               )}
@@ -456,7 +447,7 @@ export const ESP32CommandCenter: React.FC = () => {
                 disabled={!selectedDevice || !isConnected || loading}
                 className="w-full"
               >
-                {loading ? '⏳ Sending...' : '📤 Send Custom Command'}
+{loading ? 'Sending...' : 'Send Custom Command'}
               </Button>
             </div>
           </CardContent>
@@ -557,7 +548,7 @@ export const ESP32CommandCenter: React.FC = () => {
                 onClick={() => sendCommand(selectedTemplate)}
                 disabled={loading}
               >
-                {loading ? '⏳ Sending...' : '📤 Send Command'}
+{loading ? 'Sending...' : 'Send Command'}
               </Button>
             </div>
           </div>

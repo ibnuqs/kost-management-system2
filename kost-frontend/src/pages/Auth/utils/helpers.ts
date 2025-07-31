@@ -1,4 +1,4 @@
-﻿// pages/Auth/utils/helpers.ts
+// pages/Auth/utils/helpers.ts
 // Helper functions for Auth operations
 
 import { User } from '../types/auth';
@@ -9,7 +9,7 @@ export const getStorageItem = (key: string): string | null => {
   try {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem(key);
-  } catch (error) {
+  } catch {
     // Error reading from localStorage
     return null;
   }
@@ -19,7 +19,7 @@ export const setStorageItem = (key: string, value: string): void => {
   try {
     if (typeof window === 'undefined') return;
     localStorage.setItem(key, value);
-  } catch (error) {
+  } catch {
     // Error writing to localStorage
   }
 };
@@ -28,7 +28,7 @@ export const removeStorageItem = (key: string): void => {
   try {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(key);
-  } catch (error) {
+  } catch {
     // Error removing from localStorage
   }
 };
@@ -93,7 +93,7 @@ export const getUserData = (): User | null => {
     const parsed = JSON.parse(decoded);
     
     // Validate that it's an object with expected properties
-    if (parsed && typeof parsed === 'object' && parsed.id) {
+    if (parsed && typeof parsed === 'object' && (parsed as { id?: unknown }).id) {
       return parsed as User;
     }
     
@@ -101,7 +101,7 @@ export const getUserData = (): User | null => {
     removeStorageItem(STORAGE_KEYS.USER_DATA);
     return null;
     
-  } catch (error) {
+  } catch {
     // Error parsing user data - clean up corrupted data
     removeStorageItem(STORAGE_KEYS.USER_DATA);
     return null;
@@ -116,7 +116,7 @@ export const setUserData = (user: User): void => {
     }
     const encoded = simpleEncode(JSON.stringify(user));
     setStorageItem(STORAGE_KEYS.USER_DATA, encoded);
-  } catch (error) {
+  } catch {
     // Error storing user data
   }
 };
@@ -141,7 +141,7 @@ export const isTokenExpired = (token: string): boolean => {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const currentTime = Date.now() / 1000;
     return payload.exp < currentTime;
-  } catch (error) {
+  } catch {
     // Error checking token expiration - consider it expired
     return true;
   }
@@ -205,32 +205,35 @@ export const formatPhoneNumber = (phone: string): string => {
 };
 
 // Error handling helpers
-export const getErrorMessage = (error: any): string => {
+export const getErrorMessage = (error: unknown): string => {
   if (typeof error === 'string') {
     return error;
   }
   
-  if (error?.response?.data?.message) {
-    return error.response.data.message;
+  const axiosError = error as { response?: { data?: { message?: string; error?: string } } };
+  
+  if (axiosError?.response?.data?.message) {
+    return axiosError.response.data.message;
   }
   
-  if (error?.response?.data?.error) {
-    return error.response.data.error;
+  if (axiosError?.response?.data?.error) {
+    return axiosError.response.data.error;
   }
   
-  if (error?.message) {
-    return error.message;
+  if ((error as Error)?.message) {
+    return (error as Error).message;
   }
   
   return 'An unexpected error occurred';
 };
 
-export const isNetworkError = (error: any): boolean => {
-  return !error.response && error.code !== 'ECONNABORTED';
+export const isNetworkError = (error: unknown): boolean => {
+  const axiosError = error as { response?: unknown; code?: string };
+  return !axiosError.response && axiosError.code !== 'ECONNABORTED';
 };
 
 // Debounce helper for form validation
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
 ): (...args: Parameters<T>) => void => {
@@ -273,7 +276,7 @@ export const formatLastLogin = (dateString: string): string => {
       const diffInDays = Math.floor(diffInHours / 24);
       return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
     }
-  } catch (error) {
+  } catch {
     // Error formatting date
     return 'Unknown';
   }
@@ -306,7 +309,7 @@ export const generateNonce = (): string => {
     const array = new Uint8Array(16);
     crypto.getRandomValues(array);
     return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-  } catch (error) {
+  } catch {
     // Error generating nonce - use fallback
     return Math.random().toString(36).substring(2, 15);
   }
@@ -326,25 +329,25 @@ export const maskEmail = (email: string): string => {
 };
 
 // Safe JSON helpers
-export const safeJSONParse = <T = any>(str: string, fallback: T | null = null): T | null => {
+export const safeJSONParse = <T = unknown>(str: string, fallback: T | null = null): T | null => {
   try {
     if (!str || str === 'undefined' || str === 'null') {
       return fallback;
     }
     return JSON.parse(str);
-  } catch (error) {
+  } catch {
     // JSON parse error
     return fallback;
   }
 };
 
-export const safeJSONStringify = (obj: any, fallback: string = ''): string => {
+export const safeJSONStringify = (obj: unknown, fallback: string = ''): string => {
   try {
     if (obj === null || obj === undefined) {
       return fallback;
     }
     return JSON.stringify(obj);
-  } catch (error) {
+  } catch {
     // JSON stringify error
     return fallback;
   }

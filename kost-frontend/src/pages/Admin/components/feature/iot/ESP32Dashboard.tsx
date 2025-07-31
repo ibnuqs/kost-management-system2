@@ -5,34 +5,12 @@ import { StatusBadge } from '../../ui/Status/StatusBadge';
 import { Button } from '../../ui/Forms/Button';
 import { Modal } from '../../ui/Modal';
 import { useRfidEvents } from '../../../../../hooks';
-import { esp32Service } from '../../../services/esp32Service';
+import { esp32Service, ESP32Device } from '../../../services/esp32Service';
 
-interface ESP32Device {
-  id: string;
-  device_id: string;
-  device_name: string;
-  device_type: string;
-  room_id?: string;
-  status: 'online' | 'offline' | 'error' | string;
-  last_seen: string;
-  device_info: {
-    wifi_connected?: boolean;
-    mqtt_connected?: boolean;
-    rfid_ready?: boolean;
-    device_ip?: string;
-    uptime?: string;  // ESP32 sends as "1h 30m" format
-    firmware_version?: string;
-    door_status?: string;
-  };
-  room?: {
-    room_number: string;
-    room_name: string;
-  };
-}
 
 interface DeviceCommand {
   type: 'restart' | 'ping';  // Simplified commands for ESP32
-  payload?: any;
+  payload?: Record<string, unknown>;
 }
 
 export const ESP32Dashboard: React.FC = () => {
@@ -40,27 +18,26 @@ export const ESP32Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDevice, setSelectedDevice] = useState<ESP32Device | null>(null);
   const [commandModal, setCommandModal] = useState(false);
-  const [configModal, setConfigModal] = useState(false);
   const [commandType, setCommandType] = useState<DeviceCommand['type']>('ping');
   
   // Get real-time device data from MQTT
-  const { deviceStatuses, isConnected } = useRfidEvents();
+  const { deviceStatuses } = useRfidEvents();
 
   useEffect(() => {
     fetchDevices();
     // Set up periodic refresh
     const interval = setInterval(fetchDevices, 30000); // Every 30 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchDevices]);
   
   // Update devices when MQTT data changes
   useEffect(() => {
     if (deviceStatuses.size > 0) {
       fetchDevices();
     }
-  }, [deviceStatuses]);
+  }, [deviceStatuses, fetchDevices]);
 
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async () => {
     try {
       // Get devices from API
       const apiDevices = await esp32Service.getDevices();
@@ -92,19 +69,28 @@ export const ESP32Dashboard: React.FC = () => {
             device_type: 'rfid_reader',
             status: (mqttDevice?.wifi_connected && mqttDevice?.mqtt_connected && mqttDevice?.rfid_ready) ? 'online' : 'offline',
             last_seen: mqttDevice?.last_seen?.toISOString() || new Date().toISOString(),
-            device_info: mqttDevice || {}
+            device_info: {
+              wifi_connected: mqttDevice?.wifi_connected,
+              mqtt_connected: mqttDevice?.mqtt_connected,
+              rfid_ready: mqttDevice?.rfid_ready,
+              device_ip: undefined,
+              uptime: mqttDevice?.uptime,
+              firmware_version: mqttDevice?.firmware_version,
+              door_status: undefined
+            }
           };
           updatedDevices.push(newDevice);
         }
       });
       
       setDevices(updatedDevices);
-    } catch (error) {
+    } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
       // Error loading devices - will show in UI debug info
-    } finally {
+    }
+    finally {
       setLoading(false);
     }
-  };
+  }, [deviceStatuses]);
 
   const sendCommand = async (device: ESP32Device, command: DeviceCommand) => {
     try {
@@ -138,21 +124,10 @@ export const ESP32Dashboard: React.FC = () => {
         alert(`Perintah "${command.type}" telah dikirim ke ${device.device_name}`);
       }
       
-    } catch (error) {
+    } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
       alert(`Gagal mengirim perintah: ${error instanceof Error ? error.message : 'Kesalahan tidak diketahui'}`);
     }
   };
-
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'online': return 'text-green-600 bg-green-100';
-      case 'offline': return 'text-red-600 bg-red-100';
-      case 'error': return 'text-yellow-600 bg-yellow-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  // formatUptime removed - ESP32 sends uptime as string directly
 
   const formatLastSeen = (timestamp: string): string => {
     const now = new Date();
@@ -190,7 +165,7 @@ export const ESP32Dashboard: React.FC = () => {
           <p className="text-gray-600">Monitor dan kontrol perangkat ESP32 RFID Anda</p>
         </div>
         <Button onClick={fetchDevices}>
-          🔄 Segarkan
+Segarkan
         </Button>
       </div>
 
@@ -260,7 +235,6 @@ export const ESP32Dashboard: React.FC = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="text-2xl">📡</div>
                   <div>
                     <h3 className="text-lg font-semibold">{device.device_name}</h3>
                     <p className="text-sm text-gray-500">{device.device_id}</p>
@@ -330,7 +304,7 @@ export const ESP32Dashboard: React.FC = () => {
                       setCommandModal(true);
                     }}
                   >
-                    📡 Ping
+Ping
                   </Button>
                   
                   {device.status === 'online' && (
@@ -344,7 +318,7 @@ export const ESP32Dashboard: React.FC = () => {
                           setCommandModal(true);
                         }}
                       >
-                        🔄 Restart
+Restart
                       </Button>
                     </>
                   )}
@@ -354,7 +328,6 @@ export const ESP32Dashboard: React.FC = () => {
           </Card>
         )) : (
           <div className="text-center py-8 text-gray-500">
-            <div className="text-4xl mb-2">📡</div>
             <div>Tidak ada perangkat ESP32 ditemukan</div>
             <div className="text-sm">Perangkat akan muncul di sini ketika terhubung melalui MQTT</div>
           </div>
@@ -376,7 +349,7 @@ export const ESP32Dashboard: React.FC = () => {
             {commandType === 'restart' && (
               <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
                 <p className="text-yellow-800 text-sm">
-                  ⚠️ Ini akan me-restart perangkat ESP32 dan mungkin akan offline selama beberapa menit.
+Ini akan me-restart perangkat ESP32 dan mungkin akan offline selama beberapa menit.
                 </p>
               </div>
             )}
@@ -387,7 +360,9 @@ export const ESP32Dashboard: React.FC = () => {
               </Button>
               <Button 
                 onClick={() => {
-                  sendCommand(selectedDevice, { type: commandType });
+                  if (selectedDevice) {
+                    sendCommand(selectedDevice, { type: commandType });
+                  }
                   setCommandModal(false);
                 }}
               >

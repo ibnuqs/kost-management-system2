@@ -1,6 +1,5 @@
 // File: src/pages/Tenant/pages/Profile.tsx
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { User, Edit, Save, X, CreditCard, Key, Lock } from 'lucide-react';
 import { useProfile, useUpdateProfile, useChangePassword } from '../hooks/useProfile';
 import { toast } from 'react-hot-toast';
@@ -8,19 +7,18 @@ import { useRfidCards, useToggleCardStatus } from '../hooks/useRfidCards';
 import { useTenantDashboard } from '../hooks/useTenantDashboard';
 import { PageHeader } from '../components/layout/Header';
 import { Card, InfoCard } from '../components/ui/Card';
-import { Button, IconButton } from '../components/ui/Buttons';
+import { Button } from '../components/ui/Buttons';
 import { Input } from '../components/ui/Forms';
 import { StatusBadge, LoadingSpinner, ProgressBar } from '../components/ui/Status';
-import { formatCurrency, formatDate, getInitials } from '../utils/formatters';
-import { getTenantStatusColor, getProfileCompletionColor } from '../types/profile';
-import { getRfidStatusColor, getRfidStatusLabel } from '../types/rfid';
+import { formatCurrency, formatDate } from '../utils/formatters';
+import { getRfidStatusLabel } from '../types/rfid';
+import { ProfileUpdateData } from '../types/profile';
 import { mergeClasses } from '../utils/helpers';
 import { MOBILE_SPECIFIC } from '../utils/constants';
 
 const Profile: React.FC = () => {
-  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProfile, setEditedProfile] = useState<any>({});
+  const [editedProfile, setEditedProfile] = useState<Partial<ProfileUpdateData>>({});
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordData, setPasswordData] = useState({
     current_password: '',
@@ -29,7 +27,7 @@ const Profile: React.FC = () => {
   });
   const [isManagingCards, setIsManagingCards] = useState(false);
   
-  const { profile, isLoading, isError, error } = useProfile();
+  const { profile, isLoading, isError } = useProfile();
   const { dashboardData } = useTenantDashboard();
   const { cards } = useRfidCards();
   const updateProfile = useUpdateProfile();
@@ -55,13 +53,13 @@ const Profile: React.FC = () => {
       await updateProfile.mutateAsync(editedProfile);
       setIsEditing(false);
       setEditedProfile({});
-    } catch (error) {
+    } catch {
       // Error handled by mutation
     }
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setEditedProfile((prev: any) => ({
+    setEditedProfile((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -93,7 +91,7 @@ const Profile: React.FC = () => {
         new_password: '',
         new_password_confirmation: '',
       });
-    } catch (error) {
+    } catch {
       // Error handled by mutation
     }
   };
@@ -111,7 +109,7 @@ const Profile: React.FC = () => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     try {
       await toggleCardStatus.mutateAsync({ cardId, status: newStatus });
-    } catch (error) {
+    } catch {
       // Error handled by mutation
     }
   };
@@ -158,7 +156,6 @@ const Profile: React.FC = () => {
   }
 
   const profileCompletion = getProfileCompletion();
-  const activeCards = cards.filter(card => card.status === 'active');
 
   return (
     <div className={mergeClasses(
@@ -405,12 +402,12 @@ const Profile: React.FC = () => {
               </div>
 
               <div className="space-y-3">
-                {cards.length === 0 ? (
+                {(Array.isArray(cards) ? cards.length : 0) === 0 ? (
                   <p className="text-sm text-gray-500">Tidak ada kartu RFID terdaftar</p>
                 ) : (
                   !isManagingCards ? (
                     // View mode - tampilkan kartu saja
-                    cards.slice(0, 3).map((card) => (
+                    (Array.isArray(cards) ? cards.slice(0, 3) : []).map((card) => (
                       <div key={card.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
                           <p className="text-sm font-medium">{card.uid}</p>
@@ -424,7 +421,7 @@ const Profile: React.FC = () => {
                     ))
                   ) : (
                     // Management mode - tampilkan dengan tombol toggle
-                    cards.map((card) => (
+                    (Array.isArray(cards) ? cards : []).map((card) => (
                       <div key={card.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
                           <p className="text-sm font-medium">{card.uid}</p>
@@ -455,7 +452,7 @@ const Profile: React.FC = () => {
                   size="sm" 
                   fullWidth
                   onClick={() => setIsManagingCards(!isManagingCards)}
-                  disabled={cards.length === 0}
+                  disabled={(Array.isArray(cards) ? cards.length : 0) === 0}
                 >
                   {isManagingCards ? 'Selesai' : 'Kelola Kartu'}
                 </Button>

@@ -1,12 +1,11 @@
 // Mobile-Optimized Dashboard Header
 import React, { memo } from 'react';
-import { Bell, Settings, RefreshCw, Sunrise, Sun, Moon, Home, AlertCircle, CheckCircle } from 'lucide-react';
+import { RefreshCw, Sunrise, Sun, Moon, Home, AlertCircle, CheckCircle } from 'lucide-react';
 import { useTenantDashboard } from '../../hooks/useTenantDashboard';
 import { useUnreadNotificationsCount } from '../../hooks/useNotifications';
 import { IconButton } from '../ui/Buttons';
 import { NotificationBell } from '../layout/Header';
 import { mergeClasses } from '../../utils/helpers';
-import { formatDateTime } from '../../utils/formatters';
 
 interface DashboardHeaderProps {
   className?: string;

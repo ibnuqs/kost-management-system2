@@ -1,8 +1,8 @@
 // File: src/pages/Admin/components/feature/rfid/RfidScanner.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  Wifi, WifiOff, CreditCard, CheckCircle, AlertCircle, 
-  Loader, Scan, X, Settings, UserPlus, Loader2 
+  Wifi, WifiOff, CheckCircle, AlertCircle, 
+  Scan, X, Settings, UserPlus, Loader2 
 } from 'lucide-react';
 import mqtt from 'mqtt';
 import { toast } from 'react-hot-toast';
@@ -39,9 +39,9 @@ const MQTT_CONFIG = {
 
 const getErrorMessage = (error: unknown, defaultMessage: string = 'An unexpected error occurred.'): string => {
   if (error instanceof Error) {
-    if ((error as any).response?.data?.message) return (error as any).response.data.message;
-    if ((error as any).response?.data?.error) return (error as any).response.data.error;
-    if ((error as any).response?.status) return `Server Error: ${(error as any).response.status} ${(error as any).response.statusText}`;
+    if ((error as { response?: { data?: { message?: string; error?: string; }; status?: number; statusText?: string; } }).response?.data?.message) return (error as { response: { data: { message: string; } } }).response.data.message;
+    if ((error as { response?: { data?: { message?: string; error?: string; }; status?: number; statusText?: string; } }).response?.data?.error) return (error as { response: { data: { error: string; } } }).response.data.error;
+    if ((error as { response?: { data?: { message?: string; error?: string; }; status?: number; statusText?: string; } }).response?.status) return `Server Error: ${(error as { response: { status: number; statusText: string; } }).response.status} ${(error as { response: { status: number; statusText: string; } }).response.statusText}`;
     return error.message;
   }
   return defaultMessage;
@@ -75,7 +75,7 @@ export const RfidScanner: React.FC<RfidScannerProps> = ({ onCardRegistered }) =>
     try {
       const endpoints = ['/admin/iot-devices', '/admin/iot/devices', '/iot/devices'];
       let devicesData: IoTDevice[] = [];
-      let lastError: any = null;
+      let lastError: unknown = null;
 
       for (const endpoint of endpoints) {
         try {
@@ -190,8 +190,8 @@ export const RfidScanner: React.FC<RfidScannerProps> = ({ onCardRegistered }) =>
             `Access denied for ${data.card_uid}: ${data.message}`;
           toast[data.access_granted ? 'success' : 'error'](message);
         }
-      } catch (e) {
-        toast.error("Error processing scanner message.");
+      } catch (error) {
+        toast.error(`Error processing scanner message: ${error instanceof Error ? error.message : String(error)}`);
       }
     });
 
@@ -211,6 +211,13 @@ export const RfidScanner: React.FC<RfidScannerProps> = ({ onCardRegistered }) =>
       }));
     });
 
+    client.on('offline', () => {
+      setState(prev => ({ 
+        ...prev, 
+        connected: false 
+      }));
+    });
+
     return () => {
       client.removeAllListeners();
       if (mqttClientRef.current) {
@@ -219,7 +226,7 @@ export const RfidScanner: React.FC<RfidScannerProps> = ({ onCardRegistered }) =>
       }
       if (toastIdRef.current) toast.dismiss(toastIdRef.current);
     };
-  }, [state.selectedDeviceId]);
+  }, [state.selectedDeviceId, checkCard, state]);
 
   useEffect(() => {
     loadScannerDevices();

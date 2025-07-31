@@ -50,7 +50,7 @@ const AdminLayout: React.FC = () => {
     const props = currentMenuItem.id === 'dashboard' ? { onNavigate: handleMenuClick } : {};
     
     return <Component {...props} />;
-  }, [currentPage, handleMenuClick, currentMenuItem]);
+  }, [handleMenuClick, currentMenuItem]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans">

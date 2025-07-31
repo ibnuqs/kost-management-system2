@@ -1,13 +1,13 @@
-// File: src/pages/Admin/components/feature/iot/DeviceRoomMapping.tsx
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { Card, CardHeader, CardContent } from '../../ui/Card';
 import { Button } from '../../ui/Forms/Button';
-import { Home, Wifi, Settings, MapPin, CheckCircle, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { Wifi } from 'lucide-react';
 import api from '../../../../../utils/api';
 import { DeviceFilters } from './index';
 import type { IoTDevice } from '../../../types/iot';
 import type { Room } from '../../../types/room';
+import type { AccessLogFilters as AccessLogFiltersType } from '../../../types/accessLog';
 
 interface DeviceRoomMappingProps {
   devices: IoTDevice[];
@@ -16,13 +16,11 @@ interface DeviceRoomMappingProps {
   onDeviceUpdated?: () => void;
   onAddDevice?: () => void;
   onEditDevice?: (device: IoTDevice) => void;
-  filters?: any;
+  filters?: AccessLogFiltersType;
   showFilters?: boolean;
   onFilterChange?: (key: string, value: string) => void;
   onToggleFilters?: () => void;
   onClearFilters?: () => void;
-  pagination?: any;
-  onPageChange?: (page: number) => void;
   loading?: boolean;
 }
 
@@ -39,8 +37,6 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
   onFilterChange,
   onToggleFilters,
   onClearFilters,
-  pagination,
-  onPageChange,
   loading
 }) => {
   const [mappings, setMappings] = useState<Record<string, number | null>>({});
@@ -53,17 +49,17 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
       initialMappings[device.device_id] = device.room_id || null;
       // Debug logging
       if (device.room_id) {
-        console.log(`🔧 Device ${device.device_name} (${device.device_id}) assigned to room_id: ${device.room_id}`);
+        console.log(`Device ${device.device_name} (${device.device_id}) assigned to room_id: ${device.room_id}`);
       }
     });
     setMappings(initialMappings);
-    console.log('📍 Current mappings:', initialMappings);
+    console.log('Current mappings:', initialMappings);
   }, [devices]);
 
   // Auto-refresh rooms data if empty
   useEffect(() => {
     if (rooms.length === 0) {
-      console.log('🏠 DeviceRoomMapping: Rooms empty, triggering refresh...');
+      console.log('DeviceRoomMapping: Rooms empty, triggering refresh...');
       onDeviceUpdated?.();
     }
   }, [rooms.length, onDeviceUpdated]);
@@ -95,8 +91,15 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
         await onUpdateMapping(deviceId, roomId);
         setMappings(prev => ({ ...prev, [deviceId]: roomId }));
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update device mapping');
+    
+    } catch (error: unknown) {
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to update device mapping');
+      }
     } finally {
       setSaving(null);
     }
@@ -104,7 +107,7 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
 
   
   // Debug logging
-  console.log('🖥️ DeviceRoomMapping render:', {
+  console.log('DeviceRoomMapping render:', {
     devices: devices.length,
     rooms: rooms.length,
     mappings: Object.keys(mappings).length,
@@ -114,21 +117,21 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
     roomsWithoutTenants: rooms.filter(r => !r.tenant).length,
     sampleRoomWithTenant: rooms.find(r => r.tenant),
     archivedRoomsCheck: rooms.filter(r => r.status === 'archived' || r.is_archived).length,
-    tenantNames: rooms.filter(r => r.tenant).map(r => ({ room: r.room_number, tenant: r.tenant.name }))
+    tenantNames: rooms.filter(r => r.tenant).map(r => ({ room: r.room_number, tenant: r.tenant?.name || 'Unknown' }))
   });
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">🗺️ Kelola Perangkat dan Kamar</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Kelola Perangkat dan Kamar</h2>
         <div className="flex gap-2">
           {onAddDevice && (
             <Button
               onClick={onAddDevice}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
-              ➕ Tambah Perangkat
+              Tambah Perangkat
             </Button>
           )}
         </div>
@@ -137,7 +140,7 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
       {/* Device Management with Filters and Table */}
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold">📡 Daftar Perangkat ESP32</h3>
+          <h3 className="text-lg font-semibold">Daftar Perangkat ESP32</h3>
           <p className="text-gray-600">Ubah nama perangkat dan pindahkan ke kamar lain</p>
         </CardHeader>
         <CardContent>
@@ -148,8 +151,8 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
               rooms={rooms}
               showFilters={showFilters || false}
               onFilterChange={onFilterChange}
-              onToggleFilters={onToggleFilters}
-              onClearFilters={onClearFilters}
+              onToggleFilters={onToggleFilters || (() => {})}
+              onClearFilters={onClearFilters || (() => {})}
             />
           )}
 
@@ -166,7 +169,7 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
                   </div>
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">
-                      📡 {device.device_name}
+                      {device.device_name}
                     </div>
                     <div className="text-sm text-gray-500">
                       ID: {device.device_id} • 
@@ -176,9 +179,6 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
                           : 'bg-red-100 text-red-800'
                       }`} title={`Status: ${device.status} | DB Status: ${device.status_db} | Minutes since last seen: ${device.minutes_since_last_seen} | Last seen: ${device.last_seen_date}`}>
                         {device.status === 'online' ? 'Online' : 'Offline'}
-                        {device.minutes_since_last_seen < 2 && device.minutes_since_last_seen !== undefined && (
-                          <span className="ml-1 text-xs">🟢</span>
-                        )}
                       </span> • 
                       <span className="ml-1">Aktif {device.last_seen_human}</span>
                     </div>
@@ -194,7 +194,7 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                     title={`Device ${device.device_name}: room_id=${device.room_id}, mapping=${mappings[device.device_id]}`}
                   >
-                    <option value="">🚫 Belum Dipasang</option>
+                    <option value="">Belum Dipasang</option>
                     {rooms && rooms.length > 0 ? rooms.map(room => {
                       const tenantName = room.tenant?.user_name || room.tenant?.name || room.tenant_name || null;
                       return (
@@ -214,7 +214,7 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
                       variant="outline"
                       className="text-blue-600 border-blue-200 hover:bg-blue-50"
                     >
-                      ✏️ Ubah
+                      Ubah
                     </Button>
                   )}
                   
@@ -239,7 +239,7 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
       {/* Status Kamar Lengkap */}
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold">🏠 Status Kamar dan Penghuni</h3>
+          <h3 className="text-lg font-semibold">Status Kamar dan Penghuni</h3>
         </CardHeader>
         <CardContent>
           {rooms && rooms.length > 0 ? (
@@ -260,7 +260,7 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
                   }`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold text-gray-900">
-                        🏠 Kamar {room.room_number}
+                        Kamar {room.room_number}
                       </div>
                       <div className={`w-3 h-3 rounded-full ${
                         hasDevice 
@@ -293,19 +293,19 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
                       {hasDevice ? (
                         <div>
                           <div className="text-green-700 font-medium mb-1">
-                            📡 {assignedDevice.device_name}
+                            {assignedDevice.device_name}
                           </div>
                           <div className={`text-xs px-2 py-1 rounded ${
                             assignedDevice.status === 'online' 
                               ? 'bg-green-100 text-green-700' 
                               : 'bg-yellow-100 text-yellow-700'
                           }`}>
-                            {assignedDevice.status === 'online' ? '✅ Perangkat Online' : '⚠️ Perangkat Offline'}
+                            {assignedDevice.status === 'online' ? 'Perangkat Online' : 'Perangkat Offline'}
                           </div>
                         </div>
                       ) : (
                         <div className="text-gray-500">
-                          ❌ Belum ada perangkat
+                          Belum ada perangkat
                         </div>
                       )}
                     </div>
@@ -315,7 +315,7 @@ export const DeviceRoomMapping: React.FC<DeviceRoomMappingProps> = ({
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
-              <div className="text-lg">⏳ Memuat data kamar...</div>
+              <div className="text-lg">Memuat data kamar...</div>
               <div className="text-sm mt-2">Harap tunggu sebentar</div>
             </div>
           )}

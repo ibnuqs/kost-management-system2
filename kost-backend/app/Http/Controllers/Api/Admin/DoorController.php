@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\MqttService;
-use App\Models\IoTDevice;
 use App\Models\AccessLog;
+use App\Models\IoTDevice;
+use App\Services\MqttService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class DoorController extends Controller
 {
@@ -30,7 +30,7 @@ class DoorController extends Controller
                 ->get()
                 ->map(function ($device) {
                     $deviceInfo = json_decode($device->device_info ?? '{}', true);
-                    
+
                     return [
                         'id' => $device->id,
                         'device_id' => $device->device_id,
@@ -41,23 +41,23 @@ class DoorController extends Controller
                         'device_info' => $deviceInfo,
                         'room' => $device->room ? [
                             'room_number' => $device->room->room_number,
-                            'room_name' => $device->room->room_name
-                        ] : null
+                            'room_name' => $device->room->room_name,
+                        ] : null,
                     ];
                 });
 
             return response()->json([
                 'success' => true,
                 'data' => $devices,
-                'message' => 'Door devices retrieved successfully'
+                'message' => 'Door devices retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error retrieving door devices', ['error' => $e->getMessage()]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve door devices: ' . $e->getMessage()
+                'message' => 'Failed to retrieve door devices: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -71,20 +71,20 @@ class DoorController extends Controller
         Log::info('DoorController sendCommand called:', [
             'device_id' => $request->device_id,
             'command' => $request->command,
-            'all_input' => $request->all()
+            'all_input' => $request->all(),
         ]);
-        
+
         $validator = Validator::make($request->all(), [
             'device_id' => 'required|string',
             'command' => 'required|in:open_door,close_door,ping,restart',
-            'reason' => 'nullable|string|max:255'
+            'reason' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -95,10 +95,10 @@ class DoorController extends Controller
 
             // Check if device exists
             $device = IoTDevice::where('device_id', $deviceId)->first();
-            if (!$device) {
+            if (! $device) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Device not found'
+                    'message' => 'Device not found',
                 ], 404);
             }
 
@@ -106,7 +106,7 @@ class DoorController extends Controller
             if ($device->status !== 'online') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Device is offline'
+                    'message' => 'Device is offline',
                 ], 400);
             }
 
@@ -117,12 +117,12 @@ class DoorController extends Controller
                 'timestamp' => time() * 1000, // ESP32 expects milliseconds
                 'reason' => $reason,
                 'from' => 'admin_dashboard',
-                'user_id' => auth()->id() ?? null
+                'user_id' => auth()->id() ?? null,
             ];
 
             // Use the topic that ESP32 actually subscribes to
-            $topic = "rfid/command";
-            
+            $topic = 'rfid/command';
+
             // Connect to MQTT and send command
             $this->mqttService->connect();
             $success = $this->mqttService->publish($topic, json_encode($commandData));
@@ -133,7 +133,7 @@ class DoorController extends Controller
                     'device_id' => $deviceId,
                     'command' => $command,
                     'reason' => $reason,
-                    'user_id' => auth()->id()
+                    'user_id' => auth()->id(),
                 ]);
 
                 // If it's a door command, log access
@@ -147,13 +147,13 @@ class DoorController extends Controller
                     'data' => [
                         'device_id' => $deviceId,
                         'command' => $command,
-                        'timestamp' => time()
-                    ]
+                        'timestamp' => time(),
+                    ],
                 ]);
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to send command to device'
+                    'message' => 'Failed to send command to device',
                 ], 500);
             }
 
@@ -161,12 +161,12 @@ class DoorController extends Controller
             Log::error('Error sending door command', [
                 'device_id' => $request->device_id,
                 'command' => $request->command,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send command: ' . $e->getMessage()
+                'message' => 'Failed to send command: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -178,11 +178,11 @@ class DoorController extends Controller
     {
         try {
             $device = IoTDevice::where('device_id', $deviceId)->first();
-            
-            if (!$device) {
+
+            if (! $device) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Device not found'
+                    'message' => 'Device not found',
                 ], 404);
             }
 
@@ -199,14 +199,14 @@ class DoorController extends Controller
                     'wifi_connected' => $deviceInfo['wifi_connected'] ?? false,
                     'mqtt_connected' => $deviceInfo['mqtt_connected'] ?? false,
                     'rfid_ready' => $deviceInfo['rfid_ready'] ?? false,
-                    'device_info' => $deviceInfo
-                ]
+                    'device_info' => $deviceInfo,
+                ],
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get device status: ' . $e->getMessage()
+                'message' => 'Failed to get device status: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -238,25 +238,25 @@ class DoorController extends Controller
                     'accessed_at' => $log->accessed_at,
                     'user' => $log->user ? [
                         'name' => $log->user->name,
-                        'email' => $log->user->email
+                        'email' => $log->user->email,
                     ] : null,
                     'room' => $log->room ? [
                         'room_number' => $log->room->room_number,
-                        'room_name' => $log->room->room_name
-                    ] : null
+                        'room_name' => $log->room->room_name,
+                    ] : null,
                 ];
             });
 
             return response()->json([
                 'success' => true,
                 'data' => $logs,
-                'message' => 'Access logs retrieved successfully'
+                'message' => 'Access logs retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve access logs: ' . $e->getMessage()
+                'message' => 'Failed to retrieve access logs: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -268,14 +268,14 @@ class DoorController extends Controller
     {
         try {
             $this->mqttService->connect();
-            
+
             // Send test message using ESP32 expected format
             $testData = [
                 'command' => 'ping',
                 'device_id' => 'TEST',
                 'timestamp' => time() * 1000,
                 'from' => 'admin_dashboard',
-                'message' => 'Connection test from admin dashboard'
+                'message' => 'Connection test from admin dashboard',
             ];
 
             $success = $this->mqttService->publish('rfid/command', json_encode($testData));
@@ -283,19 +283,19 @@ class DoorController extends Controller
             if ($success) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'MQTT connection test successful'
+                    'message' => 'MQTT connection test successful',
                 ]);
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'MQTT connection test failed'
+                    'message' => 'MQTT connection test failed',
                 ], 500);
             }
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'MQTT connection test failed: ' . $e->getMessage()
+                'message' => 'MQTT connection test failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -309,13 +309,13 @@ class DoorController extends Controller
             // Lookup room_id dari device_id (sama seperti RFID cards logic)
             $iotDevice = IoTDevice::where('device_id', $deviceId)->first();
             $roomId = $iotDevice ? $iotDevice->room_id : null;
-            
+
             Log::info('Door access logging:', [
                 'device_id' => $deviceId,
                 'room_id' => $roomId,
-                'command' => $command
+                'command' => $command,
             ]);
-            
+
             AccessLog::create([
                 'device_id' => $deviceId,
                 'room_id' => $roomId, // ← Ini yang missing!
@@ -323,13 +323,13 @@ class DoorController extends Controller
                 'access_granted' => true,
                 'reason' => "Manual {$command}: {$reason}",
                 'accessed_at' => now(),
-                'user_id' => auth()->id()
+                'user_id' => auth()->id(),
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to log door access', [
                 'device_id' => $deviceId,
                 'command' => $command,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }

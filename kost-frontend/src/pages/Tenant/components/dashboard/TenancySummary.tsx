@@ -3,10 +3,8 @@ import React from 'react';
 import { Home, Calendar, CreditCard, TrendingUp, MapPin, Users } from 'lucide-react';
 import { useTenantDashboard } from '../../hooks/useTenantDashboard';
 import { Card } from '../ui/Card';
-import { StatusBadge, ProgressBar } from '../ui/Status';
+import { StatusBadge } from '../ui/Status';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { getDaysDifference } from '../../utils/dateUtils';
-import { getTenantStatusColor } from '../../types/profile';
 import { mergeClasses } from '../../utils/helpers';
 
 interface TenancySummaryProps {
@@ -19,11 +17,9 @@ const TenancySummary: React.FC<TenancySummaryProps> = ({
   const { dashboardData, isLoading } = useTenantDashboard();
   
   const tenantInfo = dashboardData?.tenant_info;
-  const paymentInfo = dashboardData?.payment_info;
   const quickStats = dashboardData?.quick_stats;
 
   const moveInDate = tenantInfo?.start_date;
-  const moveOutDate = tenantInfo?.end_date;
   
   // Calculate lease progress
   const daysLived = quickStats?.days_since_move_in || 0;

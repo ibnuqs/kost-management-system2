@@ -1,4 +1,4 @@
-﻿// pages/Auth/services/authService.ts
+// pages/Auth/services/authService.ts
 // Authentication service for API calls
 
 import api from '../../../utils/api'; // Use the existing api instance
@@ -9,7 +9,7 @@ import {
   AuthResponse,
   ForgotPasswordData,
   ResetPasswordData,
-  ChangePasswordData
+  ChangePasswordData,
 } from '../types/auth';
 import { 
   STORAGE_KEYS 
@@ -23,6 +23,21 @@ import {
   removeUserData,
   clearAuthStorage
 } from '../utils/helpers';
+
+// Type definitions for API error responses
+interface AxiosError {
+  response?: {
+    data?: {
+      message?: string;
+      error?: string;
+      errors?: Record<string, string[]>;
+    };
+    status?: number;
+  };
+  message?: string;
+  code?: string;
+}
+
 
 class AuthService {
   constructor() {
@@ -41,10 +56,11 @@ class AuthService {
           password: credentials.password,
           remember: credentials.remember || false,
         });
-      } catch (mainError: any) {
+      } catch (mainError: unknown) {
         // If main login fails with timeout, try test endpoint
         console.warn('⚠️ Main login endpoint failed, trying test endpoint...');
-        if (mainError.code === 'ECONNABORTED') {
+        const axiosError = mainError as AxiosError;
+        if (axiosError.code === 'ECONNABORTED') {
           try {
             const testResponse = await api.post('/test-login', {
               email: credentials.email,
@@ -52,7 +68,7 @@ class AuthService {
             });
             console.log('✅ Test login endpoint worked');
             response = testResponse;
-          } catch (testError) {
+          } catch {
             console.error('❌ Test login endpoint also failed');
             throw mainError; // Throw original error
           }
@@ -79,7 +95,7 @@ class AuthService {
         } else {
           responseData = response.data;
         }
-      } catch (parseError) {
+      } catch {
         // Failed to parse response (details omitted for security)
         
         return {
@@ -129,7 +145,7 @@ class AuthService {
           error: responseData.message || 'Login failed'
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Login error occurred
       
       // Clear any partial auth data
@@ -138,12 +154,13 @@ class AuthService {
       // Handle different error response structures
       let message = 'The provided credentials are incorrect.';
       
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.response?.data?.error) {
-        message = error.response.data.error;
-      } else if (error.message) {
-        message = error.message;
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.data?.message) {
+        message = axiosError.response.data.message;
+      } else if (axiosError.response?.data?.error) {
+        message = axiosError.response.data.error;
+      } else if ((error as Error).message) {
+        message = (error as Error).message;
       }
       
       return {
@@ -188,21 +205,20 @@ class AuthService {
           error: responseData.message || 'Registration failed'
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Registration error occurred
       
       let message = 'Registration failed';
       
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.response?.data?.errors) {
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.data?.message) {
+        message = axiosError.response.data.message;
+      } else if (axiosError.response?.data?.errors) {
         // Handle Laravel validation errors
-        const errors = Object.values(error.response.data.errors).flat();
+        const errors = Object.values(axiosError.response.data.errors).flat();
         message = errors.join(', ');
-      } else if (error.response?.data?.error) {
-        message = error.response.data.error;
-      } else if (error.message) {
-        message = error.message;
+      } else if ((error as Error).message) {
+        message = (error as Error).message;
       }
       
       return {
@@ -220,10 +236,10 @@ class AuthService {
       try {
         await api.post('/auth/logout');
         // Logout endpoint called successfully
-      } catch (logoutError) {
+      } catch {
         // Logout endpoint failed, continuing with local cleanup
       }
-    } catch (error) {
+    } catch {
       // Logout error occurred
     } finally {
       // Always clear local auth data
@@ -265,21 +281,22 @@ class AuthService {
           error: responseData.message || 'Failed to load user data'
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Get user error occurred
       
       // If token is invalid (401), clear auth data
-      if (error.response?.status === 401) {
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.status === 401) {
         // Clearing invalid auth data
         this.clearAuth();
       }
       
       let message = 'Failed to load user data';
       
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.message) {
-        message = error.message;
+      if (axiosError.response?.data?.message) {
+        message = axiosError.response.data.message;
+      } else if ((error as Error).message) {
+        message = (error as Error).message;
       }
       
       return {
@@ -313,18 +330,19 @@ class AuthService {
           error: responseData.message || 'Failed to update profile'
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Update profile error occurred
       
       let message = 'Failed to update profile';
       
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.response?.data?.errors) {
-        const errors = Object.values(error.response.data.errors).flat();
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.data?.message) {
+        message = axiosError.response.data.message;
+      } else if (axiosError.response?.data?.errors) {
+        const errors = Object.values(axiosError.response.data.errors).flat();
         message = errors.join(', ');
-      } else if (error.message) {
-        message = error.message;
+      } else if ((error as Error).message) {
+        message = (error as Error).message;
       }
       
       return {
@@ -350,18 +368,19 @@ class AuthService {
         success: responseData.success || true,
         message: responseData.message || 'Password changed successfully'
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Change password error occurred
       
       let message = 'Failed to change password';
       
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.response?.data?.errors) {
-        const errors = Object.values(error.response.data.errors).flat();
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.data?.message) {
+        message = axiosError.response.data.message;
+      } else if (axiosError.response?.data?.errors) {
+        const errors = Object.values(axiosError.response.data.errors).flat();
         message = errors.join(', ');
-      } else if (error.message) {
-        message = error.message;
+      } else if ((error as Error).message) {
+        message = (error as Error).message;
       }
       
       return {
@@ -385,15 +404,16 @@ class AuthService {
         success: responseData.success || true,
         message: responseData.message || 'Password reset link sent to your email'
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Forgot password error occurred
       
       let message = 'Failed to send reset email';
       
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.message) {
-        message = error.message;
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.data?.message) {
+        message = axiosError.response.data.message;
+      } else if ((error as Error).message) {
+        message = (error as Error).message;
       }
       
       return {
@@ -419,18 +439,19 @@ class AuthService {
         success: responseData.success || true,
         message: responseData.message || 'Password reset successfully'
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Reset password error occurred
       
       let message = 'Failed to reset password';
       
-      if (error.response?.data?.message) {
-        message = error.response.data.message;
-      } else if (error.response?.data?.errors) {
-        const errors = Object.values(error.response.data.errors).flat();
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.data?.message) {
+        message = axiosError.response.data.message;
+      } else if (axiosError.response?.data?.errors) {
+        const errors = Object.values(axiosError.response.data.errors).flat();
         message = errors.join(', ');
-      } else if (error.message) {
-        message = error.message;
+      } else if ((error as Error).message) {
+        message = (error as Error).message;
       }
       
       return {

@@ -1,6 +1,6 @@
 // File: src/pages/Tenant/components/feature/payments/PaymentFilters.tsx
 import React from 'react';
-import { X, Calendar, DollarSign, Filter } from 'lucide-react';
+import { X, Calendar, Filter } from 'lucide-react';
 import { PaymentFilters as PaymentFiltersType, PaymentStatus } from '../../../types/payment';
 import { Card } from '../../ui/Card';
 import { Button, IconButton } from '../../ui/Buttons';
@@ -60,7 +60,7 @@ const PaymentFilters: React.FC<PaymentFiltersProps> = ({
     { value: 'asc', label: 'Terlama Dahulu' },
   ];
 
-  const updateFilter = (key: keyof PaymentFiltersType, value: any) => {
+  const updateFilter = (key: keyof PaymentFiltersType, value: string | undefined) => {
     onFiltersChange({
       ...filters,
       [key]: value || undefined,
@@ -246,7 +246,7 @@ const PaymentFilters: React.FC<PaymentFiltersProps> = ({
             <strong>Filter Aktif:</strong>{' '}
             <span className="break-words">
               {Object.entries(filters)
-                .filter(([_, value]) => value && value !== 'all')
+                .filter(([, value]) => value && value !== 'all')
                 .map(([key, value]) => `${key}: ${value}`)
                 .join(', ')}
             </span>

@@ -55,7 +55,7 @@ export const getResponsiveTextSize = (size: 'sm' | 'base' | 'lg' | 'xl'): string
 /**
  * Debounce function for search inputs
  */
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): ((...args: Parameters<T>) => void) => {
@@ -70,7 +70,7 @@ export const debounce = <T extends (...args: any[]) => any>(
 /**
  * Throttle function for scroll events
  */
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): ((...args: Parameters<T>) => void) => {
@@ -105,12 +105,12 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
         document.execCommand('copy');
         document.body.removeChild(textArea);
         return true;
-      } catch (err) {
+      } catch {
         document.body.removeChild(textArea);
         return false;
       }
     }
-  } catch (err) {
+  } catch {
     return false;
   }
 };
@@ -162,7 +162,7 @@ export const isValidUrl = (string: string): boolean => {
   try {
     new URL(string);
     return true;
-  } catch (_) {
+  } catch {
     return false;
   }
 };
@@ -237,7 +237,7 @@ export const parseQueryString = (queryString: string): Record<string, string> =>
 /**
  * Convert object to query string
  */
-export const objectToQueryString = (obj: Record<string, any>): string => {
+export const objectToQueryString = (obj: Record<string, unknown>): string => {
   const params = new URLSearchParams();
   
   Object.entries(obj).forEach(([key, value]) => {
@@ -254,12 +254,12 @@ export const objectToQueryString = (obj: Record<string, any>): string => {
  */
 export const deepClone = <T>(obj: T): T => {
   if (obj === null || typeof obj !== 'object') return obj;
-  if (obj instanceof Date) return new Date(obj.getTime()) as any;
-  if (obj instanceof Array) return obj.map(item => deepClone(item)) as any;
+  if (obj instanceof Date) return new Date(obj.getTime()) as T;
+  if (obj instanceof Array) return obj.map(item => deepClone(item)) as T;
   if (typeof obj === 'object') {
-    const clonedObj: any = {};
+    const clonedObj: Record<string, unknown> = {};
     Object.keys(obj).forEach(key => {
-      clonedObj[key] = deepClone((obj as any)[key]);
+      clonedObj[key] = deepClone((obj as Record<string, unknown>)[key]);
     });
     return clonedObj;
   }
@@ -269,7 +269,7 @@ export const deepClone = <T>(obj: T): T => {
 /**
  * Check if object is empty
  */
-export const isEmpty = (obj: any): boolean => {
+export const isEmpty = (obj: unknown): boolean => {
   if (obj == null) return true;
   if (Array.isArray(obj) || typeof obj === 'string') return obj.length === 0;
   if (typeof obj === 'object') return Object.keys(obj).length === 0;
@@ -279,7 +279,7 @@ export const isEmpty = (obj: any): boolean => {
 /**
  * Get nested object property safely
  */
-export const getNestedProperty = (obj: any, path: string): any => {
+export const getNestedProperty = (obj: Record<string, unknown>, path: string): unknown => {
   return path.split('.').reduce((current, key) => current?.[key], obj);
 };
 
@@ -378,10 +378,10 @@ export const triggerHapticFeedback = (type: 'light' | 'medium' | 'heavy' = 'ligh
 /**
  * Safe JSON parse with fallback
  */
-export const safeJsonParse = (jsonString: string, fallback: any = null): any => {
+export const safeJsonParse = <T>(jsonString: string, fallback: T = null as T): T => {
   try {
     return JSON.parse(jsonString);
-  } catch (error) {
+  } catch {
     return fallback;
   }
 };

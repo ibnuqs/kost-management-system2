@@ -18,8 +18,8 @@ export const usePayments = () => {
       setError(null);
       const data = await paymentService.getPayments(filters);
       setPayments(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
       toast.error('Failed to load payments');
     } finally {
       setLoading(false);
@@ -32,9 +32,9 @@ export const usePayments = () => {
       setStatsError(null);
       const data = await paymentService.getStats();
       setStats(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load payment stats:', err);
-      setStatsError(err.message || 'Failed to load payment statistics');
+      setStatsError((err as Error).message || 'Failed to load payment statistics');
     } finally {
       setStatsLoading(false);
     }
@@ -46,8 +46,8 @@ export const usePayments = () => {
       toast.success('Monthly payments generated successfully');
       loadPayments();
       loadStats();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to generate payments');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to generate payments');
       throw err;
     }
   }, [loadPayments, loadStats]);
@@ -57,8 +57,8 @@ export const usePayments = () => {
       await paymentService.syncStatus(paymentId);
       toast.success('Payment status synced successfully');
       loadPayments();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to sync payment status');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to sync payment status');
       throw err;
     }
   }, [loadPayments]);
@@ -66,8 +66,8 @@ export const usePayments = () => {
   const preCheckGenerate = useCallback(async (month: string) => {
     try {
       return await paymentService.preCheckGenerate(month);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to perform pre-check');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to perform pre-check');
       throw err;
     }
   }, []);
@@ -78,16 +78,16 @@ export const usePayments = () => {
       toast.success('Payment status berhasil dioverride');
       loadPayments();
       loadStats();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to override payment status');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to override payment status');
       throw err;
     }
   }, [loadPayments, loadStats]);
 
-  const exportPayments = useCallback(async (filters?: PaymentFilters) => {
+  const exportPayments = useCallback(async (format: string = 'csv') => {
     try {
       toast.loading('Mempersiapkan export...');
-      const blob = await paymentService.exportPayments(filters);
+      const blob = await paymentService.exportPayments(format);
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
@@ -101,9 +101,9 @@ export const usePayments = () => {
       
       toast.dismiss();
       toast.success('Export berhasil didownload');
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.dismiss();
-      toast.error(err.message || 'Failed to export payments');
+      toast.error((err as Error).message || 'Failed to export payments');
       throw err;
     }
   }, []);
@@ -114,8 +114,8 @@ export const usePayments = () => {
       toast.success('Bulk sync berhasil completed');
       loadPayments();
       loadStats();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to bulk sync payments');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to bulk sync payments');
       throw err;
     }
   }, [loadPayments, loadStats]);

@@ -2,11 +2,7 @@
 import React from 'react';
 import { Settings } from 'lucide-react';
 
-interface PaymentSystemActionsSimpleProps {
-  onRefresh?: () => void;
-}
-
-export const PaymentSystemActionsSimple: React.FC<PaymentSystemActionsSimpleProps> = ({ onRefresh }) => {
+export const PaymentSystemActionsSimple: React.FC = () => {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
       <div className="flex items-center gap-3 mb-4">

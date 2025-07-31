@@ -33,9 +33,10 @@ export const usePaymentActions = () => {
       setSnapData(data);
       
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to get Snap payment data:', error);
-      toast.error(error.message || 'Failed to load payment data');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load payment data';
+      toast.error(errorMessage);
       throw error;
     } finally {
       setIsProcessing(false);
@@ -55,9 +56,10 @@ export const usePaymentActions = () => {
       
       return response; // Return response so component can handle Snap modal
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to initiate payment:', error);
-      toast.error(error.message || 'Failed to get payment data');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get payment data';
+      toast.error(errorMessage);
       throw error;
     } finally {
       setIsProcessing(false);
@@ -81,9 +83,10 @@ export const usePaymentActions = () => {
         // Optional: trigger a refresh or callback
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to check payment status:', error);
-      toast.error(error.message || 'Failed to check payment status');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to check payment status';
+      toast.error(errorMessage);
     } finally {
       setIsCheckingStatus(false);
     }
@@ -100,9 +103,10 @@ export const usePaymentActions = () => {
       
       toast.success(`Status synced: ${result.status}`);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to sync payment status:', error);
-      toast.error(error.message || 'Failed to sync payment status');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sync payment status';
+      toast.error(errorMessage);
     } finally {
       setIsCheckingStatus(false);
     }
@@ -131,7 +135,7 @@ export const usePaymentActions = () => {
         toast.error(`Failed to update ${failures.length} payment(s)`);
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to check bulk payment status:', error);
       toast.error('Failed to check payment statuses');
     } finally {
@@ -142,7 +146,7 @@ export const usePaymentActions = () => {
   /**
    * SNAP.JS SPECIFIC: Handle successful payment callback
    */
-  const handleSnapSuccess = async (result: any, onSuccess?: () => void): Promise<void> => {
+  const handleSnapSuccess = async (result: unknown, onSuccess?: () => void): Promise<void> => {
     try {
       console.log('✅ Payment successful:', result);
       
@@ -155,7 +159,8 @@ export const usePaymentActions = () => {
         onSuccess();
       } else {
         // Default: navigate to success page
-        navigate(`/tenant/payments/success?order_id=${result.order_id}`);
+        const orderId = result && typeof result === 'object' && 'order_id' in result ? result.order_id : 'unknown';
+        navigate(`/tenant/payments/success?order_id=${orderId}`);
       }
       
     } catch (error) {
@@ -167,7 +172,7 @@ export const usePaymentActions = () => {
   /**
    * SNAP.JS SPECIFIC: Handle pending payment callback
    */
-  const handleSnapPending = async (result: any, onPending?: () => void): Promise<void> => {
+  const handleSnapPending = async (result: unknown, onPending?: () => void): Promise<void> => {
     try {
       console.log('⏳ Payment pending:', result);
       
@@ -190,13 +195,16 @@ export const usePaymentActions = () => {
   /**
    * SNAP.JS SPECIFIC: Handle payment error callback
    */
-  const handleSnapError = async (result: any, onError?: () => void): Promise<void> => {
+  const handleSnapError = async (result: unknown, onError?: () => void): Promise<void> => {
     try {
       console.error('❌ Payment error:', result);
       
       await paymentService.handleSnapError(result);
       
-      toast.error(`Payment failed: ${result.status_message || 'Unknown error'}`);
+      const statusMessage = result && typeof result === 'object' && 'status_message' in result 
+        ? String(result.status_message) 
+        : 'Unknown error';
+      toast.error(`Payment failed: ${statusMessage}`);
       
       // Call custom error handler
       if (onError) {
@@ -225,7 +233,7 @@ export const usePaymentActions = () => {
   /**
    * Export payments
    */
-  const handleExportPayments = async (filters?: any): Promise<void> => {
+  const handleExportPayments = async (filters?: unknown): Promise<void> => {
     try {
       setIsProcessing(true);
       
@@ -233,9 +241,10 @@ export const usePaymentActions = () => {
       
       toast.success('Payment data exported successfully!');
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to export payments:', error);
-      toast.error(error.message || 'Failed to export payments');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to export payments';
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -251,9 +260,10 @@ export const usePaymentActions = () => {
       // Same as getting new payment data
       return await getSnapPaymentData(paymentId);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to retry payment:', error);
-      toast.error(error.message || 'Failed to retry payment');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to retry payment';
+      toast.error(errorMessage);
       throw error;
     }
   };

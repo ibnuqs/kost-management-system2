@@ -11,7 +11,7 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({
   onClose,
   images,
   startIndex = 0,
-  category = ''
+  category = '',
 }) => {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
   const [zoom, setZoom] = useState(1);
@@ -30,6 +30,24 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({
       analyticsService.trackModalOpen('gallery');
     }
   }, [isOpen, startIndex]);
+
+  const goToNext = useCallback(() => {
+    if (images.length === 0) return;
+    setCurrentIndex((prev) => (prev + 1) % images.length);
+    setZoom(1);
+    setRotation(0);
+    setIsLoading(true);
+    setImageError(false);
+  }, [images.length]);
+
+  const goToPrevious = useCallback(() => {
+    if (images.length === 0) return;
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+    setZoom(1);
+    setRotation(0);
+    setIsLoading(true);
+    setImageError(false);
+  }, [images.length]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -68,25 +86,7 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
-  const goToNext = useCallback(() => {
-    if (images.length === 0) return;
-    setCurrentIndex((prev) => (prev + 1) % images.length);
-    setZoom(1);
-    setRotation(0);
-    setIsLoading(true);
-    setImageError(false);
-  }, [images.length]);
-
-  const goToPrevious = useCallback(() => {
-    if (images.length === 0) return;
-    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
-    setZoom(1);
-    setRotation(0);
-    setIsLoading(true);
-    setImageError(false);
-  }, [images.length]);
+  }, [isOpen, goToNext, goToPrevious, onClose]);
 
   const handleZoomIn = () => {
     setZoom(prev => Math.min(prev + 0.5, 3));
@@ -118,7 +118,7 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({
       
       window.URL.revokeObjectURL(url);
       analyticsService.trackEvent('image_download', 'engagement', 'download_gallery_image', category);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Download failed:', error);
     }
   };
@@ -336,5 +336,3 @@ export const GalleryModal: React.FC<GalleryModalProps> = ({
     </div>
   );
 };
-
-export default GalleryModal;

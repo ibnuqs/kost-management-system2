@@ -1,4 +1,5 @@
 <?php
+
 // app/Models/AccessLog.php (Updated dengan Helper Methods)
 
 namespace App\Models;
@@ -28,7 +29,6 @@ class AccessLog extends Model
         'access_granted' => 'boolean',
         'accessed_at' => 'datetime',
     ];
-
 
     // Relationships
     public function user(): BelongsTo

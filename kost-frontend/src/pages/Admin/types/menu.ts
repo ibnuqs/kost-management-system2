@@ -6,7 +6,7 @@ export interface MenuItem {
   label: string;
   icon: ElementType;
   description: string;
-  component: React.ComponentType<any>;
+  component: React.ComponentType<Record<string, unknown>>;
   category?: 'main' | 'property' | 'security';
   badge?: string;
   isNew?: boolean;

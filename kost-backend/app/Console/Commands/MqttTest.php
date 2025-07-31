@@ -2,13 +2,14 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Services\MqttService;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 class MqttTest extends Command
 {
     protected $signature = 'mqtt:test {--timeout=30 : Connection timeout in seconds}';
+
     protected $description = 'Test MQTT connection and basic functionality';
 
     protected $mqttService;
@@ -52,18 +53,19 @@ class MqttTest extends Command
             $this->error("❌ MQTT Test Failed: {$e->getMessage()}");
             Log::error('MQTT test failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return 1;
         }
 
         return 0;
     }
 
-    private function testEnvironmentVariables()
+    private function test_environment_variables()
     {
         $this->info('📋 1. Testing Environment Variables:');
-        
+
         $requiredEnvs = [
             'HIVEMQ_HOST' => env('HIVEMQ_HOST'),
             'HIVEMQ_PORT' => env('HIVEMQ_PORT'),
@@ -81,67 +83,67 @@ class MqttTest extends Command
         }
     }
 
-    private function testConnectionInfo()
+    private function test_connection_info()
     {
         $this->info('🔍 2. Connection Information:');
-        
+
         $info = $this->mqttService->getConnectionInfo();
-        
+
         foreach ($info as $key => $value) {
             if (is_array($value)) {
-                $this->info("   • {$key}: " . json_encode($value));
+                $this->info("   • {$key}: ".json_encode($value));
             } else {
                 $this->info("   • {$key}: {$value}");
             }
         }
     }
 
-    private function testBasicConnection()
+    private function test_basic_connection()
     {
         $this->info('🔌 3. Testing Basic Connection:');
-        
+
         try {
             $connected = $this->mqttService->testConnection();
-            
+
             if ($connected) {
                 $this->info('   ✅ Connection test successful');
                 $this->info('   🔗 Connected to HiveMQ Cloud broker');
             } else {
                 $this->error('   ❌ Connection test failed');
             }
-            
+
         } catch (\Exception $e) {
             $this->error("   ❌ Connection error: {$e->getMessage()}");
             $this->warn('   💡 Check your HiveMQ credentials and network connectivity');
         }
     }
 
-    private function testPublishMessage()
+    private function test_publish_message()
     {
         $this->info('📤 4. Testing Message Publishing:');
-        
+
         try {
             $testMessage = [
                 'test' => true,
                 'timestamp' => now()->format('c'),
                 'from' => 'mqtt:test command',
                 'message' => 'Laravel MQTT test - connection working',
-                'laravel_status' => 'online'
+                'laravel_status' => 'online',
             ];
-            
+
             // Publish to status topic (same as your ESP32 monitoring)
             $published = $this->mqttService->publish(
                 'kost_system/status',
                 json_encode([
                     'status' => 'online',
                     'timestamp' => now()->format('c'),
-                    'client_id' => 'laravel_mqtt_test_' . uniqid(),
-                    'source' => 'Laravel Test Command'
+                    'client_id' => 'laravel_mqtt_test_'.uniqid(),
+                    'source' => 'Laravel Test Command',
                 ]),
                 1,
                 true
             );
-            
+
             if ($published) {
                 $this->info('   ✅ Status message published successfully');
                 $this->info('   📍 Topic: kost_system/status');
@@ -149,7 +151,7 @@ class MqttTest extends Command
             } else {
                 $this->error('   ❌ Failed to publish status message');
             }
-            
+
             // Also publish test message
             $testPublished = $this->mqttService->publish(
                 'kost_system/test/laravel',
@@ -157,77 +159,77 @@ class MqttTest extends Command
                 0,
                 false
             );
-            
+
             if ($testPublished) {
                 $this->info('   ✅ Test message published successfully');
             }
-            
+
         } catch (\Exception $e) {
             $this->error("   ❌ Publish error: {$e->getMessage()}");
         }
     }
 
-    private function testSubscription()
+    private function test_subscription()
     {
         $this->info('👂 5. Testing Subscription & Listening:');
-        
+
         try {
             $messageReceived = false;
-            
+
             // Subscribe to test topic
             $this->mqttService->subscribe('kost_system/test/response', function ($topic, $message) use (&$messageReceived) {
                 $this->info("   📨 Received message on {$topic}: {$message}");
                 $messageReceived = true;
             });
-            
+
             // Also subscribe to status topic to monitor
             $this->mqttService->subscribe('kost_system/status', function ($topic, $message) {
                 $this->info("   📊 Status update: {$message}");
             });
-            
+
             $this->info('   ✅ Subscribed to test topics');
             $this->info('   ⏱️  Listening for 8 seconds...');
-            
+
             // Listen for messages
             $startTime = time();
             while ((time() - $startTime) < 8) {
                 $this->mqttService->loop(1);
-                
+
                 // Show progress every 2 seconds
                 $elapsed = time() - $startTime;
                 if ($elapsed % 2 === 0 && $elapsed > 0) {
                     $remaining = 8 - $elapsed;
                     $this->info("      ⏰ {$remaining} seconds remaining...");
                 }
-                
+
                 usleep(100000); // 100ms delay
             }
-            
+
             if ($messageReceived) {
                 $this->info('   ✅ Message received successfully');
             } else {
                 $this->warn('   ⚠️  No test messages received (normal for isolated test)');
             }
-            
+
         } catch (\Exception $e) {
             $this->error("   ❌ Subscription error: {$e->getMessage()}");
         }
     }
 
-    private function testHeartbeat()
+    private function test_heartbeat()
     {
         $this->info('💓 6. Testing Heartbeat/Ping:');
-        
+
         try {
             $pingResult = $this->mqttService->ping();
-            
+
             if ($pingResult) {
                 $this->info('   ✅ Heartbeat sent successfully');
                 $this->info('   📍 Published to: kost_system/heartbeat');
             } else {
                 $this->error('   ❌ Heartbeat failed');
             }
-            
+
             // Show final connection status
             if ($this->mqttService->isConnected()) {
                 $this->info('   🟢 MQTT connection is active and healthy');
@@ -241,7 +243,7 @@ class MqttTest extends Command
             } else {
                 $this->error('   🔴 MQTT connection is not active');
             }
-            
+
         } catch (\Exception $e) {
             $this->error("   ❌ Heartbeat error: {$e->getMessage()}");
         } finally {

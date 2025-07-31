@@ -47,9 +47,9 @@ export const MoveOutWizard: React.FC<MoveOutWizardProps> = ({
       });
       onClose();
       toast.success('Penyewa berhasil di-move out');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Move out error:', error);
-      toast.error(error.message || 'Gagal melakukan move out');
+      toast.error((error as Error).message || 'Gagal melakukan move out');
     } finally {
       setSubmitting(false);
     }
@@ -119,7 +119,7 @@ export const MoveOutWizard: React.FC<MoveOutWizardProps> = ({
                 </div>
                 <div>
                   <span className="text-gray-600">Sewa Bulanan:</span>
-                  <p className="font-medium">{formatCurrency(parseFloat(tenant.monthly_rent))}</p>
+                  <p className="font-medium">{formatCurrency(typeof tenant.monthly_rent === 'string' ? parseFloat(tenant.monthly_rent) : tenant.monthly_rent)}</p>
                 </div>
                 <div>
                   <span className="text-gray-600">Status:</span>

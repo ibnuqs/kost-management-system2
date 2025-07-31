@@ -2,6 +2,7 @@
 import React, { memo, useMemo } from 'react';
 import { Key, Clock, TrendingUp, Calendar, Shield } from 'lucide-react';
 import { useTenantDashboard } from '../../hooks/useTenantDashboard';
+import { AccessLog } from '../../types/access';
 
 // Memoized access card component
 const AccessCard = memo<{
@@ -45,7 +46,7 @@ AccessCard.displayName = 'AccessCard';
 
 // Memoized recent access list
 const RecentAccessList = memo<{
-  accessLogs: any[];
+  accessLogs: AccessLog[];
   loading?: boolean;
 }>(({ accessLogs, loading }) => {
   if (loading) {

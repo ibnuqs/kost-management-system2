@@ -1,15 +1,15 @@
 <?php
+
 // app/Services/RfidService.php
 
 namespace App\Services;
 
-use App\Models\RfidCard;
 use App\Models\AccessLog;
 use App\Models\Payment;
+use App\Models\RfidCard;
 use App\Models\Tenant;
-use App\Services\MqttService;
-use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 class RfidService
 {
@@ -34,7 +34,7 @@ class RfidService
                 ->where('status', 'active')
                 ->first();
 
-            if (!$rfidCard) {
+            if (! $rfidCard) {
                 return $this->denyAccess($rfidUid, $deviceId, $roomId, 'RFID card not found or inactive');
             }
 
@@ -44,14 +44,14 @@ class RfidService
             }
 
             // Check if tenant exists and is active
-            if (!$rfidCard->tenant || $rfidCard->tenant->status !== 'active') {
+            if (! $rfidCard->tenant || $rfidCard->tenant->status !== 'active') {
                 return $this->denyAccess($rfidUid, $deviceId, $roomId, 'No active tenancy found');
             }
 
             // Get device room from IoT device table
             $deviceRoom = \App\Models\IoTDevice::where('device_id', $deviceId)->value('room_id');
-            
-            if (!$deviceRoom) {
+
+            if (! $deviceRoom) {
                 return $this->denyAccess($rfidUid, $deviceId, $roomId, 'Device not registered');
             }
 
@@ -66,7 +66,7 @@ class RfidService
                 ->where('payment_month', $currentMonth)
                 ->first();
 
-            if (!$payment || $payment->status !== 'paid') {
+            if (! $payment || $payment->status !== 'paid') {
                 return $this->denyAccess($rfidUid, $deviceId, $roomId, 'Payment required for current month');
             }
 
@@ -74,7 +74,8 @@ class RfidService
             return $this->grantAccess($rfidCard, $deviceId, $deviceRoom);
 
         } catch (Exception $e) {
-            Log::error('RFID access processing failed: ' . $e->getMessage());
+            Log::error('RFID access processing failed: '.$e->getMessage());
+
             return $this->denyAccess($rfidUid, $deviceId, $roomId, 'System error occurred');
         }
     }
@@ -92,7 +93,7 @@ class RfidService
             'device_id' => $deviceId,
             'access_granted' => true,
             'reason' => 'Access granted',
-            'accessed_at' => now()
+            'accessed_at' => now(),
         ]);
 
         // Send door open command via MQTT
@@ -100,10 +101,10 @@ class RfidService
 
         // Send access response to ESP32
         $this->mqttService->sendAccessResponse(
-            $deviceId, 
-            $rfidCard->uid, 
-            true, 
-            'Welcome ' . $rfidCard->user->name
+            $deviceId,
+            $rfidCard->uid,
+            true,
+            'Welcome '.$rfidCard->user->name
         );
 
         Log::info("Access granted for user {$rfidCard->user->name} (UID: {$rfidCard->uid})");
@@ -114,7 +115,7 @@ class RfidService
             'message' => 'Access granted',
             'user_name' => $rfidCard->user->name,
             'room_number' => $rfidCard->tenant->room->room_number,
-            'access_log_id' => $accessLog->id
+            'access_log_id' => $accessLog->id,
         ];
     }
 
@@ -131,7 +132,7 @@ class RfidService
             'device_id' => $deviceId,
             'access_granted' => false,
             'reason' => $reason,
-            'accessed_at' => now()
+            'accessed_at' => now(),
         ]);
 
         // Send access denied response to ESP32
@@ -144,7 +145,7 @@ class RfidService
             'access_granted' => false,
             'message' => $reason,
             'user_name' => null,
-            'room_number' => null
+            'room_number' => null,
         ];
     }
 
@@ -162,7 +163,7 @@ class RfidService
 
             // Get tenant info
             $tenant = Tenant::with('user')->find($tenantId);
-            if (!$tenant) {
+            if (! $tenant) {
                 throw new Exception('Tenant not found');
             }
 
@@ -179,21 +180,22 @@ class RfidService
                 'user_id' => $tenant->user_id,
                 'tenant_id' => $tenantId,
                 'card_type' => $cardType,
-                'status' => 'active'
+                'status' => 'active',
             ]);
 
             Log::info("RFID card registered: UID={$uid}, Tenant={$tenantId}, Type={$cardType}");
 
             return [
                 'success' => true,
-                'rfid_card' => $rfidCard
+                'rfid_card' => $rfidCard,
             ];
 
         } catch (Exception $e) {
-            Log::error('RFID card registration failed: ' . $e->getMessage());
+            Log::error('RFID card registration failed: '.$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
         }
     }
@@ -205,8 +207,8 @@ class RfidService
     {
         try {
             $rfidCard = RfidCard::where('uid', $uid)->first();
-            
-            if (!$rfidCard) {
+
+            if (! $rfidCard) {
                 throw new Exception('RFID card not found');
             }
 
@@ -216,14 +218,15 @@ class RfidService
 
             return [
                 'success' => true,
-                'message' => 'RFID card deactivated successfully'
+                'message' => 'RFID card deactivated successfully',
             ];
 
         } catch (Exception $e) {
-            Log::error('RFID card deactivation failed: ' . $e->getMessage());
+            Log::error('RFID card deactivation failed: '.$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
         }
     }

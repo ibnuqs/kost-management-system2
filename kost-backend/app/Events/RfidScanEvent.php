@@ -1,4 +1,5 @@
 <?php
+
 // File: app/Events/RfidScanEvent.php
 
 namespace App\Events;
@@ -23,7 +24,7 @@ class RfidScanEvent implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new Channel('admin-notifications')
+            new Channel('admin-notifications'),
         ];
     }
 
@@ -36,7 +37,7 @@ class RfidScanEvent implements ShouldBroadcast
     {
         return [
             'type' => 'rfid_scan',
-            'data' => $this->scanData
+            'data' => $this->scanData,
         ];
     }
 }

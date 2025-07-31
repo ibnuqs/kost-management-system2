@@ -17,7 +17,7 @@ export const PaymentModal: React.FC<{
     setIsSyncing(true);
     try {
       await onSyncPayment(payment.id);
-    } catch (error) {
+    } catch {
       // Error handled by parent
     } finally {
       setIsSyncing(false);

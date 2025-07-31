@@ -1,9 +1,9 @@
 // File: src/pages/Tenant/components/feature/profile/PersonalInfo.tsx
 import React, { useState } from 'react';
-import { User, Edit, Save, X, Camera, Phone, Mail, MapPin, Briefcase } from 'lucide-react';
+import { User, Edit, Save, X, Camera, Phone, Mail, Briefcase } from 'lucide-react';
 import { useProfile, useUpdateProfile, useUploadProfilePhoto } from '../../../hooks/useProfile';
 import { Card } from '../../ui/Card';
-import { Button, IconButton } from '../../ui/Buttons';
+import { Button } from '../../ui/Buttons';
 import { Input, Textarea } from '../../ui/Forms';
 import { StatusBadge, ProgressBar } from '../../ui/Status';
 import { ProfileUpdateData } from '../../../types/profile';
@@ -46,7 +46,7 @@ const PersonalInfo: React.FC<PersonalInfoProps> = ({
       await updateProfile.mutateAsync(editedData);
       setIsEditing(false);
       setEditedData({});
-    } catch (error) {
+    } catch {
       // Error handled by mutation
     }
   };

@@ -1,12 +1,12 @@
 // Optimized Payment Status Component
 import React, { memo, useCallback } from 'react';
-import { CreditCard, AlertCircle, CheckCircle, Clock, ChevronRight, DollarSign } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, ChevronRight, DollarSign } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTenantDashboard } from '../../hooks/useTenantDashboard';
 import { usePaymentActions } from '../../hooks/usePaymentActions';
 
 // Memoized payment card component
-const PaymentCard = memo<{
+interface PaymentCardProps {
   title: string;
   amount: number;
   status: string;
@@ -15,7 +15,9 @@ const PaymentCard = memo<{
   onPayNow?: () => void;
   isOverdue?: boolean;
   loading?: boolean;
-}>(({ title, amount, status, dueDate, month, onPayNow, isOverdue, loading }) => {
+}
+
+const PaymentCard = memo(({ title, amount, status, dueDate, month, onPayNow, isOverdue, loading }: PaymentCardProps) => {
   const getStatusColor = (status: string) => {
     if (['paid', 'success', 'settlement'].includes(status)) return 'bg-green-100 text-green-800';
     if (['pending', 'authorize'].includes(status)) return 'bg-yellow-100 text-yellow-800';
@@ -141,7 +143,7 @@ const PaymentSummary = memo<{
 
 PaymentSummary.displayName = 'PaymentSummary';
 
-const OptimizedPaymentStatus: React.FC = () => {
+const OptimizedPaymentStatus = memo(() => {
   const { data, isLoading } = useTenantDashboard();
   const { handlePayNow, isProcessing } = usePaymentActions();
   
@@ -216,7 +218,8 @@ const OptimizedPaymentStatus: React.FC = () => {
                   amount={payment.amount}
                   status={payment.status}
                   dueDate={payment.due_date}
-                  onPayNow={() => handlePayment(payment.id)}
+                  month={payment.payment_month}
+                  onPayNow={currentPayment.status === 'pending' ? () => handlePayment(payment.id) : undefined}
                   isOverdue={true}
                 />
               ))}
@@ -258,6 +261,8 @@ const OptimizedPaymentStatus: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
-export default memo(OptimizedPaymentStatus);
+OptimizedPaymentStatus.displayName = 'OptimizedPaymentStatus';
+
+export default OptimizedPaymentStatus;

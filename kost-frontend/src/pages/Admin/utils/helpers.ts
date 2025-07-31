@@ -1,7 +1,19 @@
 // File: src/pages/Admin/utils/helpers.ts
+
+interface AxiosError {
+  response?: {
+    data?: {
+      message?: string;
+      error?: string;
+    };
+    status?: number;
+    statusText?: string;
+  };
+}
+
 export const getErrorMessage = (error: unknown, defaultMessage: string = 'An unexpected error occurred.'): string => {
   if (error && typeof error === 'object' && 'response' in error) {
-    const axiosError = error as any;
+    const axiosError = error as AxiosError;
     if (axiosError.response?.data?.message) return axiosError.response.data.message;
     if (axiosError.response?.data?.error) return axiosError.response.data.error;
     if (axiosError.response?.status) return `Server Error: ${axiosError.response.status} ${axiosError.response.statusText}`;
@@ -14,18 +26,18 @@ export const generateUniqueKey = (prefix: string = 'key'): string => {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
 ): ((...args: Parameters<T>) => void) => {
   let timeoutId: NodeJS.Timeout;
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func.apply(null, args), delay);
+    timeoutId = setTimeout(() => func(...args), delay);
   };
 };
 
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
 ): ((...args: Parameters<T>) => void) => {
@@ -42,13 +54,13 @@ export const throttle = <T extends (...args: any[]) => any>(
 
 export const deepClone = <T>(obj: T): T => {
   if (obj === null || typeof obj !== 'object') return obj;
-  if (obj instanceof Date) return new Date(obj.getTime()) as any;
-  if (obj instanceof Array) return obj.map(item => deepClone(item)) as any;
+  if (obj instanceof Date) return new Date(obj.getTime()) as T;
+  if (obj instanceof Array) return obj.map(item => deepClone(item)) as T;
   if (typeof obj === 'object') {
-    const clonedObj = {} as any;
+    const clonedObj = {} as T;
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        clonedObj[key] = deepClone(obj[key]);
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        (clonedObj as Record<string, unknown>)[key] = deepClone((obj as Record<string, unknown>)[key]);
       }
     }
     return clonedObj;

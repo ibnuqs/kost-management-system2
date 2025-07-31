@@ -5,7 +5,7 @@ import { TrendingUp, DollarSign, Calendar, CheckCircle, Clock, AlertCircle } fro
 import { PaymentStats as PaymentStatsType } from '../../../types/payment';
 import { StatCard, Card } from '../../ui/Card';
 import { ProgressBar } from '../../ui/Status';
-import { formatCurrency, formatCompactNumber } from '../../../utils/formatters';
+import { formatCurrency } from '../../../utils/formatters';
 import { mergeClasses, getResponsiveColumns } from '../../../utils/helpers';
 
 interface PaymentStatsProps {

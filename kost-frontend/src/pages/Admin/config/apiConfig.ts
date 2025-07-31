@@ -1,7 +1,9 @@
 // File: src/pages/Admin/config/apiConfig.ts
+import { ENV } from '../../../config/environment';
+
 export const API_CONFIG = {
-  // Base configuration
-  BASE_URL: import.meta.env.VITE_API_URL || 'https://148.230.96.228/api',
+  // Base configuration (otomatis detect environment)
+  BASE_URL: ENV.API_URL,
   TIMEOUT: 30000, // 30 seconds
   
   // Authentication
@@ -154,7 +156,7 @@ export const API_CONFIG = {
   
   // Real-time configuration
   REALTIME: {
-    WEBSOCKET_URL: import.meta.env.VITE_WS_URL || 'wss://148.230.96.228/ws',
+    WEBSOCKET_URL: ENV.WS_URL,
     MQTT: {
       URL: 'wss://16d97e84c4364ffa9d0e5a0f0fa09165.s1.eu.hivemq.cloud:8884/mqtt',
       USERNAME: 'hivemq.webclient.1745310839638',
@@ -200,7 +202,7 @@ export const API_CONFIG = {
 };
 
 // Helper functions for API configuration
-export const getEndpoint = (path: string, params?: Record<string, any>): string => {
+export const getEndpoint = (path: string, params?: Record<string, string | number | boolean>): string => {
   let endpoint = API_CONFIG.BASE_URL + path;
   
   if (params) {

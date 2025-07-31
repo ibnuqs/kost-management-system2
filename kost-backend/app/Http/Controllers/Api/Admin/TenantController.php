@@ -1,13 +1,14 @@
 <?php
+
 // File: app/Http/Controllers/Api/Admin/TenantController.php
 
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Payment;
+use App\Models\Room;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Models\Room;
-use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -37,18 +38,18 @@ class TenantController extends Controller
             }
 
             // Search functionality
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $query->where(function ($q) use ($search) {
                     $q->where('tenant_code', 'like', "%{$search}%")
-                      ->orWhereHas('user', function ($userQuery) use ($search) {
-                          $userQuery->where('name', 'like', "%{$search}%")
-                                   ->orWhere('email', 'like', "%{$search}%")
-                                   ->orWhere('phone', 'like', "%{$search}%");
-                      })
-                      ->orWhereHas('room', function ($roomQuery) use ($search) {
-                          $roomQuery->where('room_number', 'like', "%{$search}%")
-                                   ->orWhere('room_name', 'like', "%{$search}%");
-                      });
+                        ->orWhereHas('user', function ($userQuery) use ($search) {
+                            $userQuery->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('room', function ($roomQuery) use ($search) {
+                            $roomQuery->where('room_number', 'like', "%{$search}%")
+                                ->orWhere('room_name', 'like', "%{$search}%");
+                        });
                 });
             }
 
@@ -85,14 +86,14 @@ class TenantController extends Controller
                     'sort_by' => $sortBy,
                     'sort_order' => $sortOrder,
                 ],
-                'message' => 'Tenants retrieved successfully'
+                'message' => 'Tenants retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch tenants', [
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id(),
-                'request_params' => $request->all()
+                'request_params' => $request->all(),
             ]);
 
             return response()->json([
@@ -127,7 +128,7 @@ class TenantController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -136,7 +137,7 @@ class TenantController extends Controller
             if ($room->status !== Room::STATUS_AVAILABLE) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Room is not available'
+                    'message' => 'Room is not available',
                 ], 422);
             }
 
@@ -148,7 +149,7 @@ class TenantController extends Controller
                 'email' => $request->email,
                 'phone' => $request->phone,
                 'password' => bcrypt($request->password),
-                'role' => 'tenant'
+                'role' => 'tenant',
             ]);
 
             // Create tenant
@@ -173,13 +174,13 @@ class TenantController extends Controller
                 'user_id' => $user->id,
                 'user_email' => $user->email,
                 'room_id' => $request->room_id,
-                'created_by' => Auth::id()
+                'created_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $tenant->fresh()->getApiData(),
-                'message' => 'Tenant created successfully'
+                'message' => 'Tenant created successfully',
             ], 201);
 
         } catch (\Exception $e) {
@@ -187,13 +188,13 @@ class TenantController extends Controller
             Log::error('Failed to create tenant', [
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create tenant',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -207,7 +208,7 @@ class TenantController extends Controller
             $tenant = Tenant::with(['user', 'room', 'payments'])->findOrFail($id);
 
             $tenantData = $tenant->getApiData();
-            
+
             // Add payment history
             $tenantData['payment_history'] = $tenant->payments()
                 ->orderBy('created_at', 'desc')
@@ -220,26 +221,26 @@ class TenantController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $tenantData,
-                'message' => 'Tenant details retrieved successfully'
+                'message' => 'Tenant details retrieved successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tenant not found'
+                'message' => 'Tenant not found',
             ], 404);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch tenant details', [
                 'tenant_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve tenant details',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -254,27 +255,27 @@ class TenantController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255',
-                'email' => 'sometimes|required|email|unique:users,email,' . $tenant->user_id,
+                'email' => 'sometimes|required|email|unique:users,email,'.$tenant->user_id,
                 'phone' => 'nullable|string|max:20',
                 'room_id' => 'sometimes|required|exists:rooms,id',
-                'tenant_code' => 'nullable|string|max:50|unique:tenants,tenant_code,' . $tenant->id,
+                'tenant_code' => 'nullable|string|max:50|unique:tenants,tenant_code,'.$tenant->id,
                 'monthly_rent' => 'sometimes|numeric|min:0',
                 'start_date' => 'sometimes|date',
                 'end_date' => 'nullable|date|after:start_date',
-                'status' => 'sometimes|in:' . implode(',', [Tenant::STATUS_ACTIVE, Tenant::STATUS_MOVED_OUT, Tenant::STATUS_SUSPENDED]),
+                'status' => 'sometimes|in:'.implode(',', [Tenant::STATUS_ACTIVE, Tenant::STATUS_MOVED_OUT, Tenant::STATUS_SUSPENDED]),
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             $oldData = $tenant->toArray();
             $oldUserData = $tenant->user->toArray();
-            
+
             DB::beginTransaction();
 
             // Update user data if provided
@@ -290,22 +291,22 @@ class TenantController extends Controller
                 if ($newRoom->status !== Room::STATUS_AVAILABLE) {
                     throw new \Exception('Selected room is not available');
                 }
-                
+
                 // Free old room
                 $oldRoom = $tenant->room;
                 $oldRoom->update(['status' => Room::STATUS_AVAILABLE]);
-                
+
                 // Occupy new room
                 $newRoom->update(['status' => Room::STATUS_OCCUPIED]);
             }
 
             // Update tenant data
             $tenant->update($request->only([
-                'room_id', 'tenant_code', 'monthly_rent', 'start_date', 'end_date', 'status'
+                'room_id', 'tenant_code', 'monthly_rent', 'start_date', 'end_date', 'status',
             ]));
 
             // Update room status if tenant status changed (not room_id change)
-            if ($request->has('status') && !$request->has('room_id')) {
+            if ($request->has('status') && ! $request->has('room_id')) {
                 $room = $tenant->room;
                 if ($request->status === Tenant::STATUS_MOVED_OUT) {
                     $room->update(['status' => Room::STATUS_AVAILABLE]);
@@ -323,20 +324,21 @@ class TenantController extends Controller
                 'new_tenant_data' => $tenant->fresh()->toArray(),
                 'new_user_data' => $tenant->user->fresh()->toArray(),
                 'room_changed' => $request->has('room_id') && $request->room_id != $oldRoomId,
-                'updated_by' => Auth::id()
+                'updated_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $tenant->fresh()->getApiData(),
-                'message' => 'Tenant updated successfully'
+                'message' => 'Tenant updated successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Tenant not found'
+                'message' => 'Tenant not found',
             ], 404);
 
         } catch (\Exception $e) {
@@ -345,13 +347,13 @@ class TenantController extends Controller
                 'tenant_id' => $id,
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update tenant',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -367,12 +369,12 @@ class TenantController extends Controller
             if ($tenant->status !== Tenant::STATUS_ACTIVE) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Only active tenants can be moved out'
+                    'message' => 'Only active tenants can be moved out',
                 ], 422);
             }
 
             $validator = Validator::make($request->all(), [
-                'end_date' => 'required|date|after_or_equal:' . $tenant->start_date,
+                'end_date' => 'required|date|after_or_equal:'.$tenant->start_date,
                 'reason' => 'nullable|string|max:255',
             ]);
 
@@ -380,7 +382,7 @@ class TenantController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -400,20 +402,21 @@ class TenantController extends Controller
                 'tenant_id' => $tenant->id,
                 'end_date' => $request->end_date,
                 'reason' => $request->reason,
-                'processed_by' => Auth::id()
+                'processed_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $tenant->fresh()->getApiData(),
-                'message' => 'Tenant moved out successfully'
+                'message' => 'Tenant moved out successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => 'Tenant not found'
+                'message' => 'Tenant not found',
             ], 404);
 
         } catch (\Exception $e) {
@@ -422,13 +425,13 @@ class TenantController extends Controller
                 'tenant_id' => $id,
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to move out tenant',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -440,7 +443,7 @@ class TenantController extends Controller
     {
         try {
             $currentMonth = now()->format('Y-m');
-            
+
             $stats = [
                 'total_tenants' => Tenant::count(),
                 'active_tenants' => Tenant::where('status', Tenant::STATUS_ACTIVE)->count(),
@@ -469,19 +472,19 @@ class TenantController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $stats,
-                'message' => 'Tenant statistics retrieved successfully'
+                'message' => 'Tenant statistics retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch tenant statistics', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve tenant statistics',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -495,11 +498,11 @@ class TenantController extends Controller
         $activeTenants = Tenant::where('status', Tenant::STATUS_ACTIVE)->count();
         $movedOutTenants = Tenant::where('status', Tenant::STATUS_MOVED_OUT)->count();
         $suspendedTenants = Tenant::where('status', Tenant::STATUS_SUSPENDED)->count();
-        
+
         // Calculate total monthly rent from active tenants
         $totalMonthlyRent = Tenant::where('status', Tenant::STATUS_ACTIVE)->sum('monthly_rent');
         $averageRent = $activeTenants > 0 ? $totalMonthlyRent / $activeTenants : 0;
-        
+
         return [
             'total' => $totalTenants,
             'active' => $activeTenants,
@@ -508,7 +511,7 @@ class TenantController extends Controller
             'overdue_count' => 0, // Simplified - always 0
             'total_monthly_rent' => (float) $totalMonthlyRent,
             'average_rent' => (float) $averageRent,
-            'occupancy_rate' => 0 // Simplified - always 0
+            'occupancy_rate' => 0, // Simplified - always 0
         ];
     }
 
@@ -518,7 +521,7 @@ class TenantController extends Controller
     private function generateTenantCode(): string
     {
         do {
-            $code = 'TNT' . now()->format('ym') . strtoupper(Str::random(4));
+            $code = 'TNT'.now()->format('ym').strtoupper(Str::random(4));
         } while (Tenant::where('tenant_code', $code)->exists());
 
         return $code;

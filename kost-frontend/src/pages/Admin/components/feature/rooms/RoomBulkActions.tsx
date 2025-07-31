@@ -18,7 +18,6 @@ export const RoomBulkActions: React.FC<RoomBulkActionsProps> = ({
   onBulkArchive
 }) => {
   const [selectedRooms, setSelectedRooms] = useState<Set<number>>(new Set());
-  const [showBulkMenu, setShowBulkMenu] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const toggleRoomSelection = (roomId: number) => {
@@ -41,7 +40,6 @@ export const RoomBulkActions: React.FC<RoomBulkActionsProps> = ({
 
   const clearSelection = () => {
     setSelectedRooms(new Set());
-    setShowBulkMenu(false);
   };
 
   const handleBulkAction = async (action: string) => {
@@ -75,8 +73,8 @@ export const RoomBulkActions: React.FC<RoomBulkActionsProps> = ({
       }
 
       clearSelection();
-    } catch (error: any) {
-      toast.error(error.message || 'Gagal melakukan aksi bulk');
+    } catch (error: unknown) {
+      toast.error((error as Error).message || 'Gagal melakukan aksi bulk');
     } finally {
       setIsProcessing(false);
     }

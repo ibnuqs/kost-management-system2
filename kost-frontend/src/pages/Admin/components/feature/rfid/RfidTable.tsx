@@ -14,7 +14,7 @@ interface RfidTableProps {
 }
 
 // Helper function to get room display name
-const getRoomDisplay = (room: any) => {
+const getRoomDisplay = (room: Room) => {
   if (!room) return 'No room access';
   return room.room_number || room.number || room.title || `Room ${room.id}`;
 };
@@ -150,7 +150,7 @@ const CardRow: React.FC<{
             month: 'short', 
             day: 'numeric'
           });
-        } catch (error) {
+        } catch {
           console.warn('Date parsing error for card:', card.id, card.created_at);
           return 'Error format tanggal';
         }

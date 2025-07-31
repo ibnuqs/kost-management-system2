@@ -47,7 +47,7 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({
         toast.success('Showing pending payments...');
         break;
       case 'report_issue':
-        toast.info('Opening issue reporting form...');
+        toast('Opening issue reporting form...');
         // In real app, this might open a modal or navigate to a form
         break;
       case 'emergency_access':
@@ -62,7 +62,7 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({
         toast.success('Downloading latest receipt...');
         break;
       default:
-        toast.info(`Action: ${actionId}`);
+        toast(`Action: ${actionId}`);
     }
   }, [navigate]);
 

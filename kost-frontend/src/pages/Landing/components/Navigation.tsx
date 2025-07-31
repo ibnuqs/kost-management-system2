@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Menu, X, Phone, MessageCircle, Calendar, LogIn } from 'lucide-react';
 
 interface NavigationProps {
@@ -172,7 +172,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <button
                   onClick={handleLoginClick}
-                  className="flex items-center justify-center gap-2 py-3 px-4 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+                  className="flex items-center justify-center gap-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium"
                 >
                   <LogIn size={18} />
                   <span>Login</span>

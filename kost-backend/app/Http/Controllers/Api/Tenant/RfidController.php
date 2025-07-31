@@ -18,7 +18,7 @@ class RfidController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $cards = RfidCard::where('user_id', $user->id)
                 ->with('tenant.room')
                 ->orderBy('created_at', 'desc')
@@ -47,13 +47,13 @@ class RfidController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $cards->toArray(),
-                'message' => 'RFID cards retrieved successfully'
+                'message' => 'RFID cards retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve RFID cards: ' . $e->getMessage()
+                'message' => 'Failed to retrieve RFID cards: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -65,15 +65,15 @@ class RfidController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $tenant = Tenant::where('user_id', $user->id)
                 ->where('status', Tenant::STATUS_ACTIVE)
                 ->first();
 
-            if (!$tenant) {
+            if (! $tenant) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Active tenant record not found'
+                    'message' => 'Active tenant record not found',
                 ], 404);
             }
 
@@ -85,7 +85,7 @@ class RfidController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -97,16 +97,16 @@ class RfidController extends Controller
             if ($activeCards >= 2) { // Limit to 2 cards per tenant
                 return response()->json([
                     'success' => false,
-                    'message' => 'You already have the maximum number of active RFID cards (2)'
+                    'message' => 'You already have the maximum number of active RFID cards (2)',
                 ], 422);
             }
 
             // Untuk sekarang, kita buat record request atau langsung buat card
             // Tergantung workflow yang diinginkan
-            
-            // Simulasi: Langsung buat card dengan status 'pending' 
+
+            // Simulasi: Langsung buat card dengan status 'pending'
             $newCard = RfidCard::create([
-                'uid' => 'REQ-' . time() . '-' . $user->id, // Temporary UID untuk request
+                'uid' => 'REQ-'.time().'-'.$user->id, // Temporary UID untuk request
                 'user_id' => $user->id,
                 'tenant_id' => $tenant->id,
                 'card_type' => 'primary',
@@ -121,13 +121,13 @@ class RfidController extends Controller
                     'status' => 'pending',
                     'reason' => $request->reason,
                 ],
-                'message' => 'RFID card request submitted successfully'
+                'message' => 'RFID card request submitted successfully',
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to submit RFID card request: ' . $e->getMessage()
+                'message' => 'Failed to submit RFID card request: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -149,7 +149,7 @@ class RfidController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -157,17 +157,17 @@ class RfidController extends Controller
                 ->where('user_id', $user->id)
                 ->first();
 
-            if (!$card) {
+            if (! $card) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'RFID card not found or does not belong to you'
+                    'message' => 'RFID card not found or does not belong to you',
                 ], 404);
             }
 
             if ($card->status === 'lost') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'This card has already been reported as lost'
+                    'message' => 'This card has already been reported as lost',
                 ], 422);
             }
 
@@ -185,13 +185,13 @@ class RfidController extends Controller
                     'status' => $card->status,
                     'reason' => $request->reason,
                 ],
-                'message' => 'RFID card reported as lost successfully'
+                'message' => 'RFID card reported as lost successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to report lost card: ' . $e->getMessage()
+                'message' => 'Failed to report lost card: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -212,7 +212,7 @@ class RfidController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -220,10 +220,10 @@ class RfidController extends Controller
                 ->where('user_id', $user->id)
                 ->first();
 
-            if (!$card) {
+            if (! $card) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'RFID card not found or does not belong to you'
+                    'message' => 'RFID card not found or does not belong to you',
                 ], 404);
             }
 
@@ -241,13 +241,13 @@ class RfidController extends Controller
                     'uid' => $card->uid,
                     'status' => $card->status,
                 ],
-                'message' => "Kartu RFID berhasil {$statusText}"
+                'message' => "Kartu RFID berhasil {$statusText}",
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update card status: ' . $e->getMessage()
+                'message' => 'Failed to update card status: '.$e->getMessage(),
             ], 500);
         }
     }

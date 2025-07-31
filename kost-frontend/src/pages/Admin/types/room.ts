@@ -9,6 +9,9 @@ export interface RoomTenant {
   start_date: string;
   status: string;
   user?: User;
+  user_name?: string;
+  name?: string;
+  tenant_code?: string;
 }
 
 export interface ArchiveInfo {
@@ -30,13 +33,14 @@ export interface Room extends BaseEntity {
   room_number: string;
   room_name: string;
   monthly_price: string;
-  status: 'available' | 'occupied' | 'maintenance' | 'reserved';
+  status: 'available' | 'occupied' | 'maintenance' | 'reserved' | 'archived';
   is_archived: boolean;
   archive_info?: ArchiveInfo;
   reservation_info?: ReservationInfo;
   can_be_archived: boolean;
   can_be_unarchived: boolean;
   tenant?: RoomTenant;
+  tenant_name?: string;
   tenants_count?: number;
 }
 

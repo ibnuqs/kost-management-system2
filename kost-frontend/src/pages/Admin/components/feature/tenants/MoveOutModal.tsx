@@ -1,6 +1,6 @@
 // File: src/pages/Admin/components/feature/tenants/MoveOutModal.tsx
-import React, { useState, useEffect } from 'react';
-import { X, ArrowRight, UserX, Calendar, AlertTriangle, Calculator, DollarSign, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, ArrowRight, Calendar, AlertTriangle, Calculator, DollarSign, CheckCircle } from 'lucide-react';
 import { Input } from '../../ui/Forms/Input';
 import type { Tenant, MoveOutData } from '../../../types/tenant';
 
@@ -50,18 +50,11 @@ export const MoveOutWizard: React.FC<MoveOutModalProps> = ({
     }
   }, [isOpen]);
 
-  // Calculate billing when move out date changes
-  useEffect(() => {
-    if (formData.move_out_date && tenant) {
-      calculateBilling();
-    }
-  }, [formData.move_out_date, tenant]);
-
-  const calculateBilling = () => {
+  const calculateBilling = useCallback(() => {
     if (!formData.move_out_date || !tenant) return;
 
     const moveOutDate = new Date(formData.move_out_date);
-    const monthlyRent = parseFloat(tenant.monthly_rent);
+    const monthlyRent = typeof tenant.monthly_rent === 'string' ? parseFloat(tenant.monthly_rent) : tenant.monthly_rent;
     
     // Get the current month's billing period
     const currentMonth = new Date(moveOutDate.getFullYear(), moveOutDate.getMonth(), 1);
@@ -88,7 +81,14 @@ export const MoveOutWizard: React.FC<MoveOutModalProps> = ({
       depositRefund,
       totalRefund
     });
-  };
+  }, [formData.move_out_date, tenant]);
+
+  // Calculate billing when move out date changes
+  useEffect(() => {
+    if (formData.move_out_date && tenant) {
+      calculateBilling();
+    }
+  }, [formData.move_out_date, tenant, calculateBilling]);
 
   const handleChange = (key: keyof MoveOutData, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -305,7 +305,7 @@ export const MoveOutWizard: React.FC<MoveOutModalProps> = ({
                   </div>
                   <div>
                     <span className="text-gray-600">Sewa Bulanan:</span>
-                    <div className="font-medium text-gray-900">{formatCurrency(parseFloat(tenant.monthly_rent))}</div>
+                    <div className="font-medium text-gray-900">{formatCurrency(typeof tenant.monthly_rent === 'string' ? parseFloat(tenant.monthly_rent) : tenant.monthly_rent)}</div>
                   </div>
                   <div>
                     <span className="text-gray-600">Status:</span>
@@ -357,7 +357,7 @@ export const MoveOutWizard: React.FC<MoveOutModalProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">Sewa Bulanan:</span>
-                      <div className="font-medium text-gray-900">{formatCurrency(parseFloat(tenant.monthly_rent))}</div>
+                      <div className="font-medium text-gray-900">{formatCurrency(typeof tenant.monthly_rent === 'string' ? parseFloat(tenant.monthly_rent) : tenant.monthly_rent)}</div>
                     </div>
                     <div>
                       <span className="text-gray-600">Tanggal Move Out:</span>
@@ -423,7 +423,7 @@ export const MoveOutWizard: React.FC<MoveOutModalProps> = ({
                     <div className="text-sm text-blue-800">
                       <p className="font-medium">Catatan Perhitungan:</p>
                       <ul className="list-disc list-inside mt-2 space-y-1">
-                        <li>Perhitungan berdasarkan sewa bulanan sebesar {formatCurrency(parseFloat(tenant.monthly_rent))}</li>
+                        <li>Perhitungan berdasarkan sewa bulanan sebesar {formatCurrency(typeof tenant.monthly_rent === 'string' ? parseFloat(tenant.monthly_rent) : tenant.monthly_rent)}</li>
                         <li>Deposit diasumsikan sebesar 1 bulan sewa (sesuaikan jika berbeda)</li>
                         <li>Pastikan tidak ada tunggakan pembayaran sebelum move out</li>
                       </ul>

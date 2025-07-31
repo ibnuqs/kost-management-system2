@@ -1,8 +1,8 @@
 // File: src/pages/Tenant/types/dashboard.ts
-import { User, Room } from './common';
+import { User } from './common';
 import { Payment } from './payment';
 import { RfidCard } from './rfid';
-import { AccessLog, AccessStats } from './access';
+import { AccessStats } from './access';
 import { Device } from './device';
 import { Notification } from './notification';
 
@@ -126,7 +126,7 @@ export interface DashboardWidget {
   size: 'small' | 'medium' | 'large' | 'full';
   priority: number;
   visible: boolean;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 export interface DashboardLayout {
@@ -143,7 +143,7 @@ export interface RecentActivity {
   timestamp: string;
   status: 'success' | 'warning' | 'error' | 'info';
   icon?: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 export interface SystemHealth {

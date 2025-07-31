@@ -2,23 +2,25 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Notification;
 use App\Models\Tenant;
+use Illuminate\Console\Command;
 
 class CreateSampleNotifications extends Command
 {
     protected $signature = 'notifications:create-sample {--tenant-id=}';
+
     protected $description = 'Create sample notifications for testing';
 
     public function handle()
     {
         $tenantId = $this->option('tenant-id');
-        
+
         if ($tenantId) {
             $tenant = Tenant::find($tenantId);
-            if (!$tenant) {
+            if (! $tenant) {
                 $this->error("Tenant with ID {$tenantId} not found");
+
                 return 1;
             }
             $tenants = collect([$tenant]);
@@ -28,16 +30,18 @@ class CreateSampleNotifications extends Command
 
         if ($tenants->isEmpty()) {
             $this->error('No active tenants found');
+
             return 1;
         }
 
         $this->info('Creating sample notifications...');
-        
+
         foreach ($tenants as $tenant) {
             $this->createSampleNotificationsForTenant($tenant);
         }
 
         $this->info('Sample notifications created successfully!');
+
         return 0;
     }
 
@@ -90,18 +94,18 @@ class CreateSampleNotifications extends Command
                 'tenant_id' => $tenant->id,
                 'type' => 'access_granted',
                 'title' => 'Akses Diizinkan',
-                'message' => 'Anda berhasil mengakses ruangan pada ' . now()->subHours(2)->format('H:i'),
+                'message' => 'Anda berhasil mengakses ruangan pada '.now()->subHours(2)->format('H:i'),
                 'priority' => 'low',
                 'status' => 'unread',
                 'created_at' => now()->subHours(2),
                 'updated_at' => now()->subHours(2),
-            ]
+            ],
         ];
 
         foreach ($sampleNotifications as $notificationData) {
             Notification::create($notificationData);
         }
 
-        $this->info("Created " . count($sampleNotifications) . " notifications for tenant {$tenant->id}");
+        $this->info('Created '.count($sampleNotifications)." notifications for tenant {$tenant->id}");
     }
 }

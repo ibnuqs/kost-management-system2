@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 
 class UserSeeder extends Seeder
 {
@@ -15,7 +15,7 @@ class UserSeeder extends Seeder
     {
         // Create ONLY admin user for system setup
         User::firstOrCreate([
-            'email' => 'admin@localhost.local'
+            'email' => 'admin@localhost.local',
         ], [
             'name' => 'System Administrator',
             'email' => 'admin@localhost.local',

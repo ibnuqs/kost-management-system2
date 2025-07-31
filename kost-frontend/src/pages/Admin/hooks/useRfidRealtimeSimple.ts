@@ -45,7 +45,7 @@ interface RfidRealtimeData {
   
   // Control functions
   refreshData: () => void;
-  sendCommand: (deviceId: string, command: any) => boolean;
+  sendCommand: (deviceId: string, command: unknown) => boolean;
 }
 
 export const useRfidRealtimeSimple = (): RfidRealtimeData => {
@@ -75,7 +75,7 @@ export const useRfidRealtimeSimple = (): RfidRealtimeData => {
     console.log('🔄 Refreshing RFID data...');
   }, []);
 
-  const sendCommand = useCallback((deviceId: string, command: any): boolean => {
+  const sendCommand = useCallback((deviceId: string, command: Record<string, unknown>): boolean => {
     console.log('📤 Sending command to', deviceId, ':', command);
     return true;
   }, []);

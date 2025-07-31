@@ -2,12 +2,15 @@
 import React, { memo } from 'react';
 import { Bell, AlertCircle, CheckCircle, Info, CreditCard, Key, Wifi, Clock } from 'lucide-react';
 import { useTenantDashboard } from '../../hooks/useTenantDashboard';
+import { Notification } from '../../types/notification';
 
 // Memoized notification item
-const NotificationItem = memo<{
-  notification: any;
+interface NotificationItemProps {
+  notification: Notification;
   isUnread?: boolean;
-}>(({ notification, isUnread }) => {
+}
+
+const NotificationItem = memo(({ notification, isUnread }: NotificationItemProps) => {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'payment':
@@ -126,10 +129,7 @@ interface OptimizedNotificationsListProps {
   showHeader?: boolean;
 }
 
-const OptimizedNotificationsList: React.FC<OptimizedNotificationsListProps> = ({
-  limit = 10,
-  showHeader = true
-}) => {
+const OptimizedNotificationsList = memo(({ limit = 10, showHeader = true }: OptimizedNotificationsListProps) => {
   const { data, isLoading } = useTenantDashboard();
   const notifications = data?.notifications || [];
   const unreadCount = data?.quick_stats?.unread_notifications || 0;
@@ -168,7 +168,7 @@ const OptimizedNotificationsList: React.FC<OptimizedNotificationsListProps> = ({
             <NotificationItem
               key={notification.id || index}
               notification={notification}
-              isUnread={notification.read_at === null}
+              isUnread={notification.status === 'unread'}
             />
           ))}
         </div>
@@ -184,6 +184,8 @@ const OptimizedNotificationsList: React.FC<OptimizedNotificationsListProps> = ({
       )}
     </div>
   );
-};
+});
 
-export default memo(OptimizedNotificationsList);
+OptimizedNotificationsList.displayName = 'OptimizedNotificationsList';
+
+export default OptimizedNotificationsList;

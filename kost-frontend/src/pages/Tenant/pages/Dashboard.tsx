@@ -1,9 +1,9 @@
 // Optimized Tenant Dashboard - Performance & User Experience Focused
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { useTenantDashboard } from '../hooks/useTenantDashboard';
 import { ErrorBoundary } from '../../../components/Common/ErrorBoundary';
 import { LoadingSpinner } from '../components/ui/Status';
-import { RefreshCw, Wifi, WifiOff, CreditCard, Key, User, Bell, DoorOpen } from 'lucide-react';
+import { RefreshCw, Wifi, CreditCard, Key, User, Bell } from 'lucide-react';
 
 // Lazy load components for better performance
 const DashboardHeader = lazy(() => import('../components/dashboard/DashboardHeader'));
@@ -117,7 +117,6 @@ const QuickActionButtons: React.FC = () => {
 // Main dashboard component
 const Dashboard: React.FC = () => {
   const {
-    data,
     isLoading,
     isError,
     error,

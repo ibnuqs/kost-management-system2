@@ -1,12 +1,13 @@
 <?php
+
 // File: app/Http/Controllers/Api/Admin/AccessLogController.php
 
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccessLog;
-use App\Models\User;
 use App\Models\Room;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -49,37 +50,37 @@ class AccessLogController extends Controller
             }
 
             // Filter by date range
-            if (!empty($dateFrom)) {
+            if (! empty($dateFrom)) {
                 $query->whereDate('accessed_at', '>=', $dateFrom);
             }
-            if (!empty($dateTo)) {
+            if (! empty($dateTo)) {
                 $query->whereDate('accessed_at', '<=', $dateTo);
             }
 
             // Filter by user
-            if (!empty($userId)) {
+            if (! empty($userId)) {
                 $query->where('user_id', $userId);
             }
 
             // Filter by room
-            if (!empty($roomId)) {
+            if (! empty($roomId)) {
                 $query->where('room_id', $roomId);
             }
 
             // Search functionality
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $query->where(function ($q) use ($search) {
                     $q->where('rfid_uid', 'like', "%{$search}%")
-                      ->orWhere('device_id', 'like', "%{$search}%")
-                      ->orWhere('reason', 'like', "%{$search}%")
-                      ->orWhereHas('user', function ($userQuery) use ($search) {
-                          $userQuery->where('name', 'like', "%{$search}%")
-                                   ->orWhere('email', 'like', "%{$search}%");
-                      })
-                      ->orWhereHas('room', function ($roomQuery) use ($search) {
-                          $roomQuery->where('room_number', 'like', "%{$search}%")
-                                   ->orWhere('room_name', 'like', "%{$search}%");
-                      });
+                        ->orWhere('device_id', 'like', "%{$search}%")
+                        ->orWhere('reason', 'like', "%{$search}%")
+                        ->orWhereHas('user', function ($userQuery) use ($search) {
+                            $userQuery->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('room', function ($roomQuery) use ($search) {
+                            $roomQuery->where('room_number', 'like', "%{$search}%")
+                                ->orWhere('room_name', 'like', "%{$search}%");
+                        });
                 });
             }
 
@@ -130,14 +131,14 @@ class AccessLogController extends Controller
                     'sort_by' => $sortBy,
                     'sort_order' => $sortOrder,
                 ],
-                'message' => 'Access logs retrieved successfully'
+                'message' => 'Access logs retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch access logs', [
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id(),
-                'request_params' => $request->all()
+                'request_params' => $request->all(),
             ]);
 
             return response()->json([
@@ -160,26 +161,26 @@ class AccessLogController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $accessLog->getApiData(),
-                'message' => 'Access log details retrieved successfully'
+                'message' => 'Access log details retrieved successfully',
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Access log not found'
+                'message' => 'Access log not found',
             ], 404);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch access log details', [
                 'log_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve access log details',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -201,7 +202,7 @@ class AccessLogController extends Controller
             $dateFrom = $request->get('date_from', now()->subDays(30)->format('Y-m-d'));
             $dateTo = $request->get('date_to', now()->format('Y-m-d'));
 
-            $baseQuery = AccessLog::whereBetween('accessed_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59']);
+            $baseQuery = AccessLog::whereBetween('accessed_at', [$dateFrom.' 00:00:00', $dateTo.' 23:59:59']);
 
             $stats = [
                 'period' => [
@@ -224,20 +225,20 @@ class AccessLogController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $stats,
-                'message' => 'Access log statistics retrieved successfully'
+                'message' => 'Access log statistics retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch access log statistics', [
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id(),
-                'request_params' => $request->all()
+                'request_params' => $request->all(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve access log statistics',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -258,7 +259,7 @@ class AccessLogController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -267,7 +268,7 @@ class AccessLogController extends Controller
             $format = $request->get('format', 'csv');
 
             $accessLogs = AccessLog::with(['user', 'room'])
-                ->whereBetween('accessed_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
+                ->whereBetween('accessed_at', [$dateFrom.' 00:00:00', $dateTo.' 23:59:59'])
                 ->orderBy('accessed_at', 'desc')
                 ->get();
 
@@ -292,7 +293,7 @@ class AccessLogController extends Controller
                 'date_to' => $dateTo,
                 'format' => $format,
                 'records_count' => count($exportData),
-                'exported_by' => Auth::id()
+                'exported_by' => Auth::id(),
             ]);
 
             return response()->json([
@@ -302,20 +303,20 @@ class AccessLogController extends Controller
                     'filename' => "access_logs_{$dateFrom}_to_{$dateTo}.{$format}",
                     'records_count' => count($exportData),
                 ],
-                'message' => 'Access logs exported successfully'
+                'message' => 'Access logs exported successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to export access logs', [
                 'error' => $e->getMessage(),
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to export access logs',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -358,19 +359,19 @@ class AccessLogController extends Controller
                     'current_stats' => $currentStats,
                     'last_updated' => now()->format('c'),
                 ],
-                'message' => 'Real-time monitoring data retrieved successfully'
+                'message' => 'Real-time monitoring data retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch real-time monitoring data', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve real-time monitoring data',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -382,7 +383,7 @@ class AccessLogController extends Controller
     {
         $total = (clone $query)->count();
         $successful = (clone $query)->where('access_granted', true)->count();
-        
+
         return $total > 0 ? round(($successful / $total) * 100, 2) : 0.0;
     }
 
@@ -526,7 +527,7 @@ class AccessLogController extends Controller
         try {
             $period = $request->get('period', '30'); // days
             $startDate = now()->subDays($period);
-            
+
             $analytics = [
                 'access_trends' => $this->getAccessTrends($startDate),
                 'user_analytics' => $this->getUserAnalytics($startDate),
@@ -537,19 +538,19 @@ class AccessLogController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $analytics,
-                'message' => 'Access analytics retrieved successfully'
+                'message' => 'Access analytics retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch access analytics', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve access analytics',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -562,7 +563,7 @@ class AccessLogController extends Controller
         try {
             $limit = min(100, max(10, (int) $request->get('limit', 50)));
             $hours = min(168, max(1, (int) $request->get('hours', 24))); // Max 1 week
-            
+
             $suspiciousLogs = AccessLog::with(['user', 'room'])
                 ->where('accessed_at', '>=', now()->subHours($hours))
                 ->where('access_granted', false)
@@ -580,19 +581,19 @@ class AccessLogController extends Controller
                     'count' => $suspiciousLogs->count(),
                     'period_hours' => $hours,
                 ],
-                'message' => 'Suspicious activity retrieved successfully'
+                'message' => 'Suspicious activity retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch suspicious activity', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve suspicious activity',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -603,10 +604,10 @@ class AccessLogController extends Controller
     private function getAccessTrends($startDate): array
     {
         return AccessLog::where('accessed_at', '>=', $startDate)
-            ->select(DB::raw('DATE(accessed_at) as date'), 
-                    DB::raw('COUNT(*) as total'),
-                    DB::raw('SUM(CASE WHEN access_granted = 1 THEN 1 ELSE 0 END) as granted'),
-                    DB::raw('SUM(CASE WHEN access_granted = 0 THEN 1 ELSE 0 END) as denied'))
+            ->select(DB::raw('DATE(accessed_at) as date'),
+                DB::raw('COUNT(*) as total'),
+                DB::raw('SUM(CASE WHEN access_granted = 1 THEN 1 ELSE 0 END) as granted'),
+                DB::raw('SUM(CASE WHEN access_granted = 0 THEN 1 ELSE 0 END) as denied'))
             ->groupBy(DB::raw('DATE(accessed_at)'))
             ->orderBy('date')
             ->get()
@@ -628,9 +629,9 @@ class AccessLogController extends Controller
     {
         return AccessLog::with('user')
             ->where('accessed_at', '>=', $startDate)
-            ->select('user_id', 
-                    DB::raw('COUNT(*) as total_attempts'),
-                    DB::raw('SUM(CASE WHEN access_granted = 1 THEN 1 ELSE 0 END) as successful_attempts'))
+            ->select('user_id',
+                DB::raw('COUNT(*) as total_attempts'),
+                DB::raw('SUM(CASE WHEN access_granted = 1 THEN 1 ELSE 0 END) as successful_attempts'))
             ->groupBy('user_id')
             ->having('total_attempts', '>', 0)
             ->orderBy('total_attempts', 'desc')
@@ -642,7 +643,7 @@ class AccessLogController extends Controller
                     'user_name' => $item->user ? $item->user->name : 'Unknown',
                     'total_attempts' => (int) $item->total_attempts,
                     'successful_attempts' => (int) $item->successful_attempts,
-                    'success_rate' => $item->total_attempts > 0 ? 
+                    'success_rate' => $item->total_attempts > 0 ?
                         round(($item->successful_attempts / $item->total_attempts) * 100, 2) : 0,
                 ];
             })
@@ -657,9 +658,9 @@ class AccessLogController extends Controller
         return AccessLog::with('room')
             ->where('accessed_at', '>=', $startDate)
             ->whereNotNull('room_id')
-            ->select('room_id', 
-                    DB::raw('COUNT(*) as total_attempts'),
-                    DB::raw('SUM(CASE WHEN access_granted = 1 THEN 1 ELSE 0 END) as successful_attempts'))
+            ->select('room_id',
+                DB::raw('COUNT(*) as total_attempts'),
+                DB::raw('SUM(CASE WHEN access_granted = 1 THEN 1 ELSE 0 END) as successful_attempts'))
             ->groupBy('room_id')
             ->having('total_attempts', '>', 0)
             ->orderBy('total_attempts', 'desc')
@@ -672,7 +673,7 @@ class AccessLogController extends Controller
                     'room_name' => $item->room ? $item->room->room_name : 'Unknown',
                     'total_attempts' => (int) $item->total_attempts,
                     'successful_attempts' => (int) $item->successful_attempts,
-                    'success_rate' => $item->total_attempts > 0 ? 
+                    'success_rate' => $item->total_attempts > 0 ?
                         round(($item->successful_attempts / $item->total_attempts) * 100, 2) : 0,
                 ];
             })
@@ -687,7 +688,7 @@ class AccessLogController extends Controller
         $total = AccessLog::where('accessed_at', '>=', $startDate)->count();
         $denied = AccessLog::where('accessed_at', '>=', $startDate)
             ->where('access_granted', false)->count();
-        
+
         return [
             'total_attempts' => $total,
             'denied_attempts' => $denied,

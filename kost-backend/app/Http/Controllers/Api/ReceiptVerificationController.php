@@ -23,49 +23,49 @@ class ReceiptVerificationController extends Controller
     {
         try {
             // Validate receipt number format
-            if (!preg_match('/^KWT-\d{8}-\d{6}$/', $receiptNumber)) {
+            if (! preg_match('/^KWT-\d{8}-\d{6}$/', $receiptNumber)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Format nomor kwitansi tidak valid'
+                    'message' => 'Format nomor kwitansi tidak valid',
                 ], 400);
             }
 
             // Verify receipt
             $verificationResult = $this->receiptService->verifyReceipt($receiptNumber);
 
-            if (!$verificationResult) {
+            if (! $verificationResult) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Kwitansi tidak valid atau tidak ditemukan',
                     'data' => [
                         'valid' => false,
-                        'receipt_number' => $receiptNumber
-                    ]
+                        'receipt_number' => $receiptNumber,
+                    ],
                 ], 404);
             }
 
             Log::info('Receipt verification successful', [
                 'receipt_number' => $receiptNumber,
                 'payment_id' => $verificationResult['payment_id'],
-                'verifier_ip' => $request->ip()
+                'verifier_ip' => $request->ip(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Kwitansi valid dan asli',
-                'data' => $verificationResult
+                'data' => $verificationResult,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error verifying receipt', [
                 'receipt_number' => $receiptNumber,
                 'error' => $e->getMessage(),
-                'ip' => $request->ip()
+                'ip' => $request->ip(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan saat memverifikasi kwitansi'
+                'message' => 'Terjadi kesalahan saat memverifikasi kwitansi',
             ], 500);
         }
     }
@@ -81,20 +81,20 @@ class ReceiptVerificationController extends Controller
             return view('receipts.verification', [
                 'receipt_number' => $receiptNumber,
                 'verification_result' => $verificationResult,
-                'is_valid' => $verificationResult !== null
+                'is_valid' => $verificationResult !== null,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error showing verification page', [
                 'receipt_number' => $receiptNumber,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return view('receipts.verification', [
                 'receipt_number' => $receiptNumber,
                 'verification_result' => null,
                 'is_valid' => false,
-                'error' => 'Terjadi kesalahan saat memverifikasi kwitansi'
+                'error' => 'Terjadi kesalahan saat memverifikasi kwitansi',
             ]);
         }
     }

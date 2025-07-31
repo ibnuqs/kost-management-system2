@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Calendar, CreditCard, AlertCircle, CheckCircle, Clock, ExternalLink } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { Payment, getPaymentStatusColor, getPaymentStatusLabel } from '../../../types/payment';
+import { Payment, getPaymentStatusLabel } from '../../../types/payment';
 import { Card } from '../../ui/Card';
 import { Button } from '../../ui/Buttons';
 import { StatusBadge } from '../../ui/Status';
@@ -13,6 +13,29 @@ import { paymentService } from '../../../services/paymentService';
 import { receiptService } from '../../../services/receiptService';
 import { formatCurrency, formatDate, formatPaymentMonth } from '../../../utils/formatters';
 import { mergeClasses } from '../../../utils/helpers';
+
+// Snap payment result types
+interface SnapPaymentResult {
+  transaction_id: string;
+  status_code: string;
+  payment_type: string;
+  order_id: string;
+  gross_amount: string;
+  transaction_status: string;
+  signature_key?: string;
+}
+
+interface SnapPaymentData {
+  snap_token: string;
+  client_key: string;
+  is_production: boolean;
+  payment_data: {
+    order_id: string;
+    gross_amount: number;
+    payment_id: number;
+  };
+  expires_at: string;
+}
 
 interface PaymentCardProps {
   payment: Payment;
@@ -33,7 +56,7 @@ const PaymentCard: React.FC<PaymentCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const [showSnapModal, setShowSnapModal] = useState(false);
-  const [snapData, setSnapData] = useState<any>(null);
+  const [snapData, setSnapData] = useState<SnapPaymentData | null>(null);
   const [snapLoading, setSnapLoading] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
 
@@ -70,7 +93,7 @@ const PaymentCard: React.FC<PaymentCardProps> = ({
       setSnapData(data);
       setShowSnapModal(true);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Failed to load Snap payment:', error);
       toast.error('Gagal memuat pembayaran. Silakan coba lagi.');
     } finally {
@@ -86,7 +109,7 @@ const PaymentCard: React.FC<PaymentCardProps> = ({
       const { payment_url } = await paymentService.initiatePayment(payment.id);
       window.open(payment_url, '_blank');
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Legacy payment failed:', error);
       toast.error('Gagal membuka pembayaran. Silakan coba pembayaran Snap.');
     } finally {
@@ -106,7 +129,7 @@ const PaymentCard: React.FC<PaymentCardProps> = ({
         onPaymentUpdate();
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Failed to check status:', error);
       toast.error('Gagal memeriksa status pembayaran');
     } finally {
@@ -115,7 +138,7 @@ const PaymentCard: React.FC<PaymentCardProps> = ({
   };
 
   // Handle Snap payment success
-  const handleSnapSuccess = async (result: any) => {
+  const handleSnapSuccess = async (result: SnapPaymentResult) => {
     try {
       console.log('✅ Snap payment successful:', result);
       
@@ -140,7 +163,7 @@ const PaymentCard: React.FC<PaymentCardProps> = ({
   };
 
   // Handle Snap payment pending
-  const handleSnapPending = async (result: any) => {
+  const handleSnapPending = async (result: SnapPaymentResult) => {
     try {
       console.log('⏳ Snap payment pending:', result);
       
@@ -161,7 +184,7 @@ const PaymentCard: React.FC<PaymentCardProps> = ({
   };
 
   // Handle Snap payment error
-  const handleSnapError = async (result: any) => {
+  const handleSnapError = async (result: SnapPaymentResult) => {
     try {
       console.error('❌ Snap payment error:', result);
       
@@ -196,7 +219,7 @@ const PaymentCard: React.FC<PaymentCardProps> = ({
       await receiptService.downloadReceipt(payment.id);
       toast.success('Kwitansi berhasil diunduh! 📄');
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Failed to download receipt:', error);
       toast.error('Gagal mengunduh kwitansi. Silakan coba lagi.');
     } finally {

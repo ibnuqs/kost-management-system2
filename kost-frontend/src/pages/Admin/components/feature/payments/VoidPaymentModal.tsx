@@ -54,7 +54,7 @@ export const VoidPaymentModal: React.FC<VoidPaymentModalProps> = ({
     try {
       await onVoid(payment.id, finalReason, voidType);
       handleClose();
-    } catch (error) {
+    } catch {
       // Error handled by parent
     } finally {
       setIsLoading(false);

@@ -1,6 +1,6 @@
 // File: src/pages/Tenant/components/feature/payments/PaymentActions.tsx
 import React, { useState } from 'react';
-import { CreditCard, Download, RefreshCw, Filter, Search, ExternalLink, RotateCw } from 'lucide-react';
+import { CreditCard, Download, RefreshCw, Filter, ExternalLink, RotateCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { Button, IconButton } from '../../ui/Buttons';
@@ -10,6 +10,18 @@ import { SnapPayment } from './SnapPayment';
 import { paymentService } from '../../../services/paymentService';
 import { mergeClasses } from '../../../utils/helpers';
 import type { Payment } from '../../../types/payment';
+
+// Snap payment result types
+interface SnapPaymentResult {
+  transaction_id: string;
+  status_code: string;
+  payment_type: string;
+  order_id: string;
+  gross_amount: string;
+  transaction_status: string;
+  signature_key?: string;
+  status_message?: string;
+}
 
 interface PaymentActionsProps {
   payment?: Payment;
@@ -44,7 +56,7 @@ const PaymentActions: React.FC<PaymentActionsProps> = ({
 }) => {
   const navigate = useNavigate();
   const [showSnapModal, setShowSnapModal] = useState(false);
-  const [snapData, setSnapData] = useState<any>(null);
+  const [snapData, setSnapData] = useState<{ token: string; redirect_url: string } | null>(null);
   const [snapLoading, setSnapLoading] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
 
@@ -61,7 +73,7 @@ const PaymentActions: React.FC<PaymentActionsProps> = ({
       setSnapData(data);
       setShowSnapModal(true);
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Failed to load Snap payment:', error);
       toast.error('Gagal memuat pembayaran. Silakan coba lagi.');
     } finally {
@@ -77,7 +89,7 @@ const PaymentActions: React.FC<PaymentActionsProps> = ({
       const { payment_url } = await paymentService.initiatePayment(paymentId);
       window.open(payment_url, '_blank');
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Legacy payment failed:', error);
       toast.error('Gagal membuka pembayaran. Silakan coba pembayaran Snap.');
     } finally {
@@ -97,7 +109,7 @@ const PaymentActions: React.FC<PaymentActionsProps> = ({
         onPaymentUpdate();
       }
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Failed to check status:', error);
       toast.error('Gagal memeriksa status pembayaran');
     } finally {
@@ -122,7 +134,7 @@ const PaymentActions: React.FC<PaymentActionsProps> = ({
         onPaymentUpdate();
       }
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Failed to sync status:', error);
       toast.error('Gagal sinkronisasi status dengan Midtrans');
     } finally {
@@ -158,7 +170,7 @@ const PaymentActions: React.FC<PaymentActionsProps> = ({
         onPaymentUpdate();
       }
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Bulk status check failed:', error);
       toast.error('Gagal memeriksa status pembayaran');
     } finally {
@@ -167,7 +179,7 @@ const PaymentActions: React.FC<PaymentActionsProps> = ({
   };
 
   // Handle Snap payment success
-  const handleSnapSuccess = async (result: any) => {
+  const handleSnapSuccess = async (result: SnapPaymentResult) => {
     try {
       console.log('✅ Snap payment successful:', result);
       
@@ -192,7 +204,7 @@ const PaymentActions: React.FC<PaymentActionsProps> = ({
   };
 
   // Handle Snap payment pending
-  const handleSnapPending = async (result: any) => {
+  const handleSnapPending = async (result: SnapPaymentResult) => {
     try {
       console.log('⏳ Snap payment pending:', result);
       
@@ -213,7 +225,7 @@ const PaymentActions: React.FC<PaymentActionsProps> = ({
   };
 
   // Handle Snap payment error
-  const handleSnapError = async (result: any) => {
+  const handleSnapError = async (result: SnapPaymentResult) => {
     try {
       console.error('❌ Snap payment error:', result);
       

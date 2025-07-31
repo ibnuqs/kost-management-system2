@@ -1,4 +1,5 @@
 <?php
+
 // routes/web.php
 
 use Illuminate\Support\Facades\Route;
@@ -21,7 +22,7 @@ Route::get('/', function () {
         'api_url' => url('/api'),
         'health_check' => url('/api/health'),
         'documentation' => 'Available on request',
-        'version' => '1.0.0'
+        'version' => '1.0.0',
     ]);
 });
 
@@ -35,7 +36,7 @@ Route::get('/login', function () {
     return response()->json([
         'message' => 'Please use API login endpoint',
         'login_url' => url('/api/auth/login'),
-        'error' => 'This is an API-only application'
+        'error' => 'This is an API-only application',
     ], 401);
 })->name('login');
 

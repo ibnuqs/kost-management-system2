@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,14 +15,14 @@ class AppServiceProvider extends ServiceProvider
         // Register MqttService only if needed
         if (class_exists(\App\Services\MqttService::class)) {
             $this->app->singleton(\App\Services\MqttService::class, function ($app) {
-                return new \App\Services\MqttService();
+                return new \App\Services\MqttService;
             });
         }
 
         // Register MidtransService
         if (class_exists(\App\Services\MidtransService::class)) {
             $this->app->singleton(\App\Services\MidtransService::class, function ($app) {
-                return new \App\Services\MidtransService();
+                return new \App\Services\MidtransService;
             });
         }
     }
@@ -34,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register Carbon macros
         $this->registerCarbonMacros();
-        
+
         // Configure application locale
         $this->configureLocale();
     }
@@ -68,12 +68,12 @@ class AppServiceProvider extends ServiceProvider
         Carbon::macro('getPaymentDueDate', function () {
             // Payment due on 10th of each month
             $dueDate = $this->copy()->day(10);
-            
+
             // If today is after 10th, next month's due date
             if ($this->day > 10) {
                 $dueDate = $dueDate->addMonth();
             }
-            
+
             return $dueDate;
         });
     }
@@ -85,7 +85,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Set Carbon locale to Indonesian
         Carbon::setLocale('id');
-        
+
         // Set application timezone
         if (config('app.timezone')) {
             date_default_timezone_set(config('app.timezone'));

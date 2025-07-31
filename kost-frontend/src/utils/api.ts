@@ -5,12 +5,13 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import { toast } from 'react-hot-toast';
 import { getAuthToken } from '../pages/Auth/utils/helpers';
+import { ENV } from '../config/environment';
 
 // ===================================================================
 // TYPES & INTERFACES
 // ===================================================================
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data: T;
   message?: string;
@@ -76,7 +77,7 @@ export interface PaymentRegenerationResult {
 // ===================================================================
 
 const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://148.230.96.228/api',
+  baseURL: ENV.API_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -111,7 +112,7 @@ api.interceptors.response.use(
     
     // Handle different error types
     switch (response?.status) {
-      case 401:
+      case 401: {
         // Use auth helpers to clear encrypted tokens
         const { clearAuthStorage } = await import('../pages/Auth/utils/helpers');
         clearAuthStorage();
@@ -120,6 +121,7 @@ api.interceptors.response.use(
           window.location.href = '/login';
         }
         break;
+      }
         
       case 403:
         toast.error('Access denied. You do not have permission to perform this action.');
@@ -129,12 +131,13 @@ api.interceptors.response.use(
         toast.error('Resource not found.');
         break;
         
-      case 410:
+      case 410: {
         const errorData = response?.data as ApiError;
         toast.error(errorData?.message || 'Payment has expired');
         break;
+      }
         
-      case 422:
+      case 422: {
         const validationData = response.data as ApiError;
         if (validationData.errors) {
           Object.values(validationData.errors).flat().forEach(error => {
@@ -144,6 +147,7 @@ api.interceptors.response.use(
           toast.error(validationData.message);
         }
         break;
+      }
         
       default:
         if (response?.status && response.status >= 500) {
@@ -190,7 +194,14 @@ export const endpoints = {
     show: (id: number | string) => `/payments/${id}`,
     status: (id: number | string) => `/payments/${id}/status`,
     sync: (id: number | string) => `/payments/${id}/sync-status`,
+    tenantPayments: '/tenant/payments',
   },
+
+  // Shared access logs
+  accessLogs: '/access-logs',
+
+  // Shared RFID
+  rfid: '/rfid',
 
   notifications: {
     index: '/notifications',
@@ -469,7 +480,7 @@ export const apiHelpers = {
   },
 
   // File Operations
-  uploadFile: async (endpoint: string, file: File, additionalData?: Record<string, any>) => {
+  uploadFile: async (endpoint: string, file: File, additionalData?: Record<string, unknown>) => {
     const formData = new FormData();
     formData.append('file', file);
     
@@ -488,13 +499,13 @@ export const apiHelpers = {
   },
 
   // Pagination
-  getPaginated: async <T>(endpoint: string, params?: Record<string, any>) => {
+  getPaginated: async <T>(endpoint: string, params?: Record<string, unknown>) => {
     const response = await api.get<ApiResponse<PaginatedResponse<T>>>(endpoint, { params });
     return response.data;
   },
 
   // Export Data
-  exportData: async (endpoint: string, params?: Record<string, any>) => {
+  exportData: async (endpoint: string, params?: Record<string, unknown>) => {
     const response = await api.get(endpoint, {
       params,
       responseType: 'blob',
@@ -517,7 +528,7 @@ export const apiHelpers = {
   },
 
   // Bulk Operations
-  bulkOperation: async (endpoint: string, ids: (number | string)[], operation: string, additionalData?: Record<string, any>) => {
+  bulkOperation: async (endpoint: string, ids: (number | string)[], operation: string, additionalData?: Record<string, unknown>) => {
     return api.post(endpoint, {
       ids,
       operation,
@@ -536,10 +547,10 @@ export const apiHelpers = {
         } else {
           return await api.post(endpoint, {});
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Handle expired payment (410 Gone)
         if (error.response?.status === 410) {
-          const errorData = error.response.data as ApiError & { data?: any };
+          const errorData = error.response.data as ApiError & { data?: unknown };
           
           if (errorData.data?.can_regenerate) {
             toast.error('Payment expired. Attempting to regenerate...');
@@ -571,14 +582,14 @@ export const apiHelpers = {
           for (const altEndpoint of alternatives) {
             try {
               return await api.get(altEndpoint);
-            } catch (altError) {
+            } catch {
               continue;
             }
           }
           
           try {
             return await api.post(endpoints.tenant.payments.paymentUrlPost(paymentId), {});
-          } catch (postError) {
+          } catch {
             throw error;
           }
         }
@@ -594,7 +605,7 @@ export const apiHelpers = {
       return await api.post(endpoints.payments.sync(paymentId), {});
     },
 
-    getList: async (params?: Record<string, any>) => {
+    getList: async (params?: Record<string, unknown>) => {
       return await api.get(endpoints.tenant.payments.index, { params });
     },
 
@@ -605,7 +616,7 @@ export const apiHelpers = {
       );
     },
 
-    getExpiredPayments: async (params?: Record<string, any>) => {
+    getExpiredPayments: async (params?: Record<string, unknown>) => {
       return await api.get<ApiResponse<ExpiredPayment[]>>(
         endpoints.tenant.payments.expired, 
         { params }
@@ -622,15 +633,15 @@ export const apiHelpers = {
 
   // Access Log Helpers
   access: {
-    getHistory: async (params?: Record<string, any>) => {
+    getHistory: async (params?: Record<string, unknown>) => {
       return await api.get(endpoints.tenant.access.history, { params });
     },
 
-    getStats: async (params?: Record<string, any>) => {
+    getStats: async (params?: Record<string, unknown>) => {
       return await api.get(endpoints.tenant.access.stats, { params });
     },
 
-    getPatterns: async (params?: Record<string, any>) => {
+    getPatterns: async (params?: Record<string, unknown>) => {
       return await api.get(endpoints.tenant.access.patterns, { params });
     },
   },
@@ -644,7 +655,7 @@ export const reactQueryKeys = {
   payments: {
     all: ['payments'] as const,
     tenant: () => [...reactQueryKeys.payments.all, 'tenant'] as const,
-    tenantList: (params?: Record<string, any>) => [...reactQueryKeys.payments.tenant(), 'list', params] as const,
+    tenantList: (params?: Record<string, unknown>) => [...reactQueryKeys.payments.tenant(), 'list', params] as const,
     tenantPayment: (id: number | string) => [...reactQueryKeys.payments.tenant(), 'payment', id] as const,
     expirationInfo: (id: number | string) => [...reactQueryKeys.payments.tenant(), 'expiration', id] as const,
   },
@@ -652,7 +663,7 @@ export const reactQueryKeys = {
   access: {
     all: ['access'] as const,
     tenant: () => [...reactQueryKeys.access.all, 'tenant'] as const,
-    tenantHistory: (params?: Record<string, any>) => [...reactQueryKeys.access.tenant(), 'history', params] as const,
+    tenantHistory: (params?: Record<string, unknown>) => [...reactQueryKeys.access.tenant(), 'history', params] as const,
     tenantStats: () => [...reactQueryKeys.access.tenant(), 'stats'] as const,
   },
 
@@ -670,12 +681,12 @@ export const reactQueryKeys = {
 export const apiCall = {
   async safe<T>(
     apiFunction: () => Promise<AxiosResponse<ApiResponse<T>>>,
-    errorHandler?: (error: any) => void
+    errorHandler?: (error: unknown) => void
   ): Promise<{ success: true; data: T } | { success: false; error: string }> {
     try {
       const response = await apiFunction();
       return { success: true, data: response.data.data };
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
       
       if (errorHandler) {
@@ -693,13 +704,13 @@ export const apiCall = {
     retryAttempts: number = 3,
     retryDelay: number = 1000
   ): Promise<{ success: true; data: T } | { success: false; error: string }> {
-    let lastError: any;
+    let lastError: unknown;
     
     for (let attempt = 1; attempt <= retryAttempts; attempt++) {
       try {
         const response = await apiFunction();
         return { success: true, data: response.data.data };
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
         
         // Don't retry on client errors (4xx)

@@ -5,7 +5,7 @@ import { useRfidCards, useReportLostCard } from '../../../hooks/useRfidCards';
 import { Card } from '../../ui/Card';
 import { Button, IconButton } from '../../ui/Buttons';
 import { StatusBadge } from '../../ui/Status';
-import { getRfidStatusColor, getRfidStatusLabel, getRfidTypeLabel, getAccessLevelLabel } from '../../../types/rfid';
+import { getRfidStatusLabel, getRfidTypeLabel, getAccessLevelLabel } from '../../../types/rfid';
 import { formatDate } from '../../../utils/formatters';
 import { mergeClasses } from '../../../utils/helpers';
 
@@ -23,7 +23,7 @@ const RfidCardList: React.FC<RfidCardListProps> = ({
   const [showFullUid, setShowFullUid] = useState<Record<number, boolean>>({});
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   
-  const { cards, isLoading, refreshCards } = useRfidCards();
+  const { cards, isLoading } = useRfidCards();
   const reportLostCard = useReportLostCard();
 
   const toggleUidVisibility = (cardId: number) => {

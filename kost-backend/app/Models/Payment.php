@@ -1,21 +1,26 @@
 <?php
+
 // app/Models/Payment.php (Updated dengan Helper Methods)
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\Carbon;
 
 class Payment extends Model
 {
     use HasFactory;
 
     const STATUS_PENDING = 'pending';
+
     const STATUS_PAID = 'paid';
+
     const STATUS_OVERDUE = 'overdue';
+
     const STATUS_EXPIRED = 'expired';
+
     const STATUS_CANCELLED = 'cancelled';
 
     protected $fillable = [
@@ -41,7 +46,6 @@ class Payment extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
-
 
     // Relationships
     public function tenant(): BelongsTo
@@ -88,7 +92,7 @@ class Payment extends Model
         }
 
         // Check if snap token expired (24 hours)
-        if ($this->snap_token_created_at && 
+        if ($this->snap_token_created_at &&
             $this->snap_token_created_at->diffInHours(now()) >= 24) {
             return true;
         }
@@ -112,10 +116,12 @@ class Payment extends Model
 
         if ($this->snap_token_created_at) {
             $hoursElapsed = $this->snap_token_created_at->diffInHours(now());
+
             return max(0, 24 - $hoursElapsed);
         }
 
         $daysElapsed = $this->created_at->diffInDays(now());
+
         return max(0, 7 - $daysElapsed) * 24;
     }
 
@@ -141,12 +147,13 @@ class Payment extends Model
      */
     public function getReceiptPath(): ?string
     {
-        if (!$this->canGenerateReceipt()) {
+        if (! $this->canGenerateReceipt()) {
             return null;
         }
-        
+
         $receiptNumber = $this->generateReceiptNumber();
         $filename = "kwitansi_{$receiptNumber}.pdf";
+
         return "receipts/{$filename}";
     }
 
@@ -157,6 +164,7 @@ class Payment extends Model
     {
         $date = Carbon::parse($this->paid_at)->format('Ymd');
         $paymentId = str_pad($this->id, 6, '0', STR_PAD_LEFT);
+
         return "KWT-{$date}-{$paymentId}";
     }
 }

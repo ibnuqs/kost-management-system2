@@ -1,8 +1,7 @@
-// File: src/pages/Admin/pages/IoTDeviceManagement.tsx
 import React, { useState } from 'react';
 import { useIoTDevices } from '../hooks/useIoTDevices';
-import { DeviceForm, DeviceRoomMapping, DeviceFilters } from '../components/feature/iot';
-import { Card, CardHeader, CardContent } from '../components/ui/Card';
+import { DeviceForm, DeviceRoomMapping } from '../components/feature/iot';
+import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Forms/Button';
 import type { IoTDevice } from '../types/iot';
 
@@ -11,15 +10,12 @@ import type { IoTDevice } from '../types/iot';
 const IoTDeviceManagement: React.FC = () => {
   const {
     devices,
-    stats,
     rooms,
     loading,
     pagination,
     loadDevices,
     createDevice,
     updateDevice,
-    deleteDevice,
-    toggleDeviceStatus,
     exportDevices,
     refresh
   } = useIoTDevices();
@@ -53,7 +49,7 @@ const IoTDeviceManagement: React.FC = () => {
       await createDevice(deviceData);
       setShowForm(false);
       setSelectedDevice(null);
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -77,7 +73,7 @@ const IoTDeviceManagement: React.FC = () => {
       await updateDevice(selectedDevice.id, deviceData);
       setShowForm(false);
       setSelectedDevice(null);
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -87,7 +83,7 @@ const IoTDeviceManagement: React.FC = () => {
     try {
       setIsExporting(true);
       await exportDevices('csv');
-    } catch (error) {
+    } catch {
       // Error handled by hook
     } finally {
       setIsExporting(false);
@@ -133,7 +129,7 @@ const IoTDeviceManagement: React.FC = () => {
         {/* Page Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">🗺️ Kelola Perangkat ESP32</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Kelola Perangkat ESP32</h1>
             <p className="text-gray-600 mt-1 text-sm lg:text-base">
               Atur nama perangkat dan pindahkan antar kamar
             </p>
@@ -146,7 +142,7 @@ const IoTDeviceManagement: React.FC = () => {
               disabled={isExporting || devices.length === 0}
               className="text-xs lg:text-sm"
             >
-              {isExporting ? '⏳ Mengekspor...' : '📤 Ekspor'}
+{isExporting ? 'Mengekspor...' : 'Ekspor'}
             </Button>
             <Button 
               variant="outline" 
@@ -154,7 +150,7 @@ const IoTDeviceManagement: React.FC = () => {
               disabled={loading}
               className="text-xs lg:text-sm"
             >
-              🔄 Segarkan
+Segarkan
             </Button>
           </div>
         </div>

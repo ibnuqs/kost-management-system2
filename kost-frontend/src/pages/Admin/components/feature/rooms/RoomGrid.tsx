@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   Home, User, DollarSign, Calendar, MoreVertical,
-  Edit, Trash2, UserPlus, UserMinus, Eye, Wrench, Archive, ArchiveRestore
+  Edit, UserPlus, Eye, Wrench, Archive, ArchiveRestore
 } from 'lucide-react';
 import { StatusBadge, IconButton } from '../../ui';
 import type { Room } from '../../../types/room';
@@ -11,13 +11,10 @@ interface RoomGridProps {
   rooms: Room[];
   loading: boolean;
   onEdit: (room: Room) => void;
-  onDelete: (room: Room) => void;
   onViewDetails: (room: Room) => void;
   onAssignTenant: (room: Room) => void;
-  onRemoveTenant: (room: Room) => void;
   onArchive?: (room: Room) => void;
   onUnarchive?: (room: Room) => void;
-  onReserve?: (room: Room) => void;
   onViewTenant?: (room: Room) => void;
 }
 
@@ -104,14 +101,12 @@ const EmptyState = () => (
 const RoomCard: React.FC<{
   room: Room;
   onEdit: (room: Room) => void;
-  onDelete: (room: Room) => void;
   onViewDetails: (room: Room) => void;
   onAssignTenant: (room: Room) => void;
-  onRemoveTenant: (room: Room) => void;
   onArchive?: (room: Room) => void;
   onUnarchive?: (room: Room) => void;
   onViewTenant?: (room: Room) => void;
-}> = ({ room, onEdit, onDelete, onViewDetails, onAssignTenant, onRemoveTenant, onArchive, onUnarchive, onViewTenant }) => {
+}> = ({ room, onEdit, onViewDetails, onAssignTenant, onArchive, onUnarchive, onViewTenant }) => {
   const styling = getStatusStyling(room.status);
   const [showActions, setShowActions] = React.useState(false);
 
@@ -251,7 +246,7 @@ const RoomCard: React.FC<{
         {/* Status Badge */}
         <div className="flex items-center justify-between mb-4">
           <StatusBadge 
-            status={room.status as any} 
+            status={room.status as 'available' | 'occupied' | 'maintenance'} 
             size="md" 
             icon={getStatusIcon()}
           >
@@ -348,10 +343,8 @@ export const RoomGrid: React.FC<RoomGridProps> = ({
   rooms,
   loading,
   onEdit,
-  onDelete,
   onViewDetails,
   onAssignTenant,
-  onRemoveTenant,
   onArchive,
   onUnarchive,
   onViewTenant
@@ -385,10 +378,8 @@ export const RoomGrid: React.FC<RoomGridProps> = ({
           key={room.id}
           room={room}
           onEdit={onEdit}
-          onDelete={onDelete}
           onViewDetails={onViewDetails}
           onAssignTenant={onAssignTenant}
-          onRemoveTenant={onRemoveTenant}
           onArchive={onArchive}
           onUnarchive={onUnarchive}
           onViewTenant={onViewTenant}

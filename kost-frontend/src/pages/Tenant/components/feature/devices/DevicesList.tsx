@@ -1,6 +1,6 @@
 // ===== FIXED: src/pages/Tenant/components/feature/devices/DeviceList.tsx =====
 import React, { useState } from 'react';
-import { Search, Filter, Wifi, WifiOff, Settings, AlertTriangle } from 'lucide-react';
+import { Search, Settings } from 'lucide-react';
 import { Device, DeviceStatus, DeviceType } from '../../../types/device';
 import DeviceCard from './DeviceCard';
 import { Card } from '../../ui/Card';
@@ -137,14 +137,14 @@ const DeviceList: React.FC<DeviceListProps> = ({
         
         <Select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
+          onChange={(e) => setStatusFilter(e.target.value as DeviceStatus | 'all')}
           options={statusOptions}
           placeholder="Filter by status"
         />
         
         <Select
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as any)}
+          onChange={(e) => setTypeFilter(e.target.value as DeviceType | 'all')}
           options={typeOptions}
           placeholder="Filter by type"
         />

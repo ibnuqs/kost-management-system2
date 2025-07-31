@@ -20,7 +20,7 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({
   style
 }) => {
   // Get icon component dynamically
-  const IconComponent = (LucideIcons as any)[icon] || LucideIcons.Star;
+  const IconComponent = (LucideIcons as typeof LucideIcons)[icon as keyof typeof LucideIcons] || LucideIcons.Star;
 
   return (
     <div
@@ -65,5 +65,3 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({
     </div>
   );
 };
-
-export default FeatureCard;

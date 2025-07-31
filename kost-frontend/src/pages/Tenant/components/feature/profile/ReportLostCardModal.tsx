@@ -106,7 +106,7 @@ const ReportLostCardModal: React.FC<ReportLostCardModalProps> = ({
       setReason('');
       setLastSeenDate('');
       setErrors({});
-    } catch (error) {
+    } catch {
       // Error handled by mutation
     }
   };
@@ -180,7 +180,7 @@ const ReportLostCardModal: React.FC<ReportLostCardModalProps> = ({
           <Select
             label="Issue Type"
             value={reportType}
-            onChange={(e) => setReportType(e.target.value as any)}
+            onChange={(e) => setReportType(e.target.value as 'lost' | 'stolen' | 'damaged')}
             options={reportTypeOptions}
             required
           />

@@ -7,7 +7,6 @@ import { AccessHistoryTable, AccessFilters, AccessStatistics } from '../componen
 import { PageHeader } from '../components/layout/Header';
 import { Button } from '../components/ui/Buttons';
 import { mergeClasses } from '../utils/helpers';
-import { MOBILE_SPECIFIC } from '../utils/constants';
 
 const AccessHistory: React.FC = () => {
   const [filters, setFilters] = useState({});
@@ -37,7 +36,7 @@ const AccessHistory: React.FC = () => {
   }, [filters]);
 
   // Handler untuk update filter
-  const handleFiltersChange = (newFilters: any) => {
+  const handleFiltersChange = (newFilters: Record<string, unknown>) => {
     setFilters(newFilters);
     setCurrentPage(1); // Reset ke halaman pertama
   };
@@ -187,7 +186,7 @@ const AccessHistory: React.FC = () => {
                     {/* Page numbers - Simplified for mobile */}
                     <div className="flex items-center gap-1">
                       {(() => {
-                        const pages = [];
+                        const pages: React.ReactElement[] = [];
                         const totalPages = pagination.last_page;
                         const current = pagination.current_page;
                         
@@ -230,7 +229,7 @@ const AccessHistory: React.FC = () => {
                               </button>
                             );
                             if (current > 3 && !isMobile) {
-                              pages.push(<span key="dots1" className="px-1 sm:px-2 text-gray-400 text-xs">...</span>);
+                              pages.push(<span key="dots1" className="px-1 sm:px-2 text-gray-400 text-xs">...</span> as React.ReactElement);
                             }
                           }
                           
@@ -259,7 +258,7 @@ const AccessHistory: React.FC = () => {
                           // Last page
                           if (current < totalPages - 1) {
                             if (current < totalPages - 2 && !isMobile) {
-                              pages.push(<span key="dots2" className="px-1 sm:px-2 text-gray-400 text-xs">...</span>);
+                              pages.push(<span key="dots2" className="px-1 sm:px-2 text-gray-400 text-xs">...</span> as React.ReactElement);
                             }
                             pages.push(
                               <button

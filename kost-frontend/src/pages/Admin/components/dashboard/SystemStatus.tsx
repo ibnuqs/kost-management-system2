@@ -11,9 +11,16 @@ import {
   RefreshCw
 } from 'lucide-react';
 
+interface SystemStats {
+  total_rooms?: number;
+  total_active_tenants?: number;
+  total_payments_this_month?: number;
+  active_rfid_cards?: number;
+}
+
 interface SystemStatusProps {
   isLoading: boolean;
-  stats?: any;
+  stats?: SystemStats;
 }
 
 const SystemStatus: React.FC<SystemStatusProps> = ({ isLoading, stats }) => {

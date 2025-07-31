@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\Tenant;
 use App\Models\Payment;
+use App\Models\Tenant;
 use Carbon\Carbon;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 class GenerateMonthlyPayments extends Command
@@ -20,36 +20,38 @@ class GenerateMonthlyPayments extends Command
     {
         $isDryRun = $this->option('dry-run');
         $targetDate = $this->option('date') ? Carbon::parse($this->option('date')) : now();
-        
-        $this->info("🏠 Starting monthly payment generation for: " . $targetDate->format('Y-m-d'));
-        
+
+        $this->info('🏠 Starting monthly payment generation for: '.$targetDate->format('Y-m-d'));
+
         if ($isDryRun) {
-            $this->warn("⚠️  DRY RUN MODE - No payments will be created");
+            $this->warn('⚠️  DRY RUN MODE - No payments will be created');
         }
 
         try {
             $result = $this->generatePayments($targetDate, $isDryRun);
-            
-            $this->info("✅ Payment generation completed!");
+
+            $this->info('✅ Payment generation completed!');
             $this->table(['Metric', 'Count'], [
                 ['Active Tenants Processed', $result['processed']],
                 ['New Payments Created', $result['created']],
                 ['Already Exists (Skipped)', $result['skipped']],
-                ['Errors', $result['errors']]
+                ['Errors', $result['errors']],
             ]);
 
             if ($result['errors'] > 0) {
-                $this->error("❌ Some payments failed to generate. Check logs for details.");
+                $this->error('❌ Some payments failed to generate. Check logs for details.');
+
                 return 1;
             }
 
             return 0;
         } catch (\Exception $e) {
-            $this->error("❌ Fatal error: " . $e->getMessage());
+            $this->error('❌ Fatal error: '.$e->getMessage());
             Log::error('Monthly payment generation failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return 1;
         }
     }
@@ -60,7 +62,7 @@ class GenerateMonthlyPayments extends Command
             'processed' => 0,
             'created' => 0,
             'skipped' => 0,
-            'errors' => 0
+            'errors' => 0,
         ];
 
         // Get all active tenants
@@ -73,11 +75,12 @@ class GenerateMonthlyPayments extends Command
         foreach ($activeTenants as $tenant) {
             try {
                 $stats['processed']++;
-                
+
                 $paymentData = $this->calculateMonthlyPayment($tenant, $targetDate);
-                
-                if (!$paymentData) {
+
+                if (! $paymentData) {
                     $this->warn("⚠️  Skipping tenant {$tenant->id} - No payment needed");
+
                     continue;
                 }
 
@@ -90,24 +93,25 @@ class GenerateMonthlyPayments extends Command
                 if ($existingPayment) {
                     $this->line("ℹ️  Payment already exists for tenant {$tenant->user->name} - {$paymentData['month']}/{$paymentData['year']}");
                     $stats['skipped']++;
+
                     continue;
                 }
 
-                if (!$isDryRun) {
+                if (! $isDryRun) {
                     $payment = Payment::create($paymentData);
-                    $this->info("✅ Created payment for {$tenant->user->name}: Rp " . number_format($payment->amount, 0, ',', '.'));
+                    $this->info("✅ Created payment for {$tenant->user->name}: Rp ".number_format($payment->amount, 0, ',', '.'));
                 } else {
-                    $this->info("🔍 Would create payment for {$tenant->user->name}: Rp " . number_format($paymentData['amount'], 0, ',', '.'));
+                    $this->info("🔍 Would create payment for {$tenant->user->name}: Rp ".number_format($paymentData['amount'], 0, ',', '.'));
                 }
 
                 $stats['created']++;
 
             } catch (\Exception $e) {
                 $stats['errors']++;
-                $this->error("❌ Error processing tenant {$tenant->id}: " . $e->getMessage());
+                $this->error("❌ Error processing tenant {$tenant->id}: ".$e->getMessage());
                 Log::error('Error generating payment for tenant', [
                     'tenant_id' => $tenant->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -118,23 +122,23 @@ class GenerateMonthlyPayments extends Command
     private function calculateMonthlyPayment(Tenant $tenant, Carbon $targetDate): ?array
     {
         $room = $tenant->room;
-        if (!$room) {
+        if (! $room) {
             throw new \Exception("Room not found for tenant {$tenant->id}");
         }
 
         // Calculate next payment month
         $nextPaymentDate = $this->calculateNextPaymentDate($tenant, $targetDate);
-        
-        if (!$nextPaymentDate) {
+
+        if (! $nextPaymentDate) {
             return null; // No payment needed yet
         }
 
         // Calculate payment amount
         $amount = $this->calculatePaymentAmount($tenant, $nextPaymentDate);
-        
+
         // Set due date (7 days from start of month)
         $dueDate = $nextPaymentDate->copy()->addDays(7);
-        
+
         return [
             'tenant_id' => $tenant->id,
             'amount' => $amount,
@@ -145,17 +149,17 @@ class GenerateMonthlyPayments extends Command
             'payment_method' => 'pending',
             'description' => $this->generatePaymentDescription($tenant, $nextPaymentDate, $amount),
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ];
     }
 
     private function calculateNextPaymentDate(Tenant $tenant, Carbon $targetDate): ?Carbon
     {
         $startDate = Carbon::parse($tenant->start_date);
-        
+
         // For monthly generation, we want to create payment for next month
         $nextMonth = $targetDate->copy()->addMonth()->startOfMonth();
-        
+
         // Don't create payment if it's before the tenant's start date
         if ($nextMonth->lt($startDate)) {
             return null;
@@ -168,15 +172,15 @@ class GenerateMonthlyPayments extends Command
     {
         $room = $tenant->room;
         $monthlyRent = $tenant->monthly_rent;
-        
+
         $startDate = Carbon::parse($tenant->start_date);
         $isFirstPayment = $paymentDate->isSameMonth($startDate);
-        
+
         if ($isFirstPayment) {
             // Prorated calculation for first month
             return $this->calculateProratedAmount($monthlyRent, $startDate, $paymentDate);
         }
-        
+
         // Regular monthly payment
         return $monthlyRent;
     }
@@ -185,12 +189,12 @@ class GenerateMonthlyPayments extends Command
     {
         $daysInMonth = $paymentMonth->daysInMonth;
         $remainingDays = $daysInMonth - $startDate->day + 1; // Include start date
-        
+
         $dailyRate = $monthlyRent / $daysInMonth;
         $proratedAmount = $dailyRate * $remainingDays;
-        
-        $this->info("📊 Prorated calculation: {$remainingDays} days of {$daysInMonth} = Rp " . number_format($proratedAmount, 0, ',', '.'));
-        
+
+        $this->info("📊 Prorated calculation: {$remainingDays} days of {$daysInMonth} = Rp ".number_format($proratedAmount, 0, ',', '.'));
+
         return round($proratedAmount, 2);
     }
 
@@ -198,7 +202,7 @@ class GenerateMonthlyPayments extends Command
     {
         $room = $tenant->room;
         $monthName = $paymentDate->format('F Y');
-        
+
         return "Sewa Bulanan - {$room->room_number} ({$room->room_name}) - {$monthName}";
     }
 }

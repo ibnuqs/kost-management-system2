@@ -1,11 +1,39 @@
 // File: src/components/Notifications/NotificationListener.tsx
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useAuth } from '../../pages/Auth/contexts/AuthContext';
 import { echoHelpers } from '../../utils/echo';
 import { toast } from 'react-hot-toast';
 
 export default function NotificationListener() {
   const { user, isAuthenticated } = useAuth();
+
+  const setupNotifications = useCallback(() => {
+    if (!user) return;
+
+    // Admin notifications
+    if (user.role === 'admin') {
+      try {
+        echoHelpers.listenToAdminNotifications((eventType, data) => {
+          if (eventType === 'rfid-access' && data.access_granted) {
+            toast.success(`${data.user_name} entered ${data.room_number}`);
+          }
+        });
+      } catch {
+        // Silent fail
+      }
+    }
+
+    // User notifications
+    try {
+      echoHelpers.listenToUserNotifications(user.id, (eventType) => {
+        if (eventType === 'payment-success') {
+          toast.success('Payment successful!');
+        }
+      });
+    } catch {
+      // Silent fail
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
@@ -33,35 +61,7 @@ export default function NotificationListener() {
         echoHelpers.disconnect();
       };
     });
-  }, [user?.id, isAuthenticated]);
-
-  const setupNotifications = () => {
-    if (!user) return;
-
-    // Admin notifications
-    if (user.role === 'admin') {
-      try {
-        echoHelpers.listenToAdminNotifications((eventType, data) => {
-          if (eventType === 'rfid-access' && data.access_granted) {
-            toast.success(`${data.user_name} entered ${data.room_number}`);
-          }
-        });
-      } catch (e) {
-        // Silent fail
-      }
-    }
-
-    // User notifications
-    try {
-      echoHelpers.listenToUserNotifications(user.id, (eventType, data) => {
-        if (eventType === 'payment-success') {
-          toast.success('Payment successful!');
-        }
-      });
-    } catch (e) {
-      // Silent fail
-    }
-  };
+  }, [user?.id, isAuthenticated, setupNotifications]);
 
   return null;
 }

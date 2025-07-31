@@ -47,6 +47,7 @@ class CheckExpiredPayments extends Command
 
         if ($expiredPayments->isEmpty()) {
             $this->info('✅ No expired payments found.');
+
             return self::SUCCESS;
         }
 
@@ -57,57 +58,57 @@ class CheckExpiredPayments extends Command
 
         foreach ($expiredPayments as $payment) {
             $expirationReason = $this->getExpirationReason($payment);
-            
+
             // Fix: Convert decimal amount to float for number_format
             $amount = (float) $payment->amount;
-            
+
             $this->line("  📋 Payment #{$payment->id} (Order: {$payment->order_id})");
-            $this->line("     Amount: Rp " . number_format($amount, 0, ',', '.'));
+            $this->line('     Amount: Rp '.number_format($amount, 0, ',', '.'));
             $this->line("     Created: {$payment->created_at->format('Y-m-d H:i:s')}");
             $this->line("     Reason: {$expirationReason}");
 
-            if (!$isDryRun) {
+            if (! $isDryRun) {
                 try {
                     $payment->update([
                         'status' => 'expired',
                         'expired_at' => now(),
                         'failure_reason' => $expirationReason,
-                        'notes' => "Automatically expired by system check on " . now()->format('Y-m-d H:i:s')
+                        'notes' => 'Automatically expired by system check on '.now()->format('Y-m-d H:i:s'),
                     ]);
 
                     $updatedCount++;
-                    $this->line("     ✅ Updated to expired");
+                    $this->line('     ✅ Updated to expired');
 
                     // Send notification if requested
                     if ($shouldNotify) {
                         $notified = $this->sendExpirationNotification($payment);
                         if ($notified) {
                             $notificationsSent++;
-                            $this->line("     📧 Notification sent");
+                            $this->line('     📧 Notification sent');
                         }
                     }
 
                 } catch (\Exception $e) {
-                    $this->error("     ❌ Failed to update: " . $e->getMessage());
+                    $this->error('     ❌ Failed to update: '.$e->getMessage());
                     Log::error('Failed to update expired payment', [
                         'payment_id' => $payment->id,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ]);
                 }
             } else {
-                $this->line("     🔄 Would be marked as expired (dry-run mode)");
+                $this->line('     🔄 Would be marked as expired (dry-run mode)');
             }
 
-            $this->line("");
+            $this->line('');
         }
 
         // Summary
         if ($isDryRun) {
-            $this->warn("🔄 DRY RUN MODE: No changes were made");
+            $this->warn('🔄 DRY RUN MODE: No changes were made');
             $this->info("Would update {$expiredPayments->count()} payments to expired status");
         } else {
             $this->info("✅ Updated {$updatedCount} payments to expired status");
-            
+
             if ($shouldNotify) {
                 $this->info("📧 Sent {$notificationsSent} notifications to tenants");
             }
@@ -117,7 +118,7 @@ class CheckExpiredPayments extends Command
                 'total_found' => $expiredPayments->count(),
                 'updated_count' => $updatedCount,
                 'notifications_sent' => $notificationsSent,
-                'execution_time' => now()->toDateTimeString()
+                'execution_time' => now()->toDateTimeString(),
             ]);
         }
 
@@ -129,7 +130,7 @@ class CheckExpiredPayments extends Command
      */
     private function getExpirationReason(Payment $payment): string
     {
-        if ($payment->snap_token_created_at && 
+        if ($payment->snap_token_created_at &&
             Carbon::parse($payment->snap_token_created_at)->lt(now()->subHours(24))) {
             return 'Snap token expired (24 hours)';
         }
@@ -148,22 +149,22 @@ class CheckExpiredPayments extends Command
     {
         try {
             $tenant = $payment->tenant()->with('user')->first();
-            
-            if (!$tenant || !$tenant->user) {
+
+            if (! $tenant || ! $tenant->user) {
                 return false;
             }
 
             // You can implement your notification logic here
             // For example, using Laravel's notification system:
-            
+
             // $tenant->user->notify(new PaymentExpiredNotification($payment));
-            
+
             // Or send via email, SMS, push notification, etc.
-            
+
             Log::info('Payment expiration notification sent', [
                 'payment_id' => $payment->id,
                 'tenant_id' => $tenant->id,
-                'user_email' => $tenant->user->email
+                'user_email' => $tenant->user->email,
             ]);
 
             return true;
@@ -171,8 +172,9 @@ class CheckExpiredPayments extends Command
         } catch (\Exception $e) {
             Log::error('Failed to send expiration notification', [
                 'payment_id' => $payment->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }

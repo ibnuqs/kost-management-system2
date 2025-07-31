@@ -1,10 +1,10 @@
-﻿// pages/Auth/hooks/useAuthForm.ts
+// pages/Auth/hooks/useAuthForm.ts
 // Custom hook for form state management with validation
 
 import { useState, useCallback } from 'react';
 import { FormState, FormErrors, FormHookOptions } from '../types';
 
-export function useAuthForm<T extends Record<string, any>>({
+export function useAuthForm<T extends Record<string, unknown>>({
   initialValues,
   validationRules,
   onSubmit,
@@ -22,7 +22,7 @@ export function useAuthForm<T extends Record<string, any>>({
   const [touchedFields, setTouchedFields] = useState<Set<keyof T>>(new Set());
 
   // Handle field changes
-  const handleChange = useCallback((name: keyof T, value: any) => {
+  const handleChange = useCallback((name: keyof T, value: unknown) => {
     setState(prev => {
       const newValues = { ...prev.values, [name]: value };
       const newErrors = { ...prev.errors };
@@ -49,6 +49,7 @@ export function useAuthForm<T extends Record<string, any>>({
         values: newValues,
         errors: newErrors,
         isValid: !hasErrors,
+        isSubmitting: false,
         isDirty: true
       };
     });
@@ -138,7 +139,7 @@ export function useAuthForm<T extends Record<string, any>>({
 
     try {
       await onSubmit(state.values);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Form submission error:', error);
     } finally {
       setState(prev => ({
@@ -179,7 +180,7 @@ export function useAuthForm<T extends Record<string, any>>({
   }, []);
 
   // Set single field value
-  const setFieldValue = useCallback((name: keyof T, value: any) => {
+  const setFieldValue = useCallback((name: keyof T, value: unknown) => {
     handleChange(name, value);
   }, [handleChange]);
 

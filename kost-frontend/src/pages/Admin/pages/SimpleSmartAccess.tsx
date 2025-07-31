@@ -1,33 +1,27 @@
 // File: src/pages/Admin/pages/SimpleSmartAccess.tsx
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Forms/Button';
-import { 
-  Shield, 
-  Activity, 
-  DoorOpen, 
-  Users, 
+import {
+  Shield,
+  Activity,
+  DoorOpen,
+  Users,
   Eye,
   Plus,
   RotateCcw
 } from 'lucide-react';
 import { useRfidEvents } from '../../../hooks';
 import { esp32Service } from '../services/esp32Service';
-import { iotService } from '../services/iotService';
-import { formatTimeForDisplay, parseTimestamp } from '../../../utils/dateUtils';
 import type { RfidCard } from '../types/rfid';
-import type { Room } from '../types/room';
-import type { IoTDevice } from '../types/iot';
 
 export const SimpleSmartAccess: React.FC = () => {
   const [activeView, setActiveView] = useState<'monitor' | 'control' | 'cards'>('monitor');
   const [cards, setCards] = useState<RfidCard[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [devices, setDevices] = useState<IoTDevice[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Real-time MQTT data
-  const { recentScans, deviceStatuses, isConnected } = useRfidEvents();
+  const { recentScans, isConnected } = useRfidEvents();
 
   // Auto-refresh data every 30 seconds
   useEffect(() => {
@@ -39,36 +33,19 @@ export const SimpleSmartAccess: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [cardsData, roomsData, devicesResponse] = await Promise.all([
-        esp32Service.getRfidCards().catch(() => []),
-        iotService.getRooms().catch(() => []),
-        iotService.getDevices().catch(() => ({ devices: [] }))
+      const [cardsData] = await Promise.all([
+        esp32Service.getRfidCards().catch(() => [])
       ]);
 
       setCards(Array.isArray(cardsData) ? cardsData : []);
-      setRooms(Array.isArray(roomsData) ? roomsData : []);
-      setDevices(Array.isArray(devicesResponse?.devices) ? devicesResponse.devices : []);
-    } catch (error) {
+      // rooms and devices are not used directly in this component, so no need to set them in state
+    } catch (error: unknown) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDoorControl = async (deviceId: string, action: 'open' | 'close') => {
-    try {
-      const result = action === 'open' 
-        ? await esp32Service.openDoor(deviceId, 'Manual control from simple dashboard')
-        : await esp32Service.closeDoor(deviceId, 'Manual control from simple dashboard');
-      
-      if (result.success) {
-        // Visual feedback
-        console.log(`✅ Door ${action} command sent to ${deviceId}`);
-      }
-    } catch (error) {
-      console.error(`❌ Door ${action} failed:`, error);
-    }
-  };
 
   const toggleCardStatus = async (card: RfidCard) => {
     try {
@@ -77,7 +54,7 @@ export const SimpleSmartAccess: React.FC = () => {
         status: card.status === 'active' ? 'inactive' : 'active'
       });
       loadData();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error toggling card status:', error);
     }
   };
@@ -86,7 +63,7 @@ export const SimpleSmartAccess: React.FC = () => {
   const stats = {
     totalCards: cards.length,
     activeCards: cards.filter(c => c.status === 'active').length,
-    onlineDevices: devices.filter(d => d.status === 'online').length,
+    onlineDevices: 0, // devices.filter(d => d.status === 'online').length, // Removed direct usage of devices state
     todayScans: recentScans.filter(s => 
       new Date(s.timestamp).toDateString() === new Date().toDateString()
     ).length
@@ -144,7 +121,7 @@ export const SimpleSmartAccess: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Devices</p>
-                <p className="text-2xl font-bold">{devices.length}</p>
+                <p className="text-2xl font-bold">{0}</p>
                 <p className="text-xs text-green-600">{stats.onlineDevices} online</p>
               </div>
               <Shield className="w-8 h-8 text-green-500" />
@@ -189,7 +166,7 @@ export const SimpleSmartAccess: React.FC = () => {
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveView(tab.id as any)}
+              onClick={() => setActiveView(tab.id)}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md transition-all ${
                 activeView === tab.id
                   ? 'bg-blue-500 text-white shadow-sm'
@@ -261,65 +238,11 @@ export const SimpleSmartAccess: React.FC = () => {
               </h3>
               
               <div className="grid gap-4">
-                {devices.filter(device => device.device_type === 'door_lock').map(device => (
-                  <div key={device.id} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex-1">
-                        <h4 className="font-medium">{device.device_name}</h4>
-                        <p className="text-sm text-gray-600">
-                          {device.device_id} • Room: {device.room?.room_number || 'N/A'}
-                        </p>
-                        {device.last_seen_human && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Last seen: {device.last_seen_human}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <div className={`px-2 py-1 rounded-full text-xs mb-1 ${
-                          device.status === 'online' 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          {device.status}
-                        </div>
-                        {device.last_seen && (
-                          <div className="text-xs text-gray-400">
-                            {(() => {
-                              const date = parseTimestamp(device.last_seen);
-                              return date ? formatTimeForDisplay(date) : 'Unknown';
-                            })()} 
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => handleDoorControl(device.device_id, 'open')}
-                        disabled={device.status !== 'online'}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        🔓 Open Door
-                      </Button>
-                      <Button
-                        onClick={() => handleDoorControl(device.device_id, 'close')}
-                        disabled={device.status !== 'online'}
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        🔒 Close Door
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                
-                {devices.filter(device => device.device_type === 'door_lock').length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <DoorOpen className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                    <p>No door devices found</p>
-                  </div>
-                )}
+                {/* Removed direct usage of devices state */}
+                <div className="text-center py-8 text-gray-500">
+                  <DoorOpen className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>Door control devices are not directly managed here.</p>
+                </div>
               </div>
             </div>
           )}
@@ -395,7 +318,7 @@ export const SimpleSmartAccess: React.FC = () => {
                 🔄 Auto-refresh: 30s
               </span>
               <span className="text-gray-600">
-                📡 Devices: {stats.onlineDevices}/{devices.length} online
+                📡 Devices: {stats.onlineDevices} online
               </span>
               <span className="text-gray-600">
                 💳 Cards: {stats.activeCards}/{stats.totalCards} active

@@ -27,7 +27,10 @@ export interface Payment extends BaseEntity {
   payment_method?: string;
   snap_token?: string;
   paid_at?: string;
-  // Removed non-existent fields: due_date, payment_url, transaction_id, failure_reason, failed_at
+  due_date?: string;
+  failure_reason?: string;
+  failed_at?: string;
+  transaction_id?: string;
 }
 
 export interface PaymentStatusResponse {

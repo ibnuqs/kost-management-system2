@@ -4,7 +4,7 @@ import { Home, CreditCard, History, User, Bell } from 'lucide-react';
 export interface MenuItem {
   id: string;
   label: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   path: string;
   badge?: number | string | null;
   description?: string;

@@ -27,11 +27,11 @@ class RfidService {
         console.warn('⚠️ Backend returned non-OK status:', response.status);
         return false;
       }
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error: unknown) {
+      if ((error as Error).name === 'AbortError') {
         console.warn('⏱️ Backend health check timed out (3s) for RFID service');
       } else {
-        console.warn('🌐 Backend health check failed for RFID service:', error.message);
+        console.warn('🌐 Backend health check failed for RFID service:', (error as Error).message);
       }
       return false;
     }
@@ -63,33 +63,38 @@ class RfidService {
       for (const endpoint of userEndpoints) {
         try {
           const usersResponse = await api.get(endpoint);
-          let usersData = usersResponse.data.data || usersResponse.data;
+          const usersData = usersResponse.data.data || usersResponse.data;
           
-          if (Array.isArray(usersData.data)) {
-            usersData = usersData.data;
+          let actualUsersData: UserApiData[];
+          if (Array.isArray((usersData as UsersApiResponse).data)) {
+            actualUsersData = (usersData as UsersApiResponse).data as UserApiData[];
+          } else if (usersData && typeof usersData === 'object' && 'data' in usersData && Array.isArray(usersData.data)) {
+            actualUsersData = (usersData as { data: UserApiData[] }).data;
+          } else {
+            actualUsersData = usersData as UserApiData[];
           }
           
-          users = Array.isArray(usersData) ? usersData.map((u: any) => ({
+          users = Array.isArray(actualUsersData) ? actualUsersData.map((u: UserApiData): User => ({
             id: u.user_id || u.id,
             name: u.name || u.user_name || u.full_name || `User ${u.id}`,
             email: u.email || u.user_email || ''
           })) : [];
           
           if (users.length > 0) break;
-        } catch (error) {
+        } catch {
           continue;
         }
       }
 
       // Load rooms using ESP32Service (which already has fallback logic)
       const roomsData = await esp32Service.getRooms();
-      const rooms: Room[] = roomsData.map((room: any) => ({
+      const rooms: Room[] = roomsData.map((room: RoomApiData): Room => ({
         id: room.id,
         room_number: room.room_number,
         room_name: room.room_name || `Room ${room.room_number}`,
         room_type: room.room_type || 'standard',
         status: room.status || 'available'
-      }));
+      } as Room));
 
       // If we couldn't load users, use mock data
       if (users.length === 0) {
@@ -105,7 +110,7 @@ class RfidService {
 
       return { cards, users, rooms };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Error loading RFID data:', error);
       console.warn('🔧 Using mock RFID data due to backend issues');
       return this.getMockRfidData();
@@ -223,7 +228,7 @@ class RfidService {
         throw new Error(response.data.message || 'Failed to register card');
       }
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error registering card:', error);
       throw error;
     }
@@ -254,7 +259,7 @@ class RfidService {
           throw new Error(response.data.message || 'Failed to assign card');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error assigning card:', error);
       throw error;
     }
@@ -274,7 +279,7 @@ class RfidService {
       if (!response.data.success) {
         throw new Error(response.data.message || 'Failed to toggle card status');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error toggling card status:', error);
       throw error;
     }
@@ -300,7 +305,7 @@ class RfidService {
           throw new Error(response.data.message || 'Failed to delete card');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting card:', error);
       throw error;
     }

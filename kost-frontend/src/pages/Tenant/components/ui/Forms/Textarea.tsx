@@ -1,7 +1,6 @@
 // File: src/pages/Tenant/components/ui/Forms/Textarea.tsx
 import React, { forwardRef } from 'react';
 import { mergeClasses } from '../../../utils/helpers';
-import { TOUCH_TARGETS } from '../../../utils/constants';
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;

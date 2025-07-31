@@ -19,8 +19,8 @@ export const useRfid = () => {
       setCards(data.cards);
       setUsers(data.users);
       setRooms(data.rooms);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
       toast.error('Failed to load RFID data');
     } finally {
       setLoading(false);
@@ -32,8 +32,8 @@ export const useRfid = () => {
       await rfidService.registerCard(uid);
       toast.success('Card registered successfully');
       loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to register card');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to register card');
       throw err;
     }
   }, [loadData]);
@@ -43,8 +43,8 @@ export const useRfid = () => {
       await rfidService.assignCard(cardId, { user_id: userId, room_id: roomId });
       toast.success('Card assignment updated');
       loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to assign card');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to assign card');
       throw err;
     }
   }, [loadData]);
@@ -54,8 +54,8 @@ export const useRfid = () => {
       await rfidService.toggleStatus(cardId);
       toast.success('Card status updated');
       loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to toggle card status');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to toggle card status');
       throw err;
     }
   }, [loadData]);
@@ -69,8 +69,8 @@ export const useRfid = () => {
       await rfidService.deleteCard(cardId);
       toast.success('Card deleted successfully');
       loadData();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete card');
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to delete card');
       throw err;
     }
   }, [loadData]);

@@ -137,7 +137,7 @@ export const useRfidScanner = (scanTimeoutMs: number = 30000) => {
 
     console.log(`✅ RFID Scanner: Scan mode active (timeout: ${scanTimeoutMs}ms)`);
     return true;
-  }, [scanTimeoutMs]); // Remove handleScanMessage dependency
+  }, [scanTimeoutMs, handleScanMessage, state.isScanning, state.error, stopScanning]); // Remove handleScanMessage dependency
 
   // Stop scanning
   const stopScanning = useCallback(() => {
@@ -172,7 +172,7 @@ export const useRfidScanner = (scanTimeoutMs: number = 30000) => {
     }));
 
     console.log('✅ RFID Scanner: Scan mode stopped');
-  }, []); // Remove dependency to prevent re-creation
+  }, [handleScanMessage]); // Remove dependency to prevent re-creation
 
   // Clear scanned card data
   const clearScannedCard = useCallback(() => {

@@ -19,6 +19,19 @@ export interface ReceiptUrlResponse {
   paid_at: string;
 }
 
+export interface ReceiptVerificationResponse {
+  valid: boolean;
+  receipt_number: string;
+  payment_id?: number;
+  order_id?: string;
+  amount?: number;
+  paid_at?: string;
+  tenant_name?: string;
+  room_number?: string;
+  verification_timestamp: string;
+  message: string;
+}
+
 class ReceiptService {
   /**
    * Check if receipt is available for a payment
@@ -27,7 +40,7 @@ class ReceiptService {
     const response = await api.get<ApiResponse<ReceiptAvailabilityResponse>>(
       endpoints.tenant.payments.receipt.check(paymentId)
     );
-    return response.data.data || response.data;
+    return response.data.data || (response.data as ReceiptAvailabilityResponse);
   }
 
   /**
@@ -37,7 +50,7 @@ class ReceiptService {
     const response = await api.get<ApiResponse<ReceiptUrlResponse>>(
       endpoints.tenant.payments.receipt.url(paymentId)
     );
-    return response.data.data || response.data;
+    return response.data.data || (response.data as ReceiptUrlResponse);
   }
 
   /**
@@ -74,9 +87,9 @@ class ReceiptService {
   /**
    * Verify receipt authenticity
    */
-  async verifyReceipt(receiptNumber: string): Promise<any> {
-    const response = await api.get<ApiResponse<any>>(`/receipt/verify/${receiptNumber}`);
-    return response.data.data;
+  async verifyReceipt(receiptNumber: string): Promise<ReceiptVerificationResponse> {
+    const response = await api.get<ApiResponse<ReceiptVerificationResponse>>(`/receipt/verify/${receiptNumber}`);
+    return response.data.data || (response.data as ReceiptVerificationResponse);
   }
 }
 

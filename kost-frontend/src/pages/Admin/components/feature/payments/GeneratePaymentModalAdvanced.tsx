@@ -49,7 +49,7 @@ export const GeneratePaymentModalAdvanced: React.FC<GeneratePaymentModalAdvanced
         setPreCheckResult(null);
         setShowConfirm(false);
         onClose();
-      } catch (error) {
+      } catch {
         // Error is handled by the parent component
       } finally {
         setIsLoading(false);

@@ -26,19 +26,6 @@ export const TenantTable: React.FC<TenantTableProps> = ({
   onRoomTransfer,
   onPageChange
 }) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'moved_out':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'suspended':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
   const getStatusText = (status: string) => {
     switch (status) {
       case 'active':
@@ -195,7 +182,7 @@ export const TenantTable: React.FC<TenantTableProps> = ({
                 {/* Status */}
                 <td className="px-6 py-5">
                   <StatusBadge 
-                    status={tenant.status as any} 
+                    status={tenant.status as 'active' | 'inactive' | 'pending' | 'suspended'} 
                     size="md"
                   >
                     {getStatusText(tenant.status)}

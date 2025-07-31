@@ -1,10 +1,10 @@
-// File: src/pages/Admin/components/dashboard/AccessHistoryChart.tsx
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
-import { Shield, TrendingUp, Users, CheckCircle } from 'lucide-react';
+import { Shield } from 'lucide-react';
 
 interface AccessData {
   period: string;
+  date?: string;
   total_access: number;
   successful_access: number;
   failed_access: number;
@@ -25,12 +25,6 @@ const AccessHistoryChart: React.FC<AccessHistoryChartProps> = ({ data, isLoading
   // Weekly totals from chart data (7 days)
   const weeklyTotalAccess = hasData ? data.reduce((sum, item) => sum + (item.total_access || 0), 0) : 0;
   const weeklySuccessfulAccess = hasData ? data.reduce((sum, item) => sum + (item.successful_access || 0), 0) : 0;
-  const weeklyFailedAccess = hasData ? data.reduce((sum, item) => sum + (item.failed_access || 0), 0) : 0;
-  
-  // Today's data for immediate context
-  const todayData = hasData ? data[data.length - 1] : null;
-  const todayTotalAccess = todayData ? todayData.total_access : 0;
-  const todaySuccessfulAccess = todayData ? todayData.successful_access : 0;
   
   const successRate = weeklyTotalAccess > 0 ? Math.round((weeklySuccessfulAccess / weeklyTotalAccess) * 100) : 0;
   
@@ -130,7 +124,7 @@ const AccessHistoryChart: React.FC<AccessHistoryChartProps> = ({ data, isLoading
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                 }}
                 labelStyle={{ color: '#1e293b', fontWeight: '600' }}
-                formatter={(value: any, name: string) => {
+                formatter={(value: number | string | Array<number | string>, name: string) => {
                   const labels: { [key: string]: string } = {
                     successful_access: 'Akses Berhasil',
                     failed_access: 'Akses Gagal',

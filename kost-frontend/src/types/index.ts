@@ -89,7 +89,7 @@ export interface IoTDevice {
   device_type: 'door_lock' | 'card_scanner' | 'rfid_reader';
   room_id?: number;
   status: 'online' | 'offline';
-  device_info?: any;
+  device_info?: Record<string, unknown>;
   last_seen?: string;
   created_at: string;
   updated_at: string;
@@ -130,13 +130,13 @@ export interface AuthResponse {
 }
 
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data?: T;
   message?: string;
   status?: string;
 }
 
-export interface PaginatedResponse<T = any> {
+export interface PaginatedResponse<T = unknown> {
   data: T[];
   current_page: number;
   last_page: number;
@@ -265,17 +265,17 @@ export interface ModalProps {
   closeOnOverlayClick?: boolean;
 }
 
-export interface TableColumn<T = any> {
+export interface TableColumn<T = unknown> {
   key: string;
   title: string;
   dataIndex?: keyof T;
-  render?: (value: any, record: T, index: number) => React.ReactNode;
+  render?: (value: unknown, record: T, index: number) => React.ReactNode;
   sortable?: boolean;
   width?: string | number;
   align?: 'left' | 'center' | 'right';
 }
 
-export interface TableProps<T = any> {
+export interface TableProps<T = unknown> {
   columns: TableColumn<T>[];
   data: T[];
   loading?: boolean;
@@ -291,8 +291,8 @@ export interface TableProps<T = any> {
 
 // Hook Types
 export interface UseApiOptions {
-  onSuccess?: (data: any) => void;
-  onError?: (error: any) => void;
+  onSuccess?: (data: unknown) => void;
+  onError?: (error: unknown) => void;
   enabled?: boolean;
 }
 

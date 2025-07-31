@@ -6,7 +6,7 @@ import type { RoomFormData, Room } from '../../../types/room';
 
 interface RoomFormProps {
   isOpen: boolean;
-  room?: RoomFormData | Room | any; // Support both RoomFormData and Room objects
+  room?: RoomFormData | Room | Record<string, unknown>; // Support both RoomFormData and Room objects
   onClose: () => void;
   onSubmit: (data: RoomFormData) => void;
   onArchive?: (room: Room) => void;
@@ -114,7 +114,7 @@ export const RoomForm: React.FC<RoomFormProps> = ({
   
   const handleStatusChangeConfirm = () => {
     if (pendingStatusChange) {
-      setFormData(prev => ({ ...prev, status: pendingStatusChange as any }));
+      setFormData(prev => ({ ...prev, status: pendingStatusChange as 'available' | 'occupied' | 'maintenance' }));
     }
     setShowStatusChangeModal(false);
     setPendingStatusChange(null);
@@ -133,7 +133,7 @@ export const RoomForm: React.FC<RoomFormProps> = ({
     setLoading(true);
     try {
       await onSubmit(formData);
-    } catch (error) {
+    } catch {
       // Error handled by parent component
     } finally {
       setLoading(false);
@@ -158,7 +158,6 @@ export const RoomForm: React.FC<RoomFormProps> = ({
 
   const isEditMode = !!room;
   const isOccupied = room?.status === 'occupied' && room?.tenant;
-  const isEditable = isEditMode && !isOccupied;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

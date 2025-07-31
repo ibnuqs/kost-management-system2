@@ -1,4 +1,5 @@
 <?php
+
 // File: app/Http/Controllers/Api/Admin/NotificationController.php
 
 namespace App\Http\Controllers\Api\Admin;
@@ -6,8 +7,8 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class NotificationController extends Controller
 {
@@ -22,19 +23,19 @@ class NotificationController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $notifications,
-                'message' => 'Notifikasi admin berhasil diambil'
+                'message' => 'Notifikasi admin berhasil diambil',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Gagal mengambil notifikasi admin', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengambil notifikasi admin',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal'
+                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal',
             ], 500);
         }
     }
@@ -50,19 +51,19 @@ class NotificationController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => ['unread_count' => $unreadCount],
-                'message' => 'Jumlah notifikasi yang belum dibaca berhasil diambil'
+                'message' => 'Jumlah notifikasi yang belum dibaca berhasil diambil',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Gagal mendapatkan jumlah notifikasi yang belum dibaca', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengambil jumlah notifikasi yang belum dibaca',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal'
+                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal',
             ], 500);
         }
     }
@@ -75,23 +76,23 @@ class NotificationController extends Controller
         try {
             // Karena kita tidak memiliki tabel notifikasi, kita akan mensimulasikannya
             // Anda dapat mengimplementasikan pelacakan baca aktual jika diperlukan nanti
-            
+
             return response()->json([
                 'success' => true,
-                'message' => 'Notifikasi berhasil ditandai sebagai sudah dibaca'
+                'message' => 'Notifikasi berhasil ditandai sebagai sudah dibaca',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Gagal menandai notifikasi sebagai sudah dibaca', [
                 'error' => $e->getMessage(),
                 'notification_id' => $notificationId,
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menandai notifikasi sebagai sudah dibaca',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal'
+                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal',
             ], 500);
         }
     }
@@ -105,19 +106,19 @@ class NotificationController extends Controller
             // Simulasi - tandai semua sebagai sudah dibaca
             return response()->json([
                 'success' => true,
-                'message' => 'Semua notifikasi berhasil ditandai sebagai sudah dibaca'
+                'message' => 'Semua notifikasi berhasil ditandai sebagai sudah dibaca',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Gagal menandai semua notifikasi sebagai sudah dibaca', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menandai semua notifikasi sebagai sudah dibaca',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal'
+                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal',
             ], 500);
         }
     }
@@ -132,7 +133,7 @@ class NotificationController extends Controller
                 'title' => 'required|string|max:255',
                 'message' => 'required|string',
                 'type' => 'required|in:info,warning,error,success',
-                'target' => 'required|in:all,tenants,admins'
+                'target' => 'required|in:all,tenants,admins',
             ]);
 
             // Di sini Anda akan mengimplementasikan broadcasting sebenarnya
@@ -142,24 +143,24 @@ class NotificationController extends Controller
                 'message' => $request->message,
                 'type' => $request->type,
                 'target' => $request->target,
-                'from_user' => Auth::id()
+                'from_user' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Notifikasi berhasil disiarkan'
+                'message' => 'Notifikasi berhasil disiarkan',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Gagal menyiarkan notifikasi', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menyiarkan notifikasi',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal'
+                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal',
             ], 500);
         }
     }
@@ -176,53 +177,53 @@ class NotificationController extends Controller
                     'name' => 'Pengingat Pembayaran',
                     'title' => 'Pengingat Jatuh Tempo Pembayaran',
                     'message' => 'Pembayaran Anda untuk bulan ini akan segera jatuh tempo. Mohon selesaikan pembayaran untuk menghindari denda keterlambatan.',
-                    'type' => 'warning'
+                    'type' => 'warning',
                 ],
                 [
                     'id' => 2,
                     'name' => 'Maintenance Sistem',
                     'title' => 'Maintenance Terjadwal',
                     'message' => 'Maintenance sistem dijadwalkan. Beberapa fitur mungkin tidak tersedia sementara.',
-                    'type' => 'info'
+                    'type' => 'info',
                 ],
                 [
                     'id' => 3,
                     'name' => 'Pesan Selamat Datang',
                     'title' => 'Selamat Datang di Manajemen Kost',
                     'message' => 'Selamat datang! Silakan baca panduan dan hubungi kami jika ada pertanyaan.',
-                    'type' => 'success'
+                    'type' => 'success',
                 ],
                 [
                     'id' => 4,
                     'name' => 'Update Kebijakan',
                     'title' => 'Update Kebijakan',
                     'message' => 'Kebijakan kami telah diperbarui. Silakan tinjau syarat dan ketentuan yang baru.',
-                    'type' => 'info'
+                    'type' => 'info',
                 ],
                 [
                     'id' => 5,
                     'name' => 'Alert Darurat',
                     'title' => 'Alert Darurat',
                     'message' => 'Situasi darurat terdeteksi. Silakan ikuti prosedur darurat.',
-                    'type' => 'error'
-                ]
+                    'type' => 'error',
+                ],
             ];
 
             return response()->json([
                 'success' => true,
                 'data' => $templates,
-                'message' => 'Template notifikasi berhasil diambil'
+                'message' => 'Template notifikasi berhasil diambil',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Gagal mendapatkan template notifikasi', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengambil template notifikasi',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal'
+                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal',
             ], 500);
         }
     }
@@ -238,7 +239,7 @@ class NotificationController extends Controller
                 'message' => 'required|string',
                 'type' => 'required|in:info,warning,error,success',
                 'target' => 'required|in:all,tenants,admins',
-                'scheduled_at' => 'required|date|after:now'
+                'scheduled_at' => 'required|date|after:now',
             ]);
 
             // Catat notifikasi terjadwal (implementasikan penjadwalan sebenarnya nanti)
@@ -248,24 +249,24 @@ class NotificationController extends Controller
                 'type' => $request->type,
                 'target' => $request->target,
                 'scheduled_at' => $request->scheduled_at,
-                'created_by' => Auth::id()
+                'created_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Notifikasi berhasil dijadwalkan'
+                'message' => 'Notifikasi berhasil dijadwalkan',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Gagal menjadwalkan notifikasi', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menjadwalkan notifikasi',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal'
+                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal',
             ], 500);
         }
     }
@@ -289,24 +290,24 @@ class NotificationController extends Controller
                 'message' => $request->message,
                 'type' => $request->type,
                 'target_user_id' => $request->user_id,
-                'from_admin' => Auth::id()
+                'from_admin' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Notifikasi berhasil dikirim ke pengguna'
+                'message' => 'Notifikasi berhasil dikirim ke pengguna',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Gagal mengirim notifikasi ke pengguna', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengirim notifikasi ke pengguna',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal'
+                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal',
             ], 500);
         }
     }
@@ -320,25 +321,25 @@ class NotificationController extends Controller
             // Simulasi penghapusan notifikasi
             Log::info('Notifikasi dihapus oleh admin', [
                 'notification_id' => $notificationId,
-                'admin_id' => Auth::id()
+                'admin_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Notifikasi berhasil dihapus'
+                'message' => 'Notifikasi berhasil dihapus',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Gagal menghapus notifikasi', [
                 'error' => $e->getMessage(),
                 'notification_id' => $notificationId,
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menghapus notifikasi',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal'
+                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal',
             ], 500);
         }
     }
@@ -372,18 +373,18 @@ class NotificationController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $stats,
-                'message' => 'Statistik notifikasi berhasil diambil'
+                'message' => 'Statistik notifikasi berhasil diambil',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Gagal mendapatkan statistik notifikasi', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengambil statistik notifikasi',
-                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal'
+                'error' => config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan server internal',
             ], 500);
         }
     }
@@ -410,14 +411,14 @@ class NotificationController extends Controller
 
             foreach ($overduePayments as $payment) {
                 $notifications[] = [
-                    'id' => 'overdue_' . $payment->id,
+                    'id' => 'overdue_'.$payment->id,
                     'type' => 'warning',
                     'title' => 'Pembayaran Terlambat',
                     'message' => "Pembayaran dari {$payment->tenant_name} terlambat untuk {$payment->payment_month}",
                     'created_at' => $payment->created_at,
                     'read_at' => null,
                     'action_url' => '/admin/payments',
-                    'priority' => 'high'
+                    'priority' => 'high',
                 ];
             }
 
@@ -431,14 +432,14 @@ class NotificationController extends Controller
 
             foreach ($newTenants as $tenant) {
                 $notifications[] = [
-                    'id' => 'new_tenant_' . $tenant->id,
+                    'id' => 'new_tenant_'.$tenant->id,
                     'type' => 'success',
                     'title' => 'Penyewa Baru',
                     'message' => "Penyewa baru {$tenant->tenant_name} telah terdaftar",
                     'created_at' => $tenant->created_at,
                     'read_at' => null,
                     'action_url' => '/admin/tenants',
-                    'priority' => 'medium'
+                    'priority' => 'medium',
                 ];
             }
 
@@ -446,9 +447,9 @@ class NotificationController extends Controller
             $suspiciousAccess = DB::table('access_logs')
                 ->join('users', 'access_logs.user_id', '=', 'users.id')
                 ->where('access_logs.created_at', '>=', now()->subHours(24))
-                ->where(function($query) {
+                ->where(function ($query) {
                     $query->whereTime('access_logs.accessed_at', '<', '06:00:00')
-                          ->orWhereTime('access_logs.accessed_at', '>', '23:00:00');
+                        ->orWhereTime('access_logs.accessed_at', '>', '23:00:00');
                 })
                 ->select('access_logs.*', 'users.name as user_name')
                 ->limit(2)
@@ -456,19 +457,19 @@ class NotificationController extends Controller
 
             foreach ($suspiciousAccess as $access) {
                 $notifications[] = [
-                    'id' => 'suspicious_access_' . $access->id,
+                    'id' => 'suspicious_access_'.$access->id,
                     'type' => 'warning',
                     'title' => 'Waktu Akses Tidak Biasa',
                     'message' => "{$access->user_name} mengakses gedung pada jam yang tidak biasa",
                     'created_at' => $access->accessed_at,
                     'read_at' => null,
                     'action_url' => '/admin/access-logs',
-                    'priority' => 'medium'
+                    'priority' => 'medium',
                 ];
             }
 
             // Urutkan berdasarkan created_at desc dan batasi
-            usort($notifications, function($a, $b) {
+            usort($notifications, function ($a, $b) {
                 return strtotime($b['created_at']) - strtotime($a['created_at']);
             });
 
@@ -476,6 +477,7 @@ class NotificationController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error mendapatkan notifikasi admin', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -487,18 +489,18 @@ class NotificationController extends Controller
     {
         try {
             $count = 0;
-            
+
             // Hitung pembayaran terlambat
             $count += DB::table('payments')
                 ->where('status', '!=', 'paid')
                 ->where('payment_month', '<', now()->format('Y-m'))
                 ->count();
-            
+
             // Hitung penyewa baru dalam 3 hari terakhir
             $count += DB::table('tenants')
                 ->where('created_at', '>=', now()->subDays(3))
                 ->count();
-            
+
             return min($count, 99); // Batasi di 99
         } catch (\Exception $e) {
             return 0;

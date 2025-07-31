@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Home, MapPin, Eye } from 'lucide-react';
+import { MapPin, Eye } from 'lucide-react';
 
 interface HeroSectionProps {
   onBookingClick: () => void;
@@ -59,5 +59,3 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     </section>
   );
 };
-
-export default HeroSection;

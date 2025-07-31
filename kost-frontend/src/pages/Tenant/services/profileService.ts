@@ -2,7 +2,6 @@
 import api, { endpoints, ApiResponse } from '../../../utils/api';
 import { 
   TenantProfile, 
-  ProfileUpdateData,
   SecuritySettings,
   ProfileStats,
   AccountActivity,
@@ -15,8 +14,8 @@ class ProfileService {
   /**
    * Get profile
    */
-  async getProfile(): Promise<any> {
-    const response = await api.get<ApiResponse<any>>(endpoints.tenant.profile.index);
+  async getProfile(): Promise<TenantProfile> {
+    const response = await api.get<ApiResponse<TenantProfile>>(endpoints.tenant.profile.index);
     return response.data.data;
   }
 
@@ -51,6 +50,7 @@ class ProfileService {
     } else {
       // For simple data, use JSON
       const { avatar, ...updateData } = data;
+      void avatar; // avatar is intentionally excluded from updateData
       const response = await api.put<ApiResponse<{ message: string }>>(
         endpoints.tenant.profile.update, 
         updateData
@@ -71,7 +71,7 @@ class ProfileService {
       endpoints.tenant.profile.update, 
       data
     );
-    return response.data.data || response.data;
+    return response.data.data || (response.data as { message: string });
   }
 
   /**
@@ -127,16 +127,16 @@ class ProfileService {
   /**
    * Confirm two-factor authentication
    */
-  async confirmTwoFactor(token: string): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/profile/2fa/confirm`, { token });
+  async confirmTwoFactor(token: string): Promise<{ success: boolean; message: string; backup_codes?: string[] }> {
+    const response = await api.post<ApiResponse<{ success: boolean; message: string; backup_codes?: string[] }>>(`/tenant/profile/2fa/confirm`, { token });
     return response.data.data;
   }
 
   /**
    * Disable two-factor authentication
    */
-  async disableTwoFactor(password: string): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/profile/2fa/disable`, { password });
+  async disableTwoFactor(password: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.post<ApiResponse<{ success: boolean; message: string }>>(`/tenant/profile/2fa/disable`, { password });
     return response.data.data;
   }
 
@@ -183,8 +183,8 @@ class ProfileService {
   /**
    * Delete document
    */
-  async deleteDocument(documentId: string): Promise<any> {
-    const response = await api.delete<ApiResponse<any>>(`/tenant/profile/documents/${documentId}`);
+  async deleteDocument(documentId: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.delete<ApiResponse<{ success: boolean; message: string }>>(`/tenant/profile/documents/${documentId}`);
     return response.data.data;
   }
 
@@ -220,8 +220,8 @@ class ProfileService {
   /**
    * Confirm phone verification
    */
-  async confirmPhoneVerification(code: string): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/profile/confirm-phone`, { code });
+  async confirmPhoneVerification(code: string): Promise<{ success: boolean; message: string; phone_verified: boolean }> {
+    const response = await api.post<ApiResponse<{ success: boolean; message: string; phone_verified: boolean }>>(`/tenant/profile/confirm-phone`, { code });
     return response.data.data;
   }
 
@@ -236,32 +236,46 @@ class ProfileService {
   /**
    * Get active sessions
    */
-  async getActiveSessions(): Promise<any[]> {
-    const response = await api.get<ApiResponse<any[]>>(`/tenant/profile/sessions`);
+  async getActiveSessions(): Promise<{
+    id: string;
+    ip_address: string;
+    user_agent: string;
+    last_activity: string;
+    is_current: boolean;
+    location?: string;
+  }[]> {
+    const response = await api.get<ApiResponse<{
+      id: string;
+      ip_address: string;
+      user_agent: string;
+      last_activity: string;
+      is_current: boolean;
+      location?: string;
+    }[]>>(`/tenant/profile/sessions`);
     return response.data.data;
   }
 
   /**
    * Revoke session
    */
-  async revokeSession(sessionId: string): Promise<any> {
-    const response = await api.delete<ApiResponse<any>>(`/tenant/profile/sessions/${sessionId}`);
+  async revokeSession(sessionId: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.delete<ApiResponse<{ success: boolean; message: string }>>(`/tenant/profile/sessions/${sessionId}`);
     return response.data.data;
   }
 
   /**
    * Revoke all other sessions
    */
-  async revokeAllSessions(): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/profile/sessions/revoke-all`);
+  async revokeAllSessions(): Promise<{ success: boolean; message: string; revoked_count: number }> {
+    const response = await api.post<ApiResponse<{ success: boolean; message: string; revoked_count: number }>>(`/tenant/profile/sessions/revoke-all`);
     return response.data.data;
   }
 
   /**
    * Delete account
    */
-  async deleteAccount(password: string, reason?: string): Promise<any> {
-    const response = await api.post<ApiResponse<any>>(`/tenant/profile/delete`, { 
+  async deleteAccount(password: string, reason?: string): Promise<{ success: boolean; message: string; deletion_scheduled: string }> {
+    const response = await api.post<ApiResponse<{ success: boolean; message: string; deletion_scheduled: string }>>(`/tenant/profile/delete`, { 
       password, 
       reason 
     });

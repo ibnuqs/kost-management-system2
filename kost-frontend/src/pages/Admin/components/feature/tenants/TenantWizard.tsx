@@ -1,5 +1,5 @@
 // File: src/pages/Admin/components/feature/tenants/TenantWizard.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, ArrowRight, User, Home, CreditCard, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Input } from '../../ui/Forms/Input';
@@ -42,12 +42,29 @@ export const TenantWizard: React.FC<TenantWizardProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
+  const loadAvailableRooms = useCallback(async () => {
+    try {
+      setLoadingRooms(true);
+      const filters = tenant ? 
+        { per_page: 100 } : // For editing, show all rooms
+        { status: 'available', per_page: 100 }; // For new tenant, only available rooms
+      
+      const response = await roomService.getRooms(filters);
+      setRooms(response.rooms);
+    } catch (error: unknown) {
+      console.error('Failed to load rooms:', error);
+      toast.error('Gagal memuat daftar kamar');
+    } finally {
+      setLoadingRooms(false);
+    }
+  }, [tenant]);
+
   // Load available rooms
   useEffect(() => {
     if (isOpen && currentStep === 2) {
       loadAvailableRooms();
     }
-  }, [isOpen, currentStep]);
+  }, [isOpen, currentStep, loadAvailableRooms]);
 
   // Load form data if editing
   useEffect(() => {
@@ -60,7 +77,7 @@ export const TenantWizard: React.FC<TenantWizardProps> = ({
         password_confirmation: '',
         room_id: tenant.room?.id?.toString() || '',
         tenant_code: tenant.tenant_code || '',
-        monthly_rent: tenant.monthly_rent || '',
+        monthly_rent: tenant.monthly_rent?.toString() || '',
         start_date: tenant.start_date?.split('T')[0] || '',
         status: tenant.status || 'active'
       });
@@ -84,23 +101,6 @@ export const TenantWizard: React.FC<TenantWizardProps> = ({
       setSelectedRoom(null);
     }
   }, [isOpen, tenant]);
-
-  const loadAvailableRooms = async () => {
-    try {
-      setLoadingRooms(true);
-      const filters = tenant ? 
-        { per_page: 100 } : // For editing, show all rooms
-        { status: 'available', per_page: 100 }; // For new tenant, only available rooms
-      
-      const response = await roomService.getRooms(filters);
-      setRooms(response.rooms);
-    } catch (error) {
-      console.error('Failed to load rooms:', error);
-      toast.error('Gagal memuat daftar kamar');
-    } finally {
-      setLoadingRooms(false);
-    }
-  };
 
   const handleChange = (key: keyof TenantFormData, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -183,7 +183,7 @@ export const TenantWizard: React.FC<TenantWizardProps> = ({
       await onSubmit(formData);
       resetWizard();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to submit tenant form:', error);
       // Errors are handled by the parent component
     } finally {
@@ -424,30 +424,28 @@ export const TenantWizard: React.FC<TenantWizardProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Tanggal Mulai Sewa"
-                  type="date"
-                  value={formData.start_date}
-                  onChange={(e) => handleChange('start_date', e.target.value)}
-                  error={errors.start_date}
-                  required
-                />
-                <Input
-                  label="Sewa Bulanan (Rp)"
-                  type="number"
-                  value={formData.monthly_rent}
-                  onChange={(e) => handleChange('monthly_rent', e.target.value)}
-                  error={errors.monthly_rent}
-                  required
-                  placeholder="1000000"
-                />
-              </div>
+              <Input
+                label="Tanggal Mulai Sewa"
+                type="date"
+                value={formData.start_date}
+                onChange={(e) => handleChange('start_date', e.target.value)}
+                error={errors.start_date}
+                required
+              />
+              <Input
+                label="Sewa Bulanan (Rp)"
+                type="number"
+                value={formData.monthly_rent}
+                onChange={(e) => handleChange('monthly_rent', e.target.value)}
+                error={errors.monthly_rent}
+                required
+                placeholder="1000000"
+              />
 
               <Select
                 label="Status Penyewa"
                 value={formData.status}
-                onChange={(e) => handleChange('status', e.target.value)}
+                onChange={(e) => handleChange('status', e.target.value as 'active' | 'suspended' | 'moved_out')}
                 options={statusOptions}
                 error={errors.status}
               />

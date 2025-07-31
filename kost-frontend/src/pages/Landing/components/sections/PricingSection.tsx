@@ -8,8 +8,6 @@ const SimplePricingCard: React.FC<{
   onBookNow: (roomType: RoomType) => void;
   onViewDetails: (roomType: RoomType) => void;
 }> = ({ roomType, onBookNow, onViewDetails }) => {
-  const isAvailable = roomType.available > 0;
-  
   return (
     <div className={`
       relative bg-white rounded-xl shadow-sm border-2 transition-all duration-200
@@ -201,5 +199,3 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     </section>
   );
 };
-
-export default PricingSection;

@@ -14,7 +14,7 @@ interface User {
 
 interface AssignTenantModalProps {
   isOpen: boolean;
-  room: any;
+  room: Room;
   onClose: () => void;
   onSubmit: (data: TenantAssignmentData) => void;
 }

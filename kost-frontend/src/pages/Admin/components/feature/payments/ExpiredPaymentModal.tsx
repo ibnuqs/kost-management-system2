@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertTriangle, RefreshCw, X, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, AlertTriangle, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import { Modal } from '../../ui';
 import api, { endpoints } from '../../../../../utils/api';
 import type { AdminPayment as Payment } from '../../../types';
+import { AxiosError } from 'axios';
 
 interface ExpiredPaymentModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export const ExpiredPaymentModal: React.FC<ExpiredPaymentModalProps> = ({
       if (response.data.success) {
         setExpiredPayments(response.data.data || []);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load expired payments:', error);
     } finally {
       setLoading(false);
@@ -51,9 +52,15 @@ export const ExpiredPaymentModal: React.FC<ExpiredPaymentModalProps> = ({
         setExpiredPayments(prev => prev.filter(p => p.id !== paymentId));
         onRefresh(); // Refresh main payment table
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to regenerate payment:', error);
-      alert(error.response?.data?.message || 'Failed to regenerate payment');
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        alert(error.response.data.message);
+      } else if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert('Failed to regenerate payment');
+      }
     } finally {
       setRegenerating(prev => {
         const newSet = new Set([...prev]);
@@ -72,7 +79,7 @@ export const ExpiredPaymentModal: React.FC<ExpiredPaymentModalProps> = ({
         hour: '2-digit',
         minute: '2-digit'
       });
-    } catch (error) {
+    } catch {
       return 'Invalid date';
     }
   };
@@ -136,7 +143,7 @@ export const ExpiredPaymentModal: React.FC<ExpiredPaymentModalProps> = ({
       isOpen={isOpen} 
       onClose={onClose} 
       title="Expired Payments Management"
-      size="xl"
+      maxWidth="xl"
     >
       <div className="space-y-6">
         {/* Header */}
@@ -210,7 +217,7 @@ export const ExpiredPaymentModal: React.FC<ExpiredPaymentModalProps> = ({
                     <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       <div>
                         <span className="text-gray-500">Amount:</span>
-                        <p className="font-medium">{formatCurrency(payment.amount)}</p>
+                        <p className="font-medium">{formatCurrency(typeof payment.amount === 'string' ? parseFloat(payment.amount) : payment.amount)}</p>
                       </div>
                       <div>
                         <span className="text-gray-500">Created:</span>

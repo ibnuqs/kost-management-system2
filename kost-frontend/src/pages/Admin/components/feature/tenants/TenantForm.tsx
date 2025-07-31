@@ -113,7 +113,7 @@ export const TenantForm: React.FC<TenantFormProps> = ({
           password_confirmation: '',
           room_id: tenant.room_id.toString(),
           tenant_code: tenant.tenant_code || '',
-          monthly_rent: tenant.monthly_rent || '',
+          monthly_rent: tenant.monthly_rent?.toString() || '',
           start_date: tenant.start_date.split('T')[0],
           status: tenant.status
         });
@@ -162,7 +162,7 @@ export const TenantForm: React.FC<TenantFormProps> = ({
         }
       }
     }
-  }, [formData.room_id, rooms, tenant]);
+  }, [formData.room_id, formData.monthly_rent, rooms, tenant]);
 
   const handleChange = (key: keyof TenantFormData, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -217,11 +217,6 @@ export const TenantForm: React.FC<TenantFormProps> = ({
     { value: 'moved_out', label: 'Pindah' }
   ];
 
-  const roomOptions = rooms.map(room => ({
-    value: room.id.toString(),
-    label: `Kamar ${room.room_number} - ${room.room_name} (Rp ${Number(room.monthly_price).toLocaleString()})`
-  }));
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
@@ -269,7 +264,7 @@ export const TenantForm: React.FC<TenantFormProps> = ({
                 <option value="">-- Pilih Kamar --</option>
                 {rooms.map((room) => {
                   const isCurrentRoom = tenant && room.id === tenant.room_id;
-                  const roomLabel = `${room.room_number} - ${room.room_name} (Rp ${parseInt(room.monthly_price).toLocaleString('id-ID')}/bulan)`;
+                  const roomLabel = `${room.room_number} - ${room.room_name} (Rp ${Number(room.monthly_price).toLocaleString('id-ID')}/bulan)`;
                   const fullLabel = isCurrentRoom ? `${roomLabel} (Kamar Saat Ini)` : roomLabel;
                   
                   return (
@@ -319,7 +314,7 @@ export const TenantForm: React.FC<TenantFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input label="Tanggal Mulai" type="date" value={formData.start_date} onChange={(e) => handleChange('start_date', e.target.value)} error={errors.start_date} required />
             {tenant && (
-                <Select label="Status" value={formData.status} onChange={(value) => handleChange('status', value as any)} options={statusOptions} error={errors.status} required />
+                <Select label="Status" value={formData.status} onChange={(value) => handleChange('status', value as 'active' | 'suspended' | 'moved_out')} options={statusOptions} error={errors.status} required />
             )}
           </div>
 

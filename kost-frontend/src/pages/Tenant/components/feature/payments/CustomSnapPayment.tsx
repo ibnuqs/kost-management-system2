@@ -1,9 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { toast } from 'react-hot-toast';
 import PaymentLoadingScreen from './PaymentLoadingScreen';
 import PaymentSuccessPage from './PaymentSuccessPage';
 import PaymentErrorPage from './PaymentErrorPage';
 import PaymentProgressIndicator from './PaymentProgressIndicator';
+
+// Snap payment result types
+interface SnapPaymentResult {
+  transaction_id: string;
+  status_code: string;
+  payment_type: string;
+  order_id: string;
+  gross_amount: string;
+  transaction_status: string;
+  signature_key?: string;
+  status_message?: string;
+}
 
 interface CustomSnapPaymentProps {
   snapToken: string;
@@ -12,9 +23,9 @@ interface CustomSnapPaymentProps {
     amount: number;
     payment_month: string;
   };
-  onSuccess: (result: any) => void;
-  onPending: (result: any) => void;
-  onError: (result: any) => void;
+  onSuccess: (result: SnapPaymentResult) => void;
+  onPending: (result: SnapPaymentResult) => void;
+  onError: (result: SnapPaymentResult) => void;
   onClose: () => void;
 }
 
@@ -29,7 +40,7 @@ const CustomSnapPayment: React.FC<CustomSnapPaymentProps> = ({
   onClose,
 }) => {
   const [currentStep, setCurrentStep] = useState<PaymentStep>('loading');
-  const [paymentResult, setPaymentResult] = useState<any>(null);
+  const [paymentResult, setPaymentResult] = useState<SnapPaymentResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSnapLoaded, setIsSnapLoaded] = useState(false);
   const snapContainerRef = useRef<HTMLDivElement>(null);
@@ -58,7 +69,7 @@ const CustomSnapPayment: React.FC<CustomSnapPaymentProps> = ({
         };
         
         document.head.appendChild(script);
-      } catch (err) {
+      } catch {
         setError('Failed to initialize payment gateway');
         setCurrentStep('error');
       }
@@ -96,7 +107,7 @@ const CustomSnapPayment: React.FC<CustomSnapPaymentProps> = ({
         setCurrentStep('payment');
         
         window.snap.pay(snapToken, {
-          onSuccess: function(result: any) {
+          onSuccess: function(result: SnapPaymentResult) {
             console.log('Payment Success:', result);
             setCurrentStep('processing');
             
@@ -108,7 +119,7 @@ const CustomSnapPayment: React.FC<CustomSnapPaymentProps> = ({
             }, 2000);
           },
           
-          onPending: function(result: any) {
+          onPending: function(result: SnapPaymentResult) {
             console.log('Payment Pending:', result);
             setCurrentStep('processing');
             
@@ -119,7 +130,7 @@ const CustomSnapPayment: React.FC<CustomSnapPaymentProps> = ({
             }, 1500);
           },
           
-          onError: function(result: any) {
+          onError: function(result: SnapPaymentResult) {
             console.error('💥 Payment Error:', result);
             
             // Handle specific error types
@@ -142,9 +153,10 @@ const CustomSnapPayment: React.FC<CustomSnapPaymentProps> = ({
             onClose();
           }
         });
-      } catch (err: any) {
+      } catch (err) {
         console.error('Snap initialization error:', err);
-        setError(err.message || 'Failed to initialize payment');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to initialize payment';
+        setError(errorMessage);
         setCurrentStep('error');
       }
     };
@@ -165,7 +177,7 @@ const CustomSnapPayment: React.FC<CustomSnapPaymentProps> = ({
       setTimeout(() => {
         setCurrentStep('payment');
         window.snap.pay(snapToken, {
-          onSuccess: (result: any) => {
+          onSuccess: (result: SnapPaymentResult) => {
             setCurrentStep('processing');
             setTimeout(() => {
               setPaymentResult(result);
@@ -173,7 +185,7 @@ const CustomSnapPayment: React.FC<CustomSnapPaymentProps> = ({
               onSuccess(result);
             }, 2000);
           },
-          onPending: (result: any) => {
+          onPending: (result: SnapPaymentResult) => {
             setCurrentStep('processing');
             setTimeout(() => {
               setPaymentResult(result);
@@ -181,7 +193,7 @@ const CustomSnapPayment: React.FC<CustomSnapPaymentProps> = ({
               onPending(result);
             }, 1500);
           },
-          onError: (result: any) => {
+          onError: (result: SnapPaymentResult) => {
             setError(result.status_message || 'Payment failed');
             setCurrentStep('error');
             onError(result);
@@ -272,7 +284,14 @@ const CustomSnapPayment: React.FC<CustomSnapPaymentProps> = ({
 // Extend Window interface for TypeScript
 declare global {
   interface Window {
-    snap: any;
+    snap: {
+      pay: (token: string, options: {
+        onSuccess: (result: SnapPaymentResult) => void;
+        onPending: (result: SnapPaymentResult) => void;
+        onError: (result: SnapPaymentResult) => void;
+        onClose: () => void;
+      }) => void;
+    };
   }
 }
 

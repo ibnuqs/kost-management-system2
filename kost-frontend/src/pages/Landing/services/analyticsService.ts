@@ -5,7 +5,7 @@ export interface AnalyticsEvent {
   action: string;
   label?: string;
   value?: number;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 export interface PageViewEvent {
@@ -64,7 +64,7 @@ class AnalyticsService {
         // Fallback if localStorage is not available
         this.userId = `temp_${Date.now()}`;
       }
-    } catch (error) {
+    } catch {
       // Fallback if localStorage is not available
       this.userId = `temp_${Date.now()}`;
     }
@@ -85,7 +85,7 @@ class AnalyticsService {
   }
 
   // Track user interactions
-  trackEvent(event: string, category: string, action: string, label?: string, value?: number, properties?: Record<string, any>): void {
+  trackEvent(event: string, category: string, action: string, label?: string, value?: number, properties?: Record<string, unknown>): void {
     if (!this.isEnabled) return;
 
     const analyticsEvent: AnalyticsEvent = {
@@ -166,15 +166,22 @@ class AnalyticsService {
   }
 
   // Send events to analytics service
-  private async sendEvent(type: string, data: any): Promise<void> {
+  private async sendEvent(type: string, data: unknown): Promise<void> {
     try {
       // Send to Google Analytics 4 if available
-      if (typeof window !== 'undefined' && (window as any).gtag) {
-        (window as any).gtag('event', data.event || data.action, {
-          event_category: data.category,
-          event_label: data.label,
-          value: data.value,
-          custom_parameters: data.properties
+      if (typeof window !== 'undefined' && window.gtag) {
+        const eventData = data as AnalyticsEvent | PageViewEvent;
+        const eventName = 'event' in eventData ? eventData.event : ('action' in eventData ? (eventData as AnalyticsEvent).action : type);
+        const category = 'category' in eventData ? (eventData as AnalyticsEvent).category : 'page';
+        const label = 'label' in eventData ? (eventData as AnalyticsEvent).label : undefined;
+        const value = 'value' in eventData ? (eventData as AnalyticsEvent).value : undefined;
+        const properties = 'properties' in eventData ? (eventData as AnalyticsEvent).properties : undefined;
+        
+        window.gtag('event', eventName, {
+          event_category: category,
+          event_label: label,
+          value: value,
+          custom_parameters: properties
         });
       }
 
@@ -198,7 +205,7 @@ class AnalyticsService {
       if (this.getEnvironment() === 'development') {
         console.log('Analytics Event:', { type, data });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Analytics error:', error);
     }
   }
@@ -251,7 +258,7 @@ class AnalyticsService {
 // Extend window interface for gtag
 declare global {
   interface Window {
-    gtag?: (...args: any[]) => void;
+    gtag?: (...args: unknown[]) => void;
   }
 }
 

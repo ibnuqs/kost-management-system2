@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Auth;
 
 use App\Http\Requests\BaseRequest;
-use App\Rules\StrongPassword;
 
 class LoginRequest extends BaseRequest
 {
@@ -17,17 +16,17 @@ class LoginRequest extends BaseRequest
                 'required',
                 'string',
                 'email',
-                'max:255'
+                'max:255',
             ],
             'password' => [
                 'required',
                 'string',
-                'min:8'
+                'min:8',
             ],
             'remember' => [
                 'sometimes',
-                'boolean'
-            ]
+                'boolean',
+            ],
         ];
     }
 

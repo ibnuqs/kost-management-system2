@@ -1,5 +1,5 @@
 // src/pages/Landing/components/modals/index.ts
-export { default as BookingModal } from './BookingModal';
-export { default as GalleryModal } from './GalleryModal';
-export { default as VirtualTourModal } from './VirtualTourModal';
-export { default as ContactModal } from './ContactModal';
+export { BookingModal } from './BookingModal';
+export { GalleryModal } from './GalleryModal';
+export { VirtualTourModal } from './VirtualTourModal';
+export { ContactModal } from './ContactModal';

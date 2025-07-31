@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\TenantAccessService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -34,7 +34,7 @@ class PaymentManagementController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -44,7 +44,7 @@ class PaymentManagementController extends Controller
             Log::info('Manual payment generation triggered', [
                 'triggered_by' => Auth::id(),
                 'target_date' => $targetDate,
-                'dry_run' => $dryRun
+                'dry_run' => $dryRun,
             ]);
 
             // Build command with options
@@ -61,14 +61,14 @@ class PaymentManagementController extends Controller
 
             // Check if command exists first
             $registeredCommands = Artisan::all();
-            if (!isset($registeredCommands[$command])) {
+            if (! isset($registeredCommands[$command])) {
                 return response()->json([
                     'success' => false,
                     'message' => "Command '{$command}' not found. Please check if the command is properly registered.",
                     'error' => 'Command not registered',
-                    'available_commands' => array_keys(array_filter($registeredCommands, function($cmd, $key) {
+                    'available_commands' => array_keys(array_filter($registeredCommands, function ($cmd, $key) {
                         return str_contains($key, 'payment');
-                    }, ARRAY_FILTER_USE_BOTH))
+                    }, ARRAY_FILTER_USE_BOTH)),
                 ], 500);
             }
 
@@ -84,18 +84,18 @@ class PaymentManagementController extends Controller
                         'exit_code' => $exitCode,
                         'output' => $output,
                         'dry_run' => $dryRun,
-                        'target_date' => $targetDate ?: date('Y-m-d')
-                    ]
+                        'target_date' => $targetDate ?: date('Y-m-d'),
+                    ],
                 ], 200);
             } else {
-                throw new \Exception("Command failed with exit code: {$exitCode}. Output: " . trim($output));
+                throw new \Exception("Command failed with exit code: {$exitCode}. Output: ".trim($output));
             }
 
         } catch (\Exception $e) {
             Log::error('Manual payment generation failed', [
                 'error' => $e->getMessage(),
                 'triggered_by' => Auth::id(),
-                'request_data' => $request->all()
+                'request_data' => $request->all(),
             ]);
 
             return response()->json([
@@ -103,8 +103,8 @@ class PaymentManagementController extends Controller
                 'message' => 'Payment generation failed',
                 'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
                 'data' => [
-                    'output' => Artisan::output()
-                ]
+                    'output' => Artisan::output(),
+                ],
             ], 500);
         }
     }
@@ -124,7 +124,7 @@ class PaymentManagementController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -134,13 +134,13 @@ class PaymentManagementController extends Controller
             Log::info('Manual payment status processing triggered', [
                 'triggered_by' => Auth::id(),
                 'grace_days' => $graceDays,
-                'dry_run' => $dryRun
+                'dry_run' => $dryRun,
             ]);
 
             // Build command with options
             $command = 'payments:process-status';
             $options = [
-                '--grace-days' => $graceDays
+                '--grace-days' => $graceDays,
             ];
 
             if ($dryRun) {
@@ -149,14 +149,14 @@ class PaymentManagementController extends Controller
 
             // Check if command exists first
             $registeredCommands = Artisan::all();
-            if (!isset($registeredCommands[$command])) {
+            if (! isset($registeredCommands[$command])) {
                 return response()->json([
                     'success' => false,
                     'message' => "Command '{$command}' not found. Please check if the command is properly registered.",
                     'error' => 'Command not registered',
-                    'available_commands' => array_keys(array_filter($registeredCommands, function($cmd, $key) {
+                    'available_commands' => array_keys(array_filter($registeredCommands, function ($cmd, $key) {
                         return str_contains($key, 'payment');
-                    }, ARRAY_FILTER_USE_BOTH))
+                    }, ARRAY_FILTER_USE_BOTH)),
                 ], 500);
             }
 
@@ -172,18 +172,18 @@ class PaymentManagementController extends Controller
                         'exit_code' => $exitCode,
                         'output' => $output,
                         'dry_run' => $dryRun,
-                        'grace_days' => $graceDays
-                    ]
+                        'grace_days' => $graceDays,
+                    ],
                 ], 200);
             } else {
-                throw new \Exception("Command failed with exit code: {$exitCode}. Output: " . trim($output));
+                throw new \Exception("Command failed with exit code: {$exitCode}. Output: ".trim($output));
             }
 
         } catch (\Exception $e) {
             Log::error('Manual payment status processing failed', [
                 'error' => $e->getMessage(),
                 'triggered_by' => Auth::id(),
-                'request_data' => $request->all()
+                'request_data' => $request->all(),
             ]);
 
             return response()->json([
@@ -191,8 +191,8 @@ class PaymentManagementController extends Controller
                 'message' => 'Payment status processing failed',
                 'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
                 'data' => [
-                    'output' => Artisan::output()
-                ]
+                    'output' => Artisan::output(),
+                ],
             ], 500);
         }
     }
@@ -211,13 +211,13 @@ class PaymentManagementController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid tenant ID',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             Log::info('Manual tenant access update triggered', [
                 'tenant_id' => $tenantId,
-                'triggered_by' => Auth::id()
+                'triggered_by' => Auth::id(),
             ]);
 
             // Update tenant access using service
@@ -227,13 +227,13 @@ class PaymentManagementController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Tenant access updated successfully',
-                    'data' => $result
+                    'data' => $result,
                 ], 200);
             } else {
                 return response()->json([
                     'success' => false,
                     'message' => 'Failed to update tenant access',
-                    'error' => $result['error']
+                    'error' => $result['error'],
                 ], 500);
             }
 
@@ -241,13 +241,13 @@ class PaymentManagementController extends Controller
             Log::error('Manual tenant access update failed', [
                 'tenant_id' => $tenantId,
                 'error' => $e->getMessage(),
-                'triggered_by' => Auth::id()
+                'triggered_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update tenant access',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -259,7 +259,7 @@ class PaymentManagementController extends Controller
     {
         try {
             Log::info('Bulk tenant access update triggered', [
-                'triggered_by' => Auth::id()
+                'triggered_by' => Auth::id(),
             ]);
 
             // Update all tenants access using service
@@ -268,19 +268,19 @@ class PaymentManagementController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'All tenants access updated successfully',
-                'data' => $results
+                'data' => $results,
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Bulk tenant access update failed', [
                 'error' => $e->getMessage(),
-                'triggered_by' => Auth::id()
+                'triggered_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update all tenants access',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -299,7 +299,7 @@ class PaymentManagementController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -307,7 +307,7 @@ class PaymentManagementController extends Controller
 
             Log::info('Manual reservation cleanup triggered', [
                 'triggered_by' => Auth::id(),
-                'dry_run' => $dryRun
+                'dry_run' => $dryRun,
             ]);
 
             // Build command with options
@@ -320,14 +320,14 @@ class PaymentManagementController extends Controller
 
             // Check if command exists first
             $registeredCommands = Artisan::all();
-            if (!isset($registeredCommands[$command])) {
+            if (! isset($registeredCommands[$command])) {
                 return response()->json([
                     'success' => false,
                     'message' => "Command '{$command}' not found. Please check if the command is properly registered.",
                     'error' => 'Command not registered',
-                    'available_commands' => array_keys(array_filter($registeredCommands, function($cmd, $key) {
+                    'available_commands' => array_keys(array_filter($registeredCommands, function ($cmd, $key) {
                         return str_contains($key, 'room') || str_contains($key, 'reservation');
-                    }, ARRAY_FILTER_USE_BOTH))
+                    }, ARRAY_FILTER_USE_BOTH)),
                 ], 500);
             }
 
@@ -342,18 +342,18 @@ class PaymentManagementController extends Controller
                     'data' => [
                         'exit_code' => $exitCode,
                         'output' => $output,
-                        'dry_run' => $dryRun
-                    ]
+                        'dry_run' => $dryRun,
+                    ],
                 ], 200);
             } else {
-                throw new \Exception("Command failed with exit code: {$exitCode}. Output: " . trim($output));
+                throw new \Exception("Command failed with exit code: {$exitCode}. Output: ".trim($output));
             }
 
         } catch (\Exception $e) {
             Log::error('Manual reservation cleanup failed', [
                 'error' => $e->getMessage(),
                 'triggered_by' => Auth::id(),
-                'request_data' => $request->all()
+                'request_data' => $request->all(),
             ]);
 
             return response()->json([
@@ -361,8 +361,8 @@ class PaymentManagementController extends Controller
                 'message' => 'Reservation cleanup failed',
                 'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
                 'data' => [
-                    'output' => Artisan::output()
-                ]
+                    'output' => Artisan::output(),
+                ],
             ], 500);
         }
     }
@@ -378,7 +378,7 @@ class PaymentManagementController extends Controller
                 'payments' => $this->checkPaymentSystemHealth(),
                 'tenants' => $this->checkTenantSystemHealth(),
                 'commands' => $this->checkCommandsHealth(),
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ];
 
             $overallStatus = $this->calculateOverallHealth($health);
@@ -387,21 +387,21 @@ class PaymentManagementController extends Controller
                 'success' => true,
                 'data' => [
                     'overall_status' => $overallStatus,
-                    'health_checks' => $health
+                    'health_checks' => $health,
                 ],
-                'message' => 'System health retrieved successfully'
+                'message' => 'System health retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('System health check failed', [
                 'error' => $e->getMessage(),
-                'triggered_by' => Auth::id()
+                'triggered_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve system health',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -417,12 +417,12 @@ class PaymentManagementController extends Controller
                 'status' => 'healthy',
                 'rooms_count' => $totalRooms,
                 'tenants_count' => $totalTenants,
-                'payments_count' => $totalPayments
+                'payments_count' => $totalPayments,
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'unhealthy',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -454,12 +454,12 @@ class PaymentManagementController extends Controller
                 'pending_payments' => $pendingPayments,
                 'overdue_payments' => $overduePayments,
                 'old_pending_payments' => $oldPendingPayments,
-                'alerts' => $alerts
+                'alerts' => $alerts,
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'unhealthy',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -477,7 +477,7 @@ class PaymentManagementController extends Controller
 
             if ($suspensionRate > 20) {
                 $status = 'warning';
-                $alerts[] = "High tenant suspension rate: " . round($suspensionRate, 1) . "%";
+                $alerts[] = 'High tenant suspension rate: '.round($suspensionRate, 1).'%';
             }
 
             return [
@@ -485,12 +485,12 @@ class PaymentManagementController extends Controller
                 'active_tenants' => $activeTenants,
                 'suspended_tenants' => $suspendedTenants,
                 'suspension_rate' => round($suspensionRate, 2),
-                'alerts' => $alerts
+                'alerts' => $alerts,
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'unhealthy',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -502,7 +502,7 @@ class PaymentManagementController extends Controller
             $commands = [
                 'payments:generate-monthly',
                 'payments:process-status',
-                'rooms:cleanup-expired-reservations'
+                'rooms:cleanup-expired-reservations',
             ];
 
             $commandStatus = [];
@@ -516,18 +516,18 @@ class PaymentManagementController extends Controller
                 }
             }
 
-            $unavailableCount = count(array_filter($commandStatus, fn($status) => $status === 'unavailable'));
+            $unavailableCount = count(array_filter($commandStatus, fn ($status) => $status === 'unavailable'));
             $status = $unavailableCount === 0 ? 'healthy' : ($unavailableCount < count($commands) ? 'warning' : 'critical');
 
             return [
                 'status' => $status,
                 'commands' => $commandStatus,
-                'unavailable_count' => $unavailableCount
+                'unavailable_count' => $unavailableCount,
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'unhealthy',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -535,19 +535,19 @@ class PaymentManagementController extends Controller
     private function calculateOverallHealth(array $health): string
     {
         $statuses = array_column($health, 'status');
-        
+
         if (in_array('unhealthy', $statuses)) {
             return 'unhealthy';
         }
-        
+
         if (in_array('critical', $statuses)) {
             return 'critical';
         }
-        
+
         if (in_array('warning', $statuses)) {
             return 'warning';
         }
-        
+
         return 'healthy';
     }
 }

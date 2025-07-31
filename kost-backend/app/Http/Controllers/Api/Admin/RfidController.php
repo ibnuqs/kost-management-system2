@@ -1,21 +1,21 @@
 <?php
+
 // File: app/Http/Controllers/Api/Admin/RfidController.php
 
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\RfidCard;
-use App\Models\User;
-use App\Models\Room;
 use App\Models\AccessLog;
 use App\Models\IoTDevice;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
+use App\Models\RfidCard;
+use App\Models\Room;
+use App\Models\User;
 use App\Services\MqttService;
-use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class RfidController extends Controller
 {
@@ -39,18 +39,18 @@ class RfidController extends Controller
             'file' => $e->getFile(),
             'line' => $e->getLine(),
             'trace' => $e->getTraceAsString(),
-            'user_id' => Auth::id()
+            'user_id' => Auth::id(),
         ]);
 
         return response()->json([
             'success' => false,
             'message' => $message,
-            'error' => app()->environment('local') ? $e->getMessage() : 'Terjadi Kesalahan Server Internal'
+            'error' => app()->environment('local') ? $e->getMessage() : 'Terjadi Kesalahan Server Internal',
         ], $statusCode);
     }
 
     // ===== OPERASI CRUD DASAR =====
-    
+
     /**
      * Mendapatkan semua kartu RFID untuk panel admin.
      * Endpoint: GET /admin/rfid/cards
@@ -60,9 +60,9 @@ class RfidController extends Controller
         try {
             $query = RfidCard::select('id', 'uid', 'user_id', 'tenant_id', 'card_type', 'status', 'created_at', 'updated_at')
                 ->with([
-                    'user:id,name,email', 
+                    'user:id,name,email',
                     'tenant.room:id,room_number,room_name',
-                    'tenant.room.iotDevices:id,device_id,device_name,room_id'
+                    'tenant.room.iotDevices:id,device_id,device_name,room_id',
                 ]);
 
             // Filter berdasarkan status
@@ -83,19 +83,19 @@ class RfidController extends Controller
             // Pencarian berdasarkan UID atau nama pengguna
             if ($request->filled('search')) {
                 $search = $request->search;
-                $query->where(function($q) use ($search) {
+                $query->where(function ($q) use ($search) {
                     $q->where('uid', 'like', "%{$search}%")
-                      ->orWhereHas('user', function($userQuery) use ($search) {
-                          $userQuery->where('name', 'like', "%{$search}%")
-                                   ->orWhere('email', 'like', "%{$search}%");
-                      });
+                        ->orWhereHas('user', function ($userQuery) use ($search) {
+                            $userQuery->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
                 });
             }
 
             // Urutkan berdasarkan tanggal dibuat (terbaru dulu)
             $sortBy = $request->get('sort_by', 'created_at');
             $sortOrder = $request->get('sort_order', 'desc');
-            
+
             if (in_array($sortBy, ['created_at', 'uid', 'status'])) {
                 $query->orderBy($sortBy, $sortOrder === 'asc' ? 'asc' : 'desc');
             } else {
@@ -108,31 +108,31 @@ class RfidController extends Controller
             // Manual add device_id untuk debugging
             $cards->getCollection()->transform(function ($card) {
                 $cardArray = $card->toArray();
-                
+
                 // Manual device_id calculation
                 if ($card->tenant_id) {
                     $tenant = \App\Models\Tenant::find($card->tenant_id);
                     if ($tenant && $tenant->room_id) {
                         $iotDevice = IoTDevice::where('room_id', $tenant->room_id)->first();
                         $cardArray['device_id'] = $iotDevice ? $iotDevice->device_id : null;
-                        
+
                         Log::info('Manual device_id mapping', [
                             'card_id' => $card->id,
                             'tenant_id' => $card->tenant_id,
                             'room_id' => $tenant->room_id,
-                            'device_id' => $cardArray['device_id']
+                            'device_id' => $cardArray['device_id'],
                         ]);
                     } else {
                         $cardArray['device_id'] = null;
                         Log::warning('Tenant not found or no room_id', [
                             'card_id' => $card->id,
-                            'tenant_id' => $card->tenant_id
+                            'tenant_id' => $card->tenant_id,
                         ]);
                     }
                 } else {
                     $cardArray['device_id'] = null;
                 }
-                
+
                 return $cardArray;
             });
 
@@ -149,7 +149,7 @@ class RfidController extends Controller
                 'success' => true,
                 'message' => 'Kartu RFID berhasil diambil',
                 'data' => $cards,
-                'stats' => $stats
+                'stats' => $stats,
             ]);
         } catch (\Exception $e) {
             return $this->getErrorResponse($e, 'Gagal mengambil kartu RFID');
@@ -165,7 +165,7 @@ class RfidController extends Controller
     {
         // Handle both 'uid' and 'rfid_uid' parameter names for compatibility
         $uid = $request->input('uid') ?: $request->input('rfid_uid');
-        
+
         $validator = Validator::make(array_merge($request->all(), ['uid' => $uid]), [
             'uid' => 'required|string|max:255|unique:rfid_cards,uid',
             'tenant_id' => 'nullable|exists:tenants,id',
@@ -177,7 +177,7 @@ class RfidController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -188,38 +188,38 @@ class RfidController extends Controller
                 'tenant_id' => $request->tenant_id,
                 'card_type' => $request->card_type ?? 'primary',
             ];
-            
+
             // If tenant_id is provided, get user_id from tenant relationship
             if ($request->tenant_id) {
                 $tenant = \App\Models\Tenant::find($request->tenant_id);
                 if ($tenant) {
                     $createData['user_id'] = $tenant->user_id;
-                    if (!$request->filled('status')) {
+                    if (! $request->filled('status')) {
                         $createData['status'] = 'active';
                     }
                 } else {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Tenant not found'
+                        'message' => 'Tenant not found',
                     ], 404);
                 }
             } else {
                 $createData['user_id'] = null;
             }
-            
+
             $rfidCard = RfidCard::create($createData);
 
             Log::info('Kartu RFID baru didaftarkan', [
                 'card_id' => $rfidCard->id,
                 'uid' => $rfidCard->uid,
                 'user_id' => $rfidCard->user_id,
-                'created_by' => Auth::id()
+                'created_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Kartu RFID berhasil didaftarkan',
-                'data' => $rfidCard->load(['user:id,name,email', 'tenant.room:id,room_number,room_name'])
+                'data' => $rfidCard->load(['user:id,name,email', 'tenant.room:id,room_number,room_name']),
             ], 201);
         } catch (\Exception $e) {
             return $this->getErrorResponse($e, 'Gagal mendaftarkan kartu RFID');
@@ -259,7 +259,7 @@ class RfidController extends Controller
             } catch (\Exception $e) {
                 Log::warning('Gagal mengambil statistik akses untuk kartu', [
                     'card_id' => $card->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
 
@@ -267,13 +267,13 @@ class RfidController extends Controller
                 'success' => true,
                 'message' => 'Detail kartu RFID berhasil diambil',
                 'data' => $card,
-                'stats' => $stats
+                'stats' => $stats,
             ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kartu RFID tidak ditemukan'
+                'message' => 'Kartu RFID tidak ditemukan',
             ], 404);
         } catch (\Exception $e) {
             return $this->getErrorResponse($e, 'Gagal mengambil detail kartu RFID');
@@ -286,7 +286,7 @@ class RfidController extends Controller
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'uid' => 'required|string|max:255|unique:rfid_cards,uid,' . $id,
+            'uid' => 'required|string|max:255|unique:rfid_cards,uid,'.$id,
             'tenant_id' => 'nullable|exists:tenants,id',
             'card_type' => 'nullable|in:primary,backup,temporary',
             'status' => 'required|in:active,inactive',
@@ -296,7 +296,7 @@ class RfidController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -310,7 +310,7 @@ class RfidController extends Controller
                 'card_type' => $request->card_type ?? 'primary',
                 'status' => $request->status,
             ];
-            
+
             // If tenant_id is provided, get user_id from tenant relationship
             if ($request->tenant_id) {
                 $tenant = \App\Models\Tenant::find($request->tenant_id);
@@ -319,31 +319,31 @@ class RfidController extends Controller
                 } else {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Tenant not found'
+                        'message' => 'Tenant not found',
                     ], 404);
                 }
             } else {
                 $updateData['user_id'] = null;
             }
-            
+
             $card->update($updateData);
 
             Log::info('Kartu RFID diperbarui', [
                 'card_id' => $card->id,
                 'old_data' => $oldData,
                 'new_data' => $card->toArray(),
-                'updated_by' => Auth::id()
+                'updated_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Kartu RFID berhasil diperbarui',
-                'data' => $card->load(['user:id,name,email', 'tenant.room:id,room_number,room_name'])
+                'data' => $card->load(['user:id,name,email', 'tenant.room:id,room_number,room_name']),
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kartu RFID tidak ditemukan'
+                'message' => 'Kartu RFID tidak ditemukan',
             ], 404);
         } catch (\Exception $e) {
             return $this->getErrorResponse($e, 'Gagal memperbarui kartu RFID');
@@ -366,18 +366,18 @@ class RfidController extends Controller
                 'uid' => $card->uid,
                 'old_status' => $card->getOriginal('status'),
                 'new_status' => $newStatus,
-                'changed_by' => Auth::id()
+                'changed_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => "Kartu RFID berhasil di{$newStatus}kan",
-                'data' => $card->load(['user:id,name,email', 'tenant.room:id,room_number,room_name'])
+                'data' => $card->load(['user:id,name,email', 'tenant.room:id,room_number,room_name']),
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kartu RFID tidak ditemukan'
+                'message' => 'Kartu RFID tidak ditemukan',
             ], 404);
         } catch (\Exception $e) {
             return $this->getErrorResponse($e, 'Gagal mengubah status kartu RFID');
@@ -400,28 +400,28 @@ class RfidController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         try {
             $card = RfidCard::findOrFail($id);
-            
+
             // Periksa apakah pengguna sudah memiliki kartu aktif lain
             if ($request->user_id) {
                 $existingCard = RfidCard::where('user_id', $request->user_id)
                     ->where('status', 'active')
                     ->where('id', '!=', $id)
                     ->first();
-                
+
                 if ($existingCard) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Pengguna sudah memiliki kartu RFID aktif lain'
+                        'message' => 'Pengguna sudah memiliki kartu RFID aktif lain',
                     ], 400);
                 }
             }
-            
+
             // Update assignment kartu
             $updateData = [
                 'user_id' => $request->user_id,
@@ -432,9 +432,9 @@ class RfidController extends Controller
             if ($request->user_id && $card->status === 'inactive') {
                 $updateData['status'] = 'active';
             }
-            
+
             // Nonaktifkan kartu ketika tidak ditugaskan ke pengguna
-            if (!$request->user_id && $card->status === 'active') {
+            if (! $request->user_id && $card->status === 'active') {
                 $updateData['status'] = 'inactive';
             }
 
@@ -445,18 +445,18 @@ class RfidController extends Controller
                 'uid' => $card->uid,
                 'user_id' => $request->user_id,
                 'room_id' => $request->room_id,
-                'assigned_by' => Auth::id()
+                'assigned_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Kartu RFID berhasil ditugaskan',
-                'data' => $card->load(['user:id,name,email', 'tenant.room:id,room_number,room_name'])
+                'data' => $card->load(['user:id,name,email', 'tenant.room:id,room_number,room_name']),
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kartu RFID tidak ditemukan'
+                'message' => 'Kartu RFID tidak ditemukan',
             ], 404);
         } catch (\Exception $e) {
             return $this->getErrorResponse($e, 'Gagal menugaskan kartu RFID');
@@ -473,24 +473,24 @@ class RfidController extends Controller
             $card = RfidCard::findOrFail($id);
             $cardUid = $card->uid;
             $cardUser = $card->user ? $card->user->name : 'Tidak Ditugaskan';
-            
+
             $card->delete();
 
             Log::info('Kartu RFID dihapus', [
                 'card_id' => $id,
                 'uid' => $cardUid,
                 'user' => $cardUser,
-                'deleted_by' => Auth::id()
+                'deleted_by' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => "Kartu RFID {$cardUid} berhasil dihapus"
+                'message' => "Kartu RFID {$cardUid} berhasil dihapus",
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kartu RFID tidak ditemukan'
+                'message' => 'Kartu RFID tidak ditemukan',
             ], 404);
         } catch (\Exception $e) {
             return $this->getErrorResponse($e, 'Gagal menghapus kartu RFID');
@@ -513,7 +513,7 @@ class RfidController extends Controller
                     'success' => true,
                     'exists' => true,
                     'card' => $card,
-                    'message' => 'Kartu ditemukan dalam database'
+                    'message' => 'Kartu ditemukan dalam database',
                 ]);
             }
 
@@ -521,7 +521,7 @@ class RfidController extends Controller
                 'success' => true,
                 'exists' => false,
                 'card' => null,
-                'message' => 'Kartu belum terdaftar'
+                'message' => 'Kartu belum terdaftar',
             ], 200);
         } catch (\Exception $e) {
             return $this->getErrorResponse($e, 'Gagal memeriksa kartu');
@@ -529,7 +529,7 @@ class RfidController extends Controller
     }
 
     // ===== ESP32 INTEGRATION =====
-    
+
     /**
      * Process RFID scan dari ESP32 untuk access control.
      * Endpoint: POST /admin/rfid/process (from MQTT)
@@ -541,14 +541,14 @@ class RfidController extends Controller
             'card_uid' => 'required|string',
             'device_id' => 'required|string',
             'location' => 'nullable|string',
-            'device_name' => 'nullable|string'
+            'device_name' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -559,8 +559,8 @@ class RfidController extends Controller
             $this->updateDeviceHeartbeat($deviceId);
 
             $rfidCard = RfidCard::where('uid', $cardUID)
-                                 ->with(['user', 'tenant.room'])
-                                 ->first();
+                ->with(['user', 'tenant.room'])
+                ->first();
 
             $accessGranted = false;
             $message = 'Akses ditolak: Kartu tidak dikenali.';
@@ -577,15 +577,15 @@ class RfidController extends Controller
 
                 if ($rfidCard->status !== 'active') {
                     $message = 'Akses ditolak: Kartu tidak aktif.';
-                } elseif (!$rfidCard->user_id) {
+                } elseif (! $rfidCard->user_id) {
                     $message = 'Akses ditolak: Kartu belum ditugaskan ke pengguna.';
                 } else {
                     $device = IoTDevice::where('device_id', $deviceId)->first();
-                    
-                    if (!$device || !$device->room_id) {
+
+                    if (! $device || ! $device->room_id) {
                         $accessGranted = true;
                         $message = "Akses diberikan: Selamat datang, {$userName}!";
-                    } elseif (!$roomId || $roomId !== $device->room_id) {
+                    } elseif (! $roomId || $roomId !== $device->room_id) {
                         $message = 'Akses ditolak: Kartu untuk kamar yang berbeda.';
                     } else {
                         $accessGranted = true;
@@ -594,12 +594,12 @@ class RfidController extends Controller
                 }
             } else {
                 // Auto-registration logic
-                $email = 'auto-' . strtolower($cardUID) . '@demo.com';
+                $email = 'auto-'.strtolower($cardUID).'@demo.com';
                 $user = User::where('email', $email)->first();
 
-                if (!$user) {
+                if (! $user) {
                     $user = User::create([
-                        'name' => 'Auto User ' . substr($cardUID, 0, 4),
+                        'name' => 'Auto User '.substr($cardUID, 0, 4),
                         'email' => $email,
                         'password' => bcrypt(str_random(10)),
                         'role' => 'tenant',
@@ -625,7 +625,7 @@ class RfidController extends Controller
                 'room_number' => $roomNumber,
                 'message' => $message,
                 'device_id' => $deviceId,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ];
 
             $this->logAccess($userId, $roomId, $cardUID, $deviceId, $accessGranted, $message);
@@ -634,21 +634,21 @@ class RfidController extends Controller
                 $topic = "kost_system/door/response/{$deviceId}";
                 $this->mqttService->publish($topic, json_encode($responsePayload));
                 Log::info('Respons MQTT dikirim', [
-                    'topic' => $topic, 
-                    'device_id' => $deviceId, 
-                    'access_granted' => $accessGranted
+                    'topic' => $topic,
+                    'device_id' => $deviceId,
+                    'access_granted' => $accessGranted,
                 ]);
             } catch (\Exception $e) {
                 Log::error('Publikasi MQTT gagal untuk respons pemrosesan RFID', [
                     'device_id' => $deviceId,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Akses RFID diproses.',
-                'data' => $responsePayload
+                'data' => $responsePayload,
             ]);
 
         } catch (\Exception $e) {
@@ -673,21 +673,21 @@ class RfidController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         try {
             $device = IoTDevice::where('device_id', $request->device_id)
-                               ->where('device_type', 'door_lock')
-                               ->with('room:id,room_number,room_name')
-                               ->first();
+                ->where('device_type', 'door_lock')
+                ->with('room:id,room_number,room_name')
+                ->first();
 
-            if (!$device) {
+            if (! $device) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Perangkat tidak ditemukan atau bukan kunci pintu.',
-                    'error' => 'ID Perangkat tidak terdaftar atau tipe salah.'
+                    'error' => 'ID Perangkat tidak terdaftar atau tipe salah.',
                 ], 404);
             }
 
@@ -695,7 +695,7 @@ class RfidController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Perangkat sedang offline.',
-                    'error' => 'Tidak dapat mengontrol perangkat offline.'
+                    'error' => 'Tidak dapat mengontrol perangkat offline.',
                 ], 400);
             }
 
@@ -706,14 +706,14 @@ class RfidController extends Controller
                 'timestamp' => now()->toISOString(),
                 'source' => 'web_admin',
                 'admin_id' => Auth::id() ?? 'system',
-                'request_id' => uniqid('remote_')
+                'request_id' => uniqid('remote_'),
             ];
 
             $topic = "kost_system/door/control/{$device->device_id}";
-            
+
             try {
                 $this->mqttService->publish($topic, json_encode($command));
-                
+
                 // Log aksi kontrol remote
                 $this->logAccess(
                     Auth::id(),
@@ -721,16 +721,16 @@ class RfidController extends Controller
                     null, // Tidak ada UID RFID untuk kontrol remote
                     $device->device_id,
                     true, // Perintah admin dianggap "diberikan"
-                    "Kontrol pintu remote '{$command['action']}' oleh admin untuk kamar " . 
+                    "Kontrol pintu remote '{$command['action']}' oleh admin untuk kamar ".
                     ($device->room ? $device->room->room_number : 'N/A')
                 );
-                
+
                 Log::info('Perintah kontrol pintu remote dikirim', [
                     'device_id' => $device->device_id,
                     'action' => $command['action'],
-                    'admin_id' => Auth::id()
+                    'admin_id' => Auth::id(),
                 ]);
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Perintah pintu berhasil dikirim',
@@ -739,15 +739,16 @@ class RfidController extends Controller
                     'device' => [
                         'id' => $device->device_id,
                         'name' => $device->device_name,
-                        'room' => $device->room ? $device->room->room_number : null
-                    ]
+                        'room' => $device->room ? $device->room->room_number : null,
+                    ],
                 ]);
-                
+
             } catch (\Exception $e) {
                 Log::error('Publikasi MQTT gagal untuk kontrol remote', [
                     'device_id' => $device->device_id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
+
                 return $this->getErrorResponse($e, 'Gagal mengirim perintah kontrol pintu.', 500);
             }
 
@@ -771,7 +772,7 @@ class RfidController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -780,11 +781,11 @@ class RfidController extends Controller
         try {
             $device = IoTDevice::where('device_id', $deviceId)->first();
 
-            if (!$device) {
+            if (! $device) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Perangkat scanner tidak ditemukan.',
-                    'error' => 'ID Perangkat tidak terdaftar.'
+                    'error' => 'ID Perangkat tidak terdaftar.',
                 ], 404);
             }
 
@@ -792,33 +793,33 @@ class RfidController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Perangkat sedang offline.',
-                    'error' => 'Tidak dapat mengirim perintah ke perangkat offline.'
+                    'error' => 'Tidak dapat mengirim perintah ke perangkat offline.',
                 ], 400);
             }
 
             $command = [
-                'command' => 'start-scan', 
+                'command' => 'start-scan',
                 'device_id' => $deviceId,
                 'timestamp' => now()->toISOString(),
                 'source' => 'web_admin',
-                'request_id' => uniqid('start_scan_')
+                'request_id' => uniqid('start_scan_'),
             ];
 
-            $topic = "rfid/command";
-            
+            $topic = 'rfid/command';
+
             try {
                 $this->mqttService->publish($topic, json_encode($command));
                 Log::info('Perintah mulai mode scanner dikirim', [
                     'device_id' => $deviceId,
                     'command' => 'start-scan',
-                    'request_id' => $command['request_id']
+                    'request_id' => $command['request_id'],
                 ]);
 
                 return response()->json([
                     'success' => true,
                     'message' => "Perintah mulai scanner dikirim ke perangkat {$deviceId}",
                     'status' => 'dikirim',
-                    'command' => $command
+                    'command' => $command,
                 ]);
             } catch (\Exception $e) {
                 return $this->getErrorResponse($e, 'Gagal mempublikasikan perintah mulai scanner melalui MQTT.');
@@ -844,7 +845,7 @@ class RfidController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -853,11 +854,11 @@ class RfidController extends Controller
         try {
             $device = IoTDevice::where('device_id', $deviceId)->first();
 
-            if (!$device) {
+            if (! $device) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Perangkat scanner tidak ditemukan.',
-                    'error' => 'ID Perangkat tidak terdaftar.'
+                    'error' => 'ID Perangkat tidak terdaftar.',
                 ], 404);
             }
 
@@ -865,7 +866,7 @@ class RfidController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Perangkat sedang offline.',
-                    'error' => 'Tidak dapat mengirim perintah ke perangkat offline.'
+                    'error' => 'Tidak dapat mengirim perintah ke perangkat offline.',
                 ], 400);
             }
 
@@ -874,24 +875,24 @@ class RfidController extends Controller
                 'device_id' => $deviceId,
                 'timestamp' => now()->toISOString(),
                 'source' => 'web_admin',
-                'request_id' => uniqid('stop_scan_')
+                'request_id' => uniqid('stop_scan_'),
             ];
 
-            $topic = "rfid/command";
-            
+            $topic = 'rfid/command';
+
             try {
                 $this->mqttService->publish($topic, json_encode($command));
                 Log::info('Perintah henti mode scanner dikirim', [
                     'device_id' => $deviceId,
                     'command' => 'stop-scan',
-                    'request_id' => $command['request_id']
+                    'request_id' => $command['request_id'],
                 ]);
 
                 return response()->json([
                     'success' => true,
                     'message' => "Perintah henti scanner dikirim ke perangkat {$deviceId}",
                     'status' => 'dikirim',
-                    'command' => $command
+                    'command' => $command,
                 ]);
             } catch (\Exception $e) {
                 return $this->getErrorResponse($e, 'Gagal mempublikasikan perintah henti scanner melalui MQTT.');
@@ -911,7 +912,7 @@ class RfidController extends Controller
     {
         try {
             $query = AccessLog::with(['user:id,name', 'room:id,room_number,room_name'])
-                                 ->orderBy('accessed_at', 'desc');
+                ->orderBy('accessed_at', 'desc');
 
             if ($request->filled('date_from')) {
                 $query->whereDate('accessed_at', '>=', $request->date_from);
@@ -920,10 +921,10 @@ class RfidController extends Controller
                 $query->whereDate('accessed_at', '<=', $request->date_to);
             }
             if ($request->filled('rfid_uid')) {
-                $query->where('rfid_uid', 'like', '%' . $request->rfid_uid . '%');
+                $query->where('rfid_uid', 'like', '%'.$request->rfid_uid.'%');
             }
             if ($request->filled('device_id')) {
-                $query->where('device_id', 'like', '%' . $request->device_id . '%');
+                $query->where('device_id', 'like', '%'.$request->device_id.'%');
             }
             if ($request->filled('access_granted')) {
                 $query->where('access_granted', $request->boolean('access_granted'));
@@ -935,7 +936,7 @@ class RfidController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Log akses berhasil diambil',
-                'data' => $logs
+                'data' => $logs,
             ]);
         } catch (\Exception $e) {
             return $this->getErrorResponse($e, 'Gagal mendapatkan log akses');
@@ -965,13 +966,13 @@ class RfidController extends Controller
                 ],
                 'akses_minggu_ini' => [
                     'total_akses' => AccessLog::where('access_granted', true)->whereBetween('accessed_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
-                ]
+                ],
             ];
 
             return response()->json([
                 'success' => true,
                 'message' => 'Statistik dashboard berhasil diambil',
-                'data' => $stats
+                'data' => $stats,
             ]);
         } catch (\Exception $e) {
             return $this->getErrorResponse($e, 'Gagal mendapatkan statistik');
@@ -994,7 +995,7 @@ class RfidController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -1028,7 +1029,7 @@ class RfidController extends Controller
                             break;
                     }
                 } catch (\Exception $e) {
-                    $errors[] = "Kartu {$card->uid}: " . $e->getMessage();
+                    $errors[] = "Kartu {$card->uid}: ".$e->getMessage();
                 }
             }
 
@@ -1038,7 +1039,7 @@ class RfidController extends Controller
                 'action' => $request->action,
                 'updated_count' => $updated,
                 'total_count' => count($request->card_ids),
-                'performed_by' => Auth::id()
+                'performed_by' => Auth::id(),
             ]);
 
             return response()->json([
@@ -1047,12 +1048,13 @@ class RfidController extends Controller
                 'data' => [
                     'updated_count' => $updated,
                     'total_count' => count($request->card_ids),
-                    'errors' => $errors
-                ]
+                    'errors' => $errors,
+                ],
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return $this->getErrorResponse($e, 'Gagal melakukan operasi bulk');
         }
     }
@@ -1093,8 +1095,8 @@ class RfidController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $exportData,
-                'filename' => 'kartu_rfid_' . date('Y-m-d_H-i-s') . '.csv',
-                'message' => 'Data ekspor berhasil dibuat'
+                'filename' => 'kartu_rfid_'.date('Y-m-d_H-i-s').'.csv',
+                'message' => 'Data ekspor berhasil dibuat',
             ]);
 
         } catch (\Exception $e) {
@@ -1108,14 +1110,14 @@ class RfidController extends Controller
     public function import(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'file' => 'required|file|mimes:csv,txt|max:2048'
+            'file' => 'required|file|mimes:csv,txt|max:2048',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'File tidak valid',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -1126,13 +1128,13 @@ class RfidController extends Controller
 
             $data = array_map('str_getcsv', file($file->path()));
             $headers = array_shift($data);
-            
+
             DB::beginTransaction();
 
             foreach ($data as $index => $row) {
                 try {
                     $cardData = array_combine($headers, $row);
-                    
+
                     // Validasi dan buat kartu
                     if (empty($cardData['uid'])) {
                         throw new \Exception('UID tidak boleh kosong');
@@ -1140,12 +1142,12 @@ class RfidController extends Controller
 
                     // Periksa duplikasi
                     if (RfidCard::where('uid', strtoupper(trim($cardData['uid'])))->exists()) {
-                        throw new \Exception('UID sudah ada: ' . $cardData['uid']);
+                        throw new \Exception('UID sudah ada: '.$cardData['uid']);
                     }
 
                     RfidCard::create([
                         'uid' => strtoupper(trim($cardData['uid'])),
-                        'status' => isset($cardData['status']) && in_array($cardData['status'], ['active', 'inactive']) 
+                        'status' => isset($cardData['status']) && in_array($cardData['status'], ['active', 'inactive'])
                             ? $cardData['status'] : 'inactive',
                         'user_id' => null, // Akan ditugaskan nanti
                         'room_id' => null,
@@ -1153,7 +1155,7 @@ class RfidController extends Controller
 
                     $imported++;
                 } catch (\Exception $e) {
-                    $errors[] = "Baris " . ($index + 2) . ": " . $e->getMessage();
+                    $errors[] = 'Baris '.($index + 2).': '.$e->getMessage();
                 }
             }
 
@@ -1162,7 +1164,7 @@ class RfidController extends Controller
             Log::info('Impor kartu RFID selesai', [
                 'imported_count' => $imported,
                 'error_count' => count($errors),
-                'imported_by' => Auth::id()
+                'imported_by' => Auth::id(),
             ]);
 
             return response()->json([
@@ -1170,12 +1172,13 @@ class RfidController extends Controller
                 'message' => "Berhasil mengimpor {$imported} kartu RFID",
                 'data' => [
                     'imported_count' => $imported,
-                    'errors' => $errors
-                ]
+                    'errors' => $errors,
+                ],
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return $this->getErrorResponse($e, 'Gagal mengimpor kartu RFID');
         }
     }
@@ -1195,13 +1198,13 @@ class RfidController extends Controller
                 'device_id' => $deviceId,
                 'access_granted' => $accessGranted,
                 'accessed_at' => now(),
-                'notes' => $notes
+                'notes' => $notes,
             ]);
         } catch (\Exception $e) {
             Log::error('Gagal mencatat akses', [
                 'error' => $e->getMessage(),
                 'user_id' => $userId,
-                'device_id' => $deviceId
+                'device_id' => $deviceId,
             ]);
         }
     }
@@ -1216,13 +1219,13 @@ class RfidController extends Controller
             if ($device) {
                 $device->update([
                     'last_seen' => now(),
-                    'status' => 'online'
+                    'status' => 'online',
                 ]);
             }
         } catch (\Exception $e) {
             Log::warning('Gagal memperbarui heartbeat perangkat', [
                 'device_id' => $deviceId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -1235,15 +1238,16 @@ class RfidController extends Controller
         try {
             // Pengguna tenant dengan informasi room mereka
             $availableUsers = User::where('role', 'tenant')
-                ->with(['tenants' => function($query) {
+                ->with(['tenants' => function ($query) {
                     $query->where('status', 'active')
-                          ->with('room:id,room_number,room_name');
+                        ->with('room:id,room_number,room_name');
                 }])
                 ->select('id', 'name', 'email', 'phone')
                 ->orderBy('name')
                 ->get()
-                ->map(function($user) {
+                ->map(function ($user) {
                     $activeTenant = $user->tenants->first();
+
                     return [
                         'id' => $user->id,
                         'name' => $user->name,
@@ -1256,15 +1260,15 @@ class RfidController extends Controller
                             'room' => $activeTenant->room ? [
                                 'id' => $activeTenant->room->id,
                                 'room_number' => $activeTenant->room->room_number,
-                            ] : null
-                        ] : null
+                            ] : null,
+                        ] : null,
                     ];
                 });
 
             return response()->json([
                 'success' => true,
                 'data' => $availableUsers,
-                'message' => 'Pengguna yang tersedia berhasil diambil'
+                'message' => 'Pengguna yang tersedia berhasil diambil',
             ]);
 
         } catch (\Exception $e) {
@@ -1278,15 +1282,16 @@ class RfidController extends Controller
     public function getAvailableRooms()
     {
         try {
-            $rooms = Room::with(['tenants' => function($query) {
-                    $query->where('status', 'active')
-                          ->with('user:id,name,email');
-                }])
+            $rooms = Room::with(['tenants' => function ($query) {
+                $query->where('status', 'active')
+                    ->with('user:id,name,email');
+            }])
                 ->select('id', 'room_number', 'room_name', 'status')
                 ->orderBy('room_number')
                 ->get()
                 ->map(function ($room) {
                     $activeTenant = $room->tenants->first();
+
                     return [
                         'id' => $room->id,
                         'room_number' => $room->room_number,
@@ -1300,15 +1305,15 @@ class RfidController extends Controller
                                 'id' => $activeTenant->user->id,
                                 'name' => $activeTenant->user->name,
                                 'email' => $activeTenant->user->email,
-                            ] : null
-                        ] : null
+                            ] : null,
+                        ] : null,
                     ];
                 });
 
             return response()->json([
                 'success' => true,
                 'data' => $rooms,
-                'message' => 'Kamar berhasil diambil'
+                'message' => 'Kamar berhasil diambil',
             ]);
 
         } catch (\Exception $e) {
@@ -1344,7 +1349,7 @@ class RfidController extends Controller
 
             // Kartu yang tidak digunakan
             $unusedCards = RfidCard::with('user:id,name')
-                ->whereDoesntHave('accessLogs', function($query) use ($startDate, $endDate) {
+                ->whereDoesntHave('accessLogs', function ($query) use ($startDate, $endDate) {
                     $query->whereBetween('accessed_at', [$startDate, $endDate]);
                 })
                 ->where('status', 'active')
@@ -1368,7 +1373,7 @@ class RfidController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $report,
-                'message' => 'Laporan penggunaan berhasil diambil'
+                'message' => 'Laporan penggunaan berhasil diambil',
             ]);
 
         } catch (\Exception $e) {
@@ -1396,7 +1401,7 @@ class RfidController extends Controller
                     return response()->json([
                         'success' => false,
                         'message' => 'Validasi gagal',
-                        'errors' => $validator->errors()
+                        'errors' => $validator->errors(),
                     ], 422);
                 }
             }
@@ -1413,7 +1418,7 @@ class RfidController extends Controller
                     'success' => true,
                     'message' => 'Semua kartu RFID sudah memiliki device_id',
                     'updated_count' => 0,
-                    'error_count' => 0
+                    'error_count' => 0,
                 ]);
             }
 
@@ -1424,33 +1429,33 @@ class RfidController extends Controller
             foreach ($cardsWithoutDevice as $card) {
                 try {
                     $deviceId = $this->determineDeviceIdForCard($card);
-                    
+
                     if ($deviceId) {
                         $card->update([
                             'device_id' => $deviceId,
-                            'access_type' => 'room_only' // Default access type
+                            'access_type' => 'room_only', // Default access type
                         ]);
-                        
+
                         $updateCount++;
                         $details[] = [
                             'card_uid' => $card->uid,
                             'status' => 'updated',
                             'device_id' => $deviceId,
-                            'message' => "Updated successfully"
+                            'message' => 'Updated successfully',
                         ];
-                        
+
                         Log::info('RFID card device_id updated', [
                             'card_id' => $card->id,
                             'uid' => $card->uid,
                             'device_id' => $deviceId,
-                            'updated_by' => Auth::id()
+                            'updated_by' => Auth::id(),
                         ]);
                     } else {
                         $errorCount++;
                         $details[] = [
                             'card_uid' => $card->uid,
                             'status' => 'error',
-                            'message' => "Could not determine device_id"
+                            'message' => 'Could not determine device_id',
                         ];
                     }
                 } catch (\Exception $e) {
@@ -1458,13 +1463,13 @@ class RfidController extends Controller
                     $details[] = [
                         'card_uid' => $card->uid,
                         'status' => 'error',
-                        'message' => $e->getMessage()
+                        'message' => $e->getMessage(),
                     ];
-                    
+
                     Log::error('Error updating RFID card device_id', [
                         'card_id' => $card->id,
                         'uid' => $card->uid,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ]);
                 }
             }
@@ -1476,7 +1481,7 @@ class RfidController extends Controller
                 'total_cards' => $cardsWithoutDevice->count(),
                 'updated_count' => $updateCount,
                 'error_count' => $errorCount,
-                'performed_by' => Auth::id()
+                'performed_by' => Auth::id(),
             ]);
 
             return response()->json([
@@ -1484,11 +1489,12 @@ class RfidController extends Controller
                 'message' => "Berhasil mengupdate {$updateCount} kartu RFID dengan device_id",
                 'updated_count' => $updateCount,
                 'error_count' => $errorCount,
-                'details' => $details
+                'details' => $details,
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return $this->getErrorResponse($e, 'Gagal mengupdate device_id kartu RFID');
         }
     }
@@ -1503,16 +1509,14 @@ class RfidController extends Controller
             $iotDevice = IoTDevice::where('room_id', $card->room_id)
                 ->where('device_type', 'rfid_reader')
                 ->first();
-                
+
             if ($iotDevice) {
                 return $iotDevice->device_id;
             }
         }
-        
+
         // Strategi 2: Default ke ESP32 utama
         // Ini untuk setup single-device yang ada saat ini
         return 'ESP32-RFID-01';
     }
-
-
 }

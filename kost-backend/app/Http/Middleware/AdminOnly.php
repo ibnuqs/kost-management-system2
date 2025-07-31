@@ -1,4 +1,5 @@
 <?php
+
 // ===================================================================
 // File: app/Http/Middleware/AdminOnly.php
 // ===================================================================
@@ -16,10 +17,10 @@ class AdminOnly
      */
     public function handle(Request $request, Closure $next)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthenticated'
+                'message' => 'Unauthenticated',
             ], 401);
         }
 
@@ -28,14 +29,14 @@ class AdminOnly
         if ($user->role !== 'admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Admin access required'
+                'message' => 'Admin access required',
             ], 403);
         }
 
         if ($user->status !== 'active') {
             return response()->json([
                 'success' => false,
-                'message' => 'Account is inactive'
+                'message' => 'Account is inactive',
             ], 403);
         }
 

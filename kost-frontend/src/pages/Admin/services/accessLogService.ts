@@ -9,6 +9,23 @@ import type {
   HourlyAccessStat
 } from '../types/accessLog';
 
+// Error handling interfaces
+interface ApiError {
+  response?: {
+    status?: number;
+    data?: {
+      message?: string;
+    };
+    statusText?: string;
+  };
+  config?: {
+    url?: string;
+    method?: string;
+  };
+  message?: string;
+}
+
+
 interface GetLogsResponse {
   logs: AccessLog[];
   summary: AccessLogStats;
@@ -44,16 +61,17 @@ export const accessLogService = {
       }
 
       // Debug response structure
+      const responseData = response.data.data as unknown;
       console.log('🔍 Access logs response structure:', {
-        hasData: !!response.data.data,
-        dataType: typeof response.data.data,
-        dataKeys: response.data.data ? Object.keys(response.data.data) : 'no data',
+        hasData: !!responseData,
+        dataType: typeof responseData,
+        dataKeys: responseData && typeof responseData === 'object' ? Object.keys(responseData) : 'no data',
         hasPagination: !!response.data.pagination,
-        firstItem: Array.isArray(response.data.data) ? response.data.data[0] : 'not array'
+        firstItem: Array.isArray(responseData) ? responseData[0] : 'not array'
       });
 
       return {
-        logs: response.data.data || [],
+        logs: (response.data.data as AccessLog[]) || [],
         summary: response.data.summary || {
           total_today: 0,
           granted_today: 0,
@@ -67,9 +85,14 @@ export const accessLogService = {
           total: 0
         }
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching access logs:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Failed to fetch access logs');
+      const apiError = error as ApiError;
+      throw new Error(
+        apiError.response?.data?.message || 
+        apiError.message || 
+        'Failed to fetch access logs'
+      );
     }
   },
 
@@ -77,8 +100,8 @@ export const accessLogService = {
     try {
       // Add timestamp to prevent caching issues
       const timestamp = Date.now();
-      const response = await api.get(endpoints.admin.accessLogs.statistics, { 
-        params: { days, _t: timestamp } 
+      const response = await api.get(endpoints.admin.accessLogs.statistics, {
+        params: { days, _t: timestamp }
       });
       
       if (!response.data.success) {
@@ -86,7 +109,11 @@ export const accessLogService = {
       }
 
       // Ensure data structure is valid
-      const data = response.data.data;
+      const data = response.data.data as {
+        daily_stats?: DailyAccessStat[];
+        hourly_stats?: HourlyAccessStat[];
+        summary?: AccessLogStatistics;
+      };
       return {
         daily_stats: data.daily_stats || [],
         hourly_stats: data.hourly_stats || [],
@@ -96,11 +123,13 @@ export const accessLogService = {
           busiest_hour: 0
         }
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching access log statistics:', error);
       
+      const apiError = error as ApiError;
+      
       // Check if it's a 404 error (endpoint not found)
-      if (error.response?.status === 404) {
+      if (apiError.response?.status === 404) {
         console.warn('Statistics endpoint not found. Please check if the route is registered.');
         console.warn('Expected route: GET /api/admin/access-logs/statistics');
         console.warn('Current endpoint:', endpoints.admin.accessLogs.statistics);
@@ -108,24 +137,28 @@ export const accessLogService = {
       }
       
       // Check if it's a 500 error (server error - possibly SQL issue)
-      if (error.response?.status === 500) {
+      if (apiError.response?.status === 500) {
         console.warn('Server error occurred, likely SQL issue. Using mock data.');
-        console.warn('Error details:', error.response?.data);
+        console.warn('Error details:', apiError.response?.data);
         return this.getMockStatistics(days);
       }
       
       // For development, show more detailed error
       if (process.env.NODE_ENV === 'development') {
         console.error('Full error details:', {
-          url: error.config?.url,
-          method: error.config?.method,
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data
+          url: apiError.config?.url,
+          method: apiError.config?.method,
+          status: apiError.response?.status,
+          statusText: apiError.response?.statusText,
+          data: apiError.response?.data
         });
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to fetch access log statistics');
+      throw new Error(
+        apiError.response?.data?.message || 
+        apiError.message || 
+        'Failed to fetch access log statistics'
+      );
     }
   },
 
@@ -191,18 +224,23 @@ export const accessLogService = {
 
       // Handle export data
       if (response.data.data && response.data.filename) {
-        const csvContent = this.convertToCSV(response.data.data);
+        const csvContent = this.convertToCSV(response.data.data as Record<string, unknown>[]);
         this.downloadCSV(csvContent, response.data.filename);
       } else {
         throw new Error('No export data received');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error exporting access logs:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Failed to export access logs');
+      const apiError = error as ApiError;
+      throw new Error(
+        apiError.response?.data?.message || 
+        apiError.message || 
+        'Failed to export access logs'
+      );
     }
   },
 
-  convertToCSV(data: any[]): string {
+  convertToCSV(data: Record<string, unknown>[]): string {
     if (!data || !data.length) return '';
     
     try {
@@ -225,7 +263,7 @@ export const accessLogService = {
       ].join('\n');
       
       return csvContent;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error converting to CSV:', error);
       throw new Error('Failed to convert data to CSV format');
     }
@@ -249,7 +287,7 @@ export const accessLogService = {
       
       // Clean up
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error downloading CSV:', error);
       throw new Error('Failed to download CSV file');
     }

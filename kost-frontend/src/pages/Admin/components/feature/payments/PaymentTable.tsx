@@ -214,7 +214,7 @@ export const PaymentTable: React.FC<{
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <StatusBadge 
-                      status={payment.status as any} 
+                      status={payment.status} 
                       size="md"
                     >
                       {getStatusText(payment.status)}
@@ -245,7 +245,7 @@ export const PaymentTable: React.FC<{
                         <IconButton
                           icon={<Settings className="h-4 w-4" />}
                           tooltip="Manual override status"
-                          variant="warning"
+                          variant="secondary"
                           onClick={() => onManualOverride(payment)}
                         />
                       )}

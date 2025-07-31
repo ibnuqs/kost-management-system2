@@ -11,6 +11,25 @@ interface PaymentUrlResponse {
   expires_at?: string;
 }
 
+interface ResponseData {
+  snap_token?: string;
+  frontend_config?: {
+    snap_token: string;
+    client_key: string;
+    is_production: boolean;
+    transaction_details: {
+      order_id: string;
+      gross_amount: number;
+    };
+  };
+  client_key?: string;
+  is_production?: boolean;
+  order_id?: string;
+  amount?: number;
+  payment_id?: number | string;
+  expires_at?: string;
+}
+
 interface SnapPaymentData {
   snap_token: string;
   client_key: string;
@@ -31,7 +50,7 @@ class PaymentService {
     try {
       console.log('🔄 Getting Snap payment data for:', paymentId);
 
-      const response = await api.get<ApiResponse<any>>(
+      const response = await api.get<ApiResponse<ResponseData>>(
         endpoints.tenant.payments.paymentUrl(paymentId)
       );
 
@@ -40,44 +59,45 @@ class PaymentService {
       // Handle response structure safely
       const apiData = response.data;
       if ('success' in apiData && apiData.success === false) {
-        throw new Error((apiData as any).message || 'Failed to get payment data');
+        throw new Error((apiData as ApiResponse<unknown> & { message?: string }).message || 'Failed to get payment data');
       }
 
-      const data = apiData.data || apiData;
+      const data = (apiData as ApiResponse<ResponseData>).data || (apiData as ResponseData);
 
       // Extract Snap data for frontend integration
       return {
-        snap_token: data.snap_token || data.frontend_config?.snap_token,
-        client_key: data.frontend_config?.client_key || data.client_key,
+        snap_token: data.snap_token || data.frontend_config?.snap_token || '',
+        client_key: data.frontend_config?.client_key || data.client_key || '',
         is_production: data.frontend_config?.is_production || false,
         payment_data: {
-          order_id: data.frontend_config?.transaction_details?.order_id || data.order_id,
-          gross_amount: data.frontend_config?.transaction_details?.gross_amount || data.amount,
-          payment_id: data.payment_id || paymentId
+          order_id: data.frontend_config?.transaction_details?.order_id || data.order_id || '',
+          gross_amount: data.frontend_config?.transaction_details?.gross_amount || data.amount || 0,
+          payment_id: Number(data.payment_id || paymentId)
         },
         expires_at: data.expires_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ PaymentService.getSnapPaymentData error:', error);
       
       // Enhanced error handling for 405 errors
-      if (error.response?.status === 405) {
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError.response?.status === 405) {
         console.warn('🔄 Method not allowed, trying POST method...');
         
         try {
           // FALLBACK: Try POST method if GET doesn't work
-          const postResponse = await api.post<ApiResponse<any>>(
+          const postResponse = await api.post<ApiResponse<ResponseData>>(
             endpoints.tenant.payments.paymentUrl(paymentId),
             {}
           );
           
           const postData = postResponse.data;
           if ('success' in postData && postData.success === false) {
-            throw new Error((postData as any).message || 'Failed to get payment data');
+            throw new Error((postData as ApiResponse<unknown> & { message?: string }).message || 'Failed to get payment data');
           }
 
-          const data = postData.data || postData;
+          const data = (postData as ApiResponse<ResponseData>).data || (postData as ResponseData);
           
           return {
             snap_token: data.snap_token || data.frontend_config?.snap_token,
@@ -106,59 +126,47 @@ class PaymentService {
   async initiatePayment(paymentId: number | string): Promise<PaymentUrlResponse> {
     console.log('⚠️ DEPRECATED: Using legacy payment URL. Consider using getSnapPaymentData() for better UX');
     
-    try {
-      const snapData = await this.getSnapPaymentData(paymentId);
+    const snapData = await this.getSnapPaymentData(paymentId);
       
-      // Return legacy format
-      return {
-        payment_url: `https://app.${snapData.is_production ? '' : 'sandbox.'}midtrans.com/snap/v1/transactions/${snapData.snap_token}`,
-        snap_token: snapData.snap_token,
-        expires_at: snapData.expires_at
-      };
-    } catch (error) {
-      throw error;
-    }
+    // Return legacy format
+    return {
+      payment_url: `https://app.${snapData.is_production ? '' : 'sandbox.'}midtrans.com/snap/v1/transactions/${snapData.snap_token}`,
+      snap_token: snapData.snap_token,
+      expires_at: snapData.expires_at
+    };
   }
 
   /**
    * Check payment status after Snap.js payment
    */
   async checkPaymentStatus(paymentId: number | string): Promise<Payment> {
-    try {
-      const response = await api.get<ApiResponse<Payment>>(
-        endpoints.tenant.payments.status(paymentId)
-      );
+    const response = await api.get<ApiResponse<Payment>>(
+      endpoints.tenant.payments.status(paymentId)
+    );
       
-      const apiData = response.data;
-      if ('success' in apiData && apiData.success === false) {
-        throw new Error((apiData as any).message || 'Failed to check payment status');
-      }
-
-      return (apiData as any).data || apiData;
-    } catch (error) {
-      throw error;
+    const apiData = response.data;
+    if ('success' in apiData && apiData.success === false) {
+      throw new Error((apiData as ApiResponse<unknown> & { message?: string }).message || 'Failed to check payment status');
     }
+
+    return (apiData as ApiResponse<Payment>).data || (apiData as Payment);
   }
 
   /**
    * Sync payment status with Midtrans after popup payment
    */
   async syncPaymentStatus(paymentId: number | string): Promise<{ old_status: string; new_status: string; updated_at: string }> {
-    try {
-      const response = await api.post<ApiResponse<{ old_status: string; new_status: string; updated_at: string }>>(
-        endpoints.tenant.payments.syncStatus(paymentId),
-        {}
-      );
+    const response = await api.post<ApiResponse<{ old_status: string; new_status: string; updated_at: string }>>(
+      endpoints.tenant.payments.syncStatus(paymentId),
+      {}
+    );
       
-      const apiData = response.data;
-      if ('success' in apiData && apiData.success === false) {
-        throw new Error((apiData as any).message || 'Failed to sync payment status');
-      }
-
-      return (apiData as any).data || apiData;
-    } catch (error) {
-      throw error;
+    const apiData = response.data;
+    if ('success' in apiData && apiData.success === false) {
+      throw new Error((apiData as ApiResponse<unknown> & { message?: string }).message || 'Failed to sync payment status');
     }
+
+    return (apiData as ApiResponse<{ old_status: string; new_status: string; updated_at: string }>).data || (apiData as { old_status: string; new_status: string; updated_at: string });
   }
 
   /**
@@ -168,39 +176,35 @@ class PaymentService {
     page?: number;
     limit?: number;
   }): Promise<{ payments: Payment[]; total: number; current_page?: number; last_page?: number }> {
-    try {
-      const response = await api.get<ApiResponse<Payment[]>>(
-        endpoints.tenant.payments.index, 
-        { params }
-      );
+    const response = await api.get<ApiResponse<Payment[]>>(
+      endpoints.tenant.payments.index, 
+      { params }
+    );
       
-      // Handle both paginated and non-paginated responses
-      const apiData = response.data;
-      if ('success' in apiData && apiData.success === false) {
-        throw new Error((apiData as any).message || 'Failed to fetch payments');
-      }
+    // Handle both paginated and non-paginated responses
+    const apiData = response.data;
+    if ('success' in apiData && apiData.success === false) {
+      throw new Error((apiData as ApiResponse<unknown> & { message?: string }).message || 'Failed to fetch payments');
+    }
 
-      // Check if it's a paginated response
-      const data = (apiData as any).data || apiData;
-      if (Array.isArray(data)) {
-        // Non-paginated response
-        return {
-          payments: data,
-          total: data.length
-        };
-      } else if (data.data && Array.isArray(data.data)) {
-        // Paginated response
-        return {
-          payments: data.data,
-          total: data.total || data.data.length,
-          current_page: data.current_page,
-          last_page: data.last_page
-        };
-      } else {
-        throw new Error('Invalid response format');
-      }
-    } catch (error) {
-      throw error;
+    // Check if it's a paginated response
+    const data = (apiData as ApiResponse<Payment[] | { data: Payment[]; total: number; current_page?: number; last_page?: number }>).data || (apiData as Payment[] | { data: Payment[]; total: number; current_page?: number; last_page?: number });
+    if (Array.isArray(data)) {
+      // Non-paginated response
+      return {
+        payments: data,
+        total: data.length
+      };
+    } else if (data && 'data' in data && Array.isArray(data.data)) {
+      // Paginated response
+      return {
+        payments: data.data,
+        total: data.total || data.data.length,
+        current_page: data.current_page,
+        last_page: data.last_page
+      };
+    } else {
+      throw new Error('Invalid response format');
     }
   }
 
@@ -208,65 +212,80 @@ class PaymentService {
    * Get payment by ID
    */
   async getPaymentById(paymentId: number | string): Promise<Payment> {
-    try {
-      const response = await api.get<ApiResponse<Payment>>(`/tenant/payments/${paymentId}`);
+    const response = await api.get<ApiResponse<Payment>>(`/tenant/payments/${paymentId}`);
       
-      const apiData = response.data;
-      if ('success' in apiData && apiData.success === false) {
-        throw new Error((apiData as any).message || 'Failed to fetch payment');
-      }
-
-      return (apiData as any).data || apiData;
-    } catch (error) {
-      throw error;
+    const apiData = response.data;
+    if ('success' in apiData && apiData.success === false) {
+      throw new Error((apiData as ApiResponse<unknown> & { message?: string }).message || 'Failed to fetch payment');
     }
+
+    return (apiData as ApiResponse<Payment>).data || (apiData as Payment);
   }
 
   /**
    * Get payment history with filters
    */
   async getPaymentHistory(filters?: PaymentFilters): Promise<Payment[]> {
-    try {
-      const response = await api.get<ApiResponse<Payment[]>>(
-        endpoints.tenant.payments.history,
-        { params: filters }
-      );
+    const response = await api.get<ApiResponse<Payment[]>>(
+      endpoints.tenant.payments.history,
+      { params: filters }
+    );
       
-      const apiData = response.data;
-      if ('success' in apiData && apiData.success === false) {
-        throw new Error((apiData as any).message || 'Failed to fetch payment history');
-      }
-
-      return (apiData as any).data || apiData || [];
-    } catch (error) {
-      throw error;
+    const apiData = response.data;
+    if ('success' in apiData && apiData.success === false) {
+      throw new Error((apiData as ApiResponse<unknown> & { message?: string }).message || 'Failed to fetch payment history');
     }
+
+    return (apiData as ApiResponse<Payment[]>).data || (apiData as Payment[]) || [];
   }
 
   /**
    * Get payment summary/statistics
    */
-  async getPaymentSummary(): Promise<any> {
-    try {
-      const response = await api.get<ApiResponse<any>>(
-        endpoints.tenant.payments.summary
-      );
+  async getPaymentSummary(): Promise<{
+    current_month: Payment | null;
+    next_payment: Payment | null;
+    recent_payments: Payment[];
+    total_unpaid: number;
+    payment_history_summary: {
+      total_payments: number;
+      total_paid: number;
+      success_rate: number;
+    };
+  }> {
+    type SummaryData = {
+      current_month: Payment | null;
+      next_payment: Payment | null;
+      recent_payments: Payment[];
+      total_unpaid: number;
+      payment_history_summary: {
+        total_payments: number;
+        total_paid: number;
+        success_rate: number;
+      };
+    };
+    
+    const response = await api.get<ApiResponse<SummaryData>>(
+      endpoints.tenant.payments.summary
+    );
       
-      const apiData = response.data;
-      if ('success' in apiData && apiData.success === false) {
-        throw new Error((apiData as any).message || 'Failed to fetch payment summary');
-      }
-
-      return (apiData as any).data || apiData;
-    } catch (error) {
-      throw error;
+    const apiData = response.data;
+    if ('success' in apiData && apiData.success === false) {
+      throw new Error((apiData as ApiResponse<unknown> & { message?: string }).message || 'Failed to fetch payment summary');
     }
+
+    return (apiData as ApiResponse<SummaryData>).data || (apiData as SummaryData);
   }
 
   /**
    * SNAP.JS SPECIFIC: Handle payment success callback
    */
-  async handleSnapSuccess(result: any): Promise<void> {
+  async handleSnapSuccess(result: {
+    order_id: string;
+    transaction_status: string;
+    payment_id?: string | number;
+    [key: string]: unknown;
+  }): Promise<void> {
     try {
       console.log('✅ Handling Snap success:', result);
       
@@ -297,7 +316,12 @@ class PaymentService {
   /**
    * SNAP.JS SPECIFIC: Handle payment pending callback
    */
-  async handleSnapPending(result: any): Promise<void> {
+  async handleSnapPending(result: {
+    order_id: string;
+    transaction_status: string;
+    payment_id?: string | number;
+    [key: string]: unknown;
+  }): Promise<void> {
     try {
       console.log('⏳ Handling Snap pending:', result);
       
@@ -324,7 +348,12 @@ class PaymentService {
   /**
    * SNAP.JS SPECIFIC: Handle payment error callback
    */
-  async handleSnapError(result: any): Promise<void> {
+  async handleSnapError(result: {
+    order_id: string;
+    status_message: string;
+    payment_id?: string | number;
+    [key: string]: unknown;
+  }): Promise<void> {
     try {
       console.error('❌ Handling Snap error:', result);
       
@@ -359,7 +388,7 @@ class PaymentService {
       }
       
       return null;
-    } catch (error) {
+    } catch {
       console.warn('Failed to extract payment ID from order ID:', orderId);
       return null;
     }
@@ -369,31 +398,27 @@ class PaymentService {
    * Export payments data
    */
   async exportPayments(filters?: PaymentFilters): Promise<void> {
-    try {
-      const response = await api.get('/tenant/payments/export', {
-        params: filters,
-        responseType: 'blob',
-      });
+    const response = await api.get('/tenant/payments/export', {
+      params: filters,
+      responseType: 'blob',
+    });
       
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
       
-      // Get filename from response headers or use default
-      const contentDisposition = response.headers['content-disposition'];
-      const filename = contentDisposition
-        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
-        : `payments-export-${new Date().toISOString().split('T')[0]}.xlsx`;
+    // Get filename from response headers or use default
+    const contentDisposition = response.headers['content-disposition'];
+    const filename = contentDisposition
+      ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
+      : `payments-export-${new Date().toISOString().split('T')[0]}.xlsx`;
       
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      throw error;
-    }
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   }
 }
 

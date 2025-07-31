@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { 
   Activity, User, CreditCard, DollarSign, AlertTriangle, 
-  CheckCircle, Clock, Eye, ChevronRight
+  CheckCircle, Eye, ChevronRight
 } from 'lucide-react';
 import type { ActivityItem } from '../../types/dashboard';
 

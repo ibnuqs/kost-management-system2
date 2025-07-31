@@ -14,7 +14,7 @@ import {
   GenerateIndividualPaymentModal,
   ManualOverrideModal,
   VoidPaymentModal,
-  StuckPaymentDetector,
+  // StuckPaymentDetector removed during cleanup
   ExpiredPaymentModal
 } from '../components/feature/payments';
 import { Card, DangerousActionModal } from '../components/ui';
@@ -53,7 +53,7 @@ const PaymentManagement: React.FC = () => {
   const [showExpiredModal, setShowExpiredModal] = useState(false);
   const [showDangerousAction, setShowDangerousAction] = useState<{
     type: 'generate' | 'sync' | null;
-    data?: any;
+    data?: unknown;
   }>({ type: null });
 
   // Load payments when filters change
@@ -70,9 +70,9 @@ const PaymentManagement: React.FC = () => {
 
   const executeGeneratePayments = async () => {
     try {
-      await generateMonthlyPayments(showDangerousAction.data.month);
+      await generateMonthlyPayments((showDangerousAction.data as { month: string }).month);
       setShowDangerousAction({ type: null });
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -91,7 +91,7 @@ const PaymentManagement: React.FC = () => {
     try {
       await manualOverrideStatus(paymentId, newStatus, reason);
       setShowManualOverride(false);
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -108,7 +108,7 @@ const PaymentManagement: React.FC = () => {
       await manualOverrideStatus(paymentId, 'pending', `${voidType.toUpperCase()}: ${reason}`);
       setShowVoidPayment(false);
       refresh(); // Refresh data after void
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -116,7 +116,7 @@ const PaymentManagement: React.FC = () => {
   const handleSyncPayment = async (paymentId: number) => {
     try {
       await syncPaymentStatus(paymentId);
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -168,19 +168,17 @@ const PaymentManagement: React.FC = () => {
       } else {
         throw new Error(response.data.message || 'Gagal membuat payment');
       }
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'Gagal membuat payment';
+    } catch (error: unknown) {
+      const errorMessage = (error as Record<string, unknown>).response?.data?.message || (error as Error).message || 'Gagal membuat payment';
       toast.error(errorMessage);
       throw error; // Re-throw to let modal handle the error state
-    } finally {
-      setIndividualGenerating(false);
     }
   };
 
   const handlePreCheck = async (month: string) => {
     try {
       return await preCheckGenerate(month);
-    } catch (error) {
+    } catch {
       // Return error state if API fails
       return {
         valid: false,
@@ -200,7 +198,7 @@ const PaymentManagement: React.FC = () => {
   const handleExportPayments = async () => {
     try {
       await exportPayments(filters);
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -216,7 +214,7 @@ const PaymentManagement: React.FC = () => {
     try {
       await bulkSyncPayments();
       setShowDangerousAction({ type: null });
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -264,14 +262,9 @@ const PaymentManagement: React.FC = () => {
           />
         </div>
 
-        {/* Stuck Payment Detection */}
-        <div className="mb-8">
-          <StuckPaymentDetector
-            onViewPayment={handleViewPayment}
-            onSyncPayment={handleSyncPayment}
-            onManualOverride={handleManualOverride}
-            onBulkSync={bulkSyncPayments}
-          />
+        {/* Stuck Payment Detection - Temporarily Disabled */}
+        <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-700 text-sm">Stuck payment detector temporarily unavailable</p>
         </div>
 
 
@@ -353,7 +346,7 @@ const PaymentManagement: React.FC = () => {
       <DangerousActionModal
         isOpen={showDangerousAction.type === 'generate'}
         title="Generate Pembayaran Bulanan"
-        message={`Anda akan membuat tagihan untuk SEMUA penyewa aktif untuk bulan ${showDangerousAction.data?.month || ''}. Operasi ini akan membuat banyak data pembayaran baru dan tidak dapat dibatalkan.`}
+        message={`Anda akan membuat tagihan untuk SEMUA penyewa aktif untuk bulan ${(showDangerousAction.data as { month: string })?.month || ''}. Operasi ini akan membuat banyak data pembayaran baru dan tidak dapat dibatalkan.`}
         confirmText="Ya, Generate Pembayaran"
         cancelText="Batal"
         dangerLevel="high"

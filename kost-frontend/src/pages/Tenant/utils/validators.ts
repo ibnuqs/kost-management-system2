@@ -56,9 +56,6 @@ export const validatePhoneNumber = (phone: string): ValidationResult => {
     return { isValid: false, message: 'Phone number is required' };
   }
   
-  // Remove all non-digits
-  const cleaned = phone.replace(/\D/g, '');
-  
   // Check Indonesian phone number patterns
   const indonesianPhoneRegex = /^(\+62|62|0)[0-9]{9,12}$/;
   
@@ -117,7 +114,7 @@ export const validateIdCard = (idCard: string): ValidationResult => {
 /**
  * Validate required field
  */
-export const validateRequired = (value: any, fieldName: string): ValidationResult => {
+export const validateRequired = (value: unknown, fieldName: string): ValidationResult => {
   if (value === null || value === undefined || value === '') {
     return { isValid: false, message: `${fieldName} is required` };
   }
@@ -338,8 +335,8 @@ export const validateRfidUid = (uid: string): ValidationResult => {
  * Validate form object
  */
 export const validateForm = (
-  data: Record<string, any>,
-  rules: Record<string, (value: any) => ValidationResult>
+  data: Record<string, unknown>,
+  rules: Record<string, (value: unknown) => ValidationResult>
 ): { isValid: boolean; errors: Record<string, string> } => {
   const errors: Record<string, string> = {};
   let isValid = true;
@@ -359,9 +356,9 @@ export const validateForm = (
  * Create a validator that checks multiple conditions
  */
 export const createValidator = (
-  validators: ((value: any) => ValidationResult)[]
+  validators: ((value: unknown) => ValidationResult)[]
 ) => {
-  return (value: any): ValidationResult => {
+  return (value: unknown): ValidationResult => {
     for (const validator of validators) {
       const result = validator(value);
       if (!result.isValid) {

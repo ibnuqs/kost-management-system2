@@ -1,6 +1,7 @@
 <?php
 
 // File: app/Http/Middleware/CheckRole.php
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -14,9 +15,9 @@ class CheckRole
      */
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        if (!$request->user()) {
+        if (! $request->user()) {
             return response()->json([
-                'message' => 'Unauthenticated.'
+                'message' => 'Unauthenticated.',
             ], 401);
         }
 
@@ -24,7 +25,7 @@ class CheckRole
             return response()->json([
                 'message' => "Access denied. {$role} role required.",
                 'user_role' => $request->user()->role,
-                'required_role' => $role
+                'required_role' => $role,
             ], 403);
         }
 

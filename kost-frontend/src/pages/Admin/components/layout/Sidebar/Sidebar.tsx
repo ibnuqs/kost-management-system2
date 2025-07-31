@@ -7,7 +7,10 @@ import {
 import type { MenuCategories, CategoryLabels, MenuItem } from '../../../types';
 
 interface SidebarProps {
-  user: any;
+  user: {
+    name: string;
+    role: string;
+  };
   menuCategories: MenuCategories;
   categoryLabels: CategoryLabels;
   currentPage: string;

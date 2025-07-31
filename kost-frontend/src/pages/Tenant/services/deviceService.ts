@@ -9,6 +9,16 @@ import {
   DeviceControl
 } from '../types/device';
 
+// Define error type for better type safety
+interface ServiceError {
+  message?: string;
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
 class DeviceService {
   /**
    * Get room devices
@@ -22,16 +32,17 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getRoomDevices error:', error);
-      throw new Error(error.message || 'Failed to fetch room devices');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch room devices');
     }
   }
 
   /**
    * Control device
    */
-  async controlDevice(deviceId: string, action: string, data?: any): Promise<{ success: boolean; message: string }> {
+  async controlDevice(deviceId: string, action: string, data?: Record<string, unknown>): Promise<{ success: boolean; message: string }> {
     try {
       const response = await api.post<ApiResponse<{ success: boolean; message: string }>>(
         `/tenant/devices/${deviceId}/control`, 
@@ -43,9 +54,10 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.controlDevice error:', error);
-      throw new Error(error.message || 'Failed to control device');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to control device');
     }
   }
 
@@ -63,9 +75,10 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getDeviceStatus error:', error);
-      throw new Error(error.message || 'Failed to fetch device status');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch device status');
     }
   }
 
@@ -81,9 +94,10 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getDeviceById error:', error);
-      throw new Error(error.message || 'Failed to fetch device');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch device');
     }
   }
 
@@ -99,9 +113,10 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getDeviceStats error:', error);
-      throw new Error(error.message || 'Failed to fetch device statistics');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch device statistics');
     }
   }
 
@@ -110,7 +125,7 @@ class DeviceService {
    */
   async getDeviceLogs(deviceId?: string, limit?: number): Promise<DeviceLog[]> {
     try {
-      const params: any = {};
+      const params: Record<string, string | number> = {};
       if (deviceId) params.device_id = deviceId;
       if (limit) params.limit = limit;
 
@@ -121,9 +136,10 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getDeviceLogs error:', error);
-      throw new Error(error.message || 'Failed to fetch device logs');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch device logs');
     }
   }
 
@@ -139,9 +155,10 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getDeviceHealth error:', error);
-      throw new Error(error.message || 'Failed to fetch device health');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch device health');
     }
   }
 
@@ -158,36 +175,38 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getDeviceAlerts error:', error);
-      throw new Error(error.message || 'Failed to fetch device alerts');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch device alerts');
     }
   }
 
   /**
    * Acknowledge device alert
    */
-  async acknowledgeAlert(alertId: string): Promise<any> {
+  async acknowledgeAlert(alertId: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await api.post<ApiResponse<any>>(`/tenant/devices/alerts/${alertId}/acknowledge`);
+      const response = await api.post<ApiResponse<{ success: boolean; message: string }>>(`/tenant/devices/alerts/${alertId}/acknowledge`);
 
       if (response.data.success === false) {
         throw new Error(response.data.message || 'Failed to acknowledge alert');
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.acknowledgeAlert error:', error);
-      throw new Error(error.message || 'Failed to acknowledge alert');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to acknowledge alert');
     }
   }
 
   /**
    * Resolve device alert
    */
-  async resolveAlert(alertId: string, resolution?: string): Promise<any> {
+  async resolveAlert(alertId: string, resolution?: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await api.post<ApiResponse<any>>(`/tenant/devices/alerts/${alertId}/resolve`, {
+      const response = await api.post<ApiResponse<{ success: boolean; message: string }>>(`/tenant/devices/alerts/${alertId}/resolve`, {
         resolution
       });
 
@@ -196,9 +215,10 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.resolveAlert error:', error);
-      throw new Error(error.message || 'Failed to resolve alert');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to resolve alert');
     }
   }
 
@@ -214,9 +234,10 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getDeviceControls error:', error);
-      throw new Error(error.message || 'Failed to fetch device controls');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch device controls');
     }
   }
 
@@ -227,18 +248,19 @@ class DeviceService {
     title: string;
     description: string;
     severity: 'low' | 'medium' | 'high' | 'critical';
-  }): Promise<any> {
+  }): Promise<{ success: boolean; message: string; report_id?: string }> {
     try {
-      const response = await api.post<ApiResponse<any>>(`/tenant/devices/${deviceId}/report`, issue);
+      const response = await api.post<ApiResponse<{ success: boolean; message: string; report_id?: string }>>(`/tenant/devices/${deviceId}/report`, issue);
 
       if (response.data.success === false) {
         throw new Error(response.data.message || 'Failed to report device issue');
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.reportDeviceIssue error:', error);
-      throw new Error(error.message || 'Failed to report device issue');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to report device issue');
     }
   }
 
@@ -254,9 +276,10 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getOnlineDevices error:', error);
-      throw new Error(error.message || 'Failed to fetch online devices');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch online devices');
     }
   }
 
@@ -272,9 +295,10 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getOfflineDevices error:', error);
-      throw new Error(error.message || 'Failed to fetch offline devices');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch offline devices');
     }
   }
 
@@ -290,45 +314,48 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getDevicesByType error:', error);
-      throw new Error(error.message || 'Failed to fetch devices by type');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch devices by type');
     }
   }
 
   /**
    * Get device configuration
    */
-  async getDeviceConfig(deviceId: string): Promise<any> {
+  async getDeviceConfig(deviceId: string): Promise<Record<string, unknown>> {
     try {
-      const response = await api.get<ApiResponse<any>>(`/tenant/devices/${deviceId}/config`);
+      const response = await api.get<ApiResponse<Record<string, unknown>>>(`/tenant/devices/${deviceId}/config`);
 
       if (response.data.success === false) {
         throw new Error(response.data.message || 'Failed to fetch device configuration');
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getDeviceConfig error:', error);
-      throw new Error(error.message || 'Failed to fetch device configuration');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch device configuration');
     }
   }
 
   /**
    * Update device configuration (if allowed)
    */
-  async updateDeviceConfig(deviceId: string, config: any): Promise<any> {
+  async updateDeviceConfig(deviceId: string, config: Record<string, unknown>): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await api.put<ApiResponse<any>>(`/tenant/devices/${deviceId}/config`, config);
+      const response = await api.put<ApiResponse<{ success: boolean; message: string }>>(`/tenant/devices/${deviceId}/config`, config);
 
       if (response.data.success === false) {
         throw new Error(response.data.message || 'Failed to update device configuration');
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.updateDeviceConfig error:', error);
-      throw new Error(error.message || 'Failed to update device configuration');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to update device configuration');
     }
   }
 
@@ -352,18 +379,19 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.testDeviceConnectivity error:', error);
-      throw new Error(error.message || 'Failed to test device connectivity');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to test device connectivity');
     }
   }
 
   /**
    * Get device usage statistics
    */
-  async getDeviceUsage(deviceId: string, period: 'day' | 'week' | 'month'): Promise<any> {
+  async getDeviceUsage(deviceId: string, period: 'day' | 'week' | 'month'): Promise<Record<string, unknown>> {
     try {
-      const response = await api.get<ApiResponse<any>>(`/tenant/devices/${deviceId}/usage`, {
+      const response = await api.get<ApiResponse<Record<string, unknown>>>(`/tenant/devices/${deviceId}/usage`, {
         params: { period }
       });
 
@@ -372,18 +400,19 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getDeviceUsage error:', error);
-      throw new Error(error.message || 'Failed to fetch device usage');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch device usage');
     }
   }
 
   /**
    * Get device history (status changes over time)
    */
-  async getDeviceHistory(deviceId: string, limit?: number): Promise<any[]> {
+  async getDeviceHistory(deviceId: string, limit?: number): Promise<Record<string, unknown>[]> {
     try {
-      const response = await api.get<ApiResponse<any[]>>(`/tenant/devices/${deviceId}/history`, {
+      const response = await api.get<ApiResponse<Record<string, unknown>[]>>(`/tenant/devices/${deviceId}/history`, {
         params: { limit }
       });
 
@@ -392,18 +421,19 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.getDeviceHistory error:', error);
-      throw new Error(error.message || 'Failed to fetch device history');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to fetch device history');
     }
   }
 
   /**
    * Subscribe to device notifications
    */
-  async subscribeToDeviceNotifications(deviceId: string, events: string[]): Promise<any> {
+  async subscribeToDeviceNotifications(deviceId: string, events: string[]): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await api.post<ApiResponse<any>>(`/tenant/devices/${deviceId}/subscribe`, {
+      const response = await api.post<ApiResponse<{ success: boolean; message: string }>>(`/tenant/devices/${deviceId}/subscribe`, {
         events
       });
 
@@ -412,27 +442,29 @@ class DeviceService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.subscribeToDeviceNotifications error:', error);
-      throw new Error(error.message || 'Failed to subscribe to device notifications');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to subscribe to device notifications');
     }
   }
 
   /**
    * Unsubscribe from device notifications
    */
-  async unsubscribeFromDeviceNotifications(deviceId: string): Promise<any> {
+  async unsubscribeFromDeviceNotifications(deviceId: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await api.post<ApiResponse<any>>(`/tenant/devices/${deviceId}/unsubscribe`);
+      const response = await api.post<ApiResponse<{ success: boolean; message: string }>>(`/tenant/devices/${deviceId}/unsubscribe`);
 
       if (response.data.success === false) {
         throw new Error(response.data.message || 'Failed to unsubscribe from device notifications');
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('DeviceService.unsubscribeFromDeviceNotifications error:', error);
-      throw new Error(error.message || 'Failed to unsubscribe from device notifications');
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.response?.data?.message || serviceError.message || 'Failed to unsubscribe from device notifications');
     }
   }
 }

@@ -273,7 +273,7 @@ class TenantService {
   }
 
   // Legacy support for existing code
-  async getTenantPayments(params?: any): Promise<ApiResponse<PaginatedResponse<Payment>>> {
+  async getTenantPayments(params?: Record<string, unknown>): Promise<ApiResponse<PaginatedResponse<Payment>>> {
     // This uses the legacy endpoint for backward compatibility
     const response = await api.get<ApiResponse<PaginatedResponse<Payment>>>(
       endpoints.payments.tenantPayments,
@@ -321,10 +321,10 @@ class TenantService {
   }
 
   // Legacy support for existing code
-  async getAccessLogs(params?: any): Promise<ApiResponse<PaginatedResponse<AccessLog>>> {
+  async getAccessLogs(params?: Record<string, unknown>): Promise<ApiResponse<PaginatedResponse<AccessLog>>> {
     // This uses the legacy endpoint for backward compatibility
     const response = await api.get<ApiResponse<PaginatedResponse<AccessLog>>>(
-      endpoints.accessLogs.tenantIndex,
+      '/tenant/access/history',
       { params }
     );
     return response.data;
@@ -362,7 +362,7 @@ class TenantService {
   // Legacy support for existing code
   async getTenantCards(): Promise<ApiResponse<RfidCard[]>> {
     // This uses the legacy endpoint for backward compatibility
-    const response = await api.get<ApiResponse<RfidCard[]>>(endpoints.rfid.tenantCards);
+    const response = await api.get<ApiResponse<RfidCard[]>>('/tenant/rfid/cards');
     return response.data;
   }
 
@@ -438,7 +438,7 @@ class TenantService {
     page?: number;
     per_page?: number;
     status?: string;
-  }): Promise<ApiResponse<PaginatedResponse<any>>> {
+  }): Promise<ApiResponse<PaginatedResponse<Record<string, unknown>>>> {
     const response = await api.get(endpoints.tenant.support.tickets, { params });
     return response.data;
   }
@@ -468,7 +468,7 @@ class TenantService {
     page?: number;
     per_page?: number;
     read?: boolean;
-  }): Promise<ApiResponse<PaginatedResponse<any>>> {
+  }): Promise<ApiResponse<PaginatedResponse<Record<string, unknown>>>> {
     const response = await api.get(endpoints.notifications.index, { params });
     return response.data;
   }

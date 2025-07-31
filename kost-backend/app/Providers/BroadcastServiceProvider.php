@@ -1,5 +1,7 @@
 <?php
+
 // Providers/BroadcastServiceProvider.php
+
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Broadcast;

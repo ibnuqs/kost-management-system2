@@ -45,7 +45,7 @@ export const ManualOverrideModal: React.FC<ManualOverrideModalProps> = ({
     try {
       await onOverride(payment.id, newStatus, reason.trim());
       handleClose();
-    } catch (error) {
+    } catch {
       // Error handled by parent
     } finally {
       setIsLoading(false);

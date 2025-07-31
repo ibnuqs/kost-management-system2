@@ -36,7 +36,7 @@ const AccessLogManagement: React.FC = () => {
   
   const [isExporting, setIsExporting] = useState(false);
 
-  const handleFilterChange = (key: keyof AccessLogFiltersType, value: any) => {
+  const handleFilterChange = (key: keyof AccessLogFiltersType, value: AccessLogFiltersType[typeof key]) => {
     const newFilters = { ...filters, [key]: value, page: 1 }; // Reset to page 1 when filtering
     setFilters(newFilters);
     loadLogs(newFilters);
@@ -52,7 +52,7 @@ const AccessLogManagement: React.FC = () => {
     try {
       setIsExporting(true);
       await exportLogs(filters);
-    } catch (error) {
+    } catch {
       // Error handled by hook
     } finally {
       setIsExporting(false);

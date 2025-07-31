@@ -1,5 +1,6 @@
 // File: src/services/mqttService.ts
 import mqtt, { MqttClient, IClientOptions } from 'mqtt';
+import { ENV, getMqttConfig } from '../config/environment';
 
 export interface MqttMessage {
   topic: string;
@@ -31,6 +32,19 @@ class MqttService {
   private reconnectTimeout: NodeJS.Timeout | null = null;
 
   constructor() {
+    // Check if MQTT is explicitly disabled
+    const mqttConfig = getMqttConfig();
+    if (!mqttConfig.enabled) {
+      console.log('🔧 MQTT service explicitly disabled in environment');
+      this.updateConnectionStatus({
+        connected: false,
+        connecting: false,
+        error: 'MQTT disabled in configuration',
+        reconnectAttempts: this.maxReconnectAttempts // Prevent reconnection attempts
+      });
+      return;
+    }
+
     // Only auto-connect if MQTT credentials are properly configured
     if (this.hasValidCredentials()) {
       this.connect();
@@ -53,6 +67,12 @@ class MqttService {
       return this.connectionStatus.connected;
     }
 
+    // Check if MQTT should be disabled due to previous failures
+    if (this.connectionStatus.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log('🔧 MQTT disabled - max reconnection attempts reached');
+      return false;
+    }
+
     // Check if credentials are configured
     if (!this.hasValidCredentials()) {
       console.warn('❌ Cannot connect: MQTT credentials not configured');
@@ -73,35 +93,63 @@ class MqttService {
 
     try {
       // Get MQTT configuration from environment
-      const host = import.meta.env.VITE_HIVEMQ_HOST;
-      const port = import.meta.env.VITE_HIVEMQ_PORT || '8884';
-      const username = import.meta.env.VITE_HIVEMQ_USERNAME;
-      const password = import.meta.env.VITE_HIVEMQ_PASSWORD;
+      const mqttConfig = getMqttConfig();
+      const host = mqttConfig.host;
+      const port = mqttConfig.port;
+      let username = mqttConfig.username;
+      let password = mqttConfig.password;
+      
+      // Handle different MQTT brokers
+      if (host.includes('broker.emqx.io')) {
+        console.log('🔧 Using public EMQX broker (no auth)');
+        username = undefined;
+        password = undefined;
+      } else {
+        // Ensure we have the complete password for HiveMQ
+        if (username === 'hivemq.webclient.1745310839638') {
+          password = 'UXNM#Agehw3B8!4;>6tz';
+          console.log('🔧 Using complete HiveMQ password');
+        }
+        
+        // Remove quotes if they exist (Vite might include them)
+        if (password && password.startsWith('"') && password.endsWith('"')) {
+          password = password.slice(1, -1);
+        }
+        
+        // Also handle single quotes
+        if (password && password.startsWith("'") && password.endsWith("'")) {
+          password = password.slice(1, -1);
+        }
+      }
 
       console.log('🔗 Connecting to MQTT broker:', host);
+      if (ENV.DEBUG) {
+        console.log('🔧 MQTT Debug - Processed Username:', username);
+        console.log('🔧 MQTT Debug - Password length:', password?.length);
+        console.log('🔧 MQTT Debug - Host:', host);
+        console.log('🔧 MQTT Debug - Port:', port);
+        console.log('🔧 MQTT Config:', mqttConfig);
+      }
 
+      // HiveMQ Cloud WebSocket endpoint (official format from console)
       const brokerUrl = `wss://${host}:${port}/mqtt`;
       
+      const clientId = `kost_frontend_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('🔧 MQTT Debug - Client ID:', clientId);
+      
       const options: IClientOptions = {
-        clientId: `kost_frontend_${Math.random().toString(16).substr(2, 8)}`,
+        clientId,
         username,
         password,
-        keepalive: 60,
-        reconnectPeriod: 0, // Disable auto-reconnect, we'll handle it manually
-        clean: true,
+        keepalive: 30,
         connectTimeout: 10000,
-        will: {
-          topic: 'rfid/status',
-          payload: JSON.stringify({
-            status: 'offline',
-            timestamp: new Date().toISOString(),
-            client_type: 'frontend',
-            device_id: 'frontend-client'
-          }),
-          qos: 1,
-          retain: true
-        }
+        clean: true,
+        protocol: 'wss',
+        protocolVersion: 4,
       };
+
+      console.log('🔧 MQTT Debug - Full connection URL:', brokerUrl);
+      console.log('🔧 MQTT Debug - Connection options:', JSON.stringify(options, null, 2));
 
       console.log('🔗 Connecting to MQTT broker:', brokerUrl);
       
@@ -113,8 +161,10 @@ class MqttService {
           return;
         }
 
-        this.client.on('connect', () => {
+        this.client.on('connect', (connack) => {
           console.log('✅ Connected to MQTT broker');
+          console.log('🔧 Connection acknowledgment:', connack);
+          console.log('🔧 Connected with credentials:', { username, clientId });
           this.updateConnectionStatus({
             connected: true,
             connecting: false,
@@ -124,7 +174,7 @@ class MqttService {
 
           // Frontend status publishing disabled to reduce console spam
           // Only publish if debugging is enabled
-          if (import.meta.env.VITE_MQTT_DEBUG === 'true') {
+          if (ENV.DEBUG) {
             this.publish('rfid/status', JSON.stringify({
               device_id: 'frontend-client',
               wifi_connected: true,
@@ -147,6 +197,36 @@ class MqttService {
 
         this.client.on('error', (error) => {
           console.error('❌ MQTT connection error:', error);
+          console.error('🔧 Error details:', {
+            message: error.message,
+            code: (error as any).code,
+            errno: (error as any).errno,
+            type: typeof error,
+            stack: error.stack
+          });
+          
+          // Check if this is an authorization error
+          if (error.message.includes('Not authorized') || error.message.includes('Connection refused')) {
+            console.error('🔒 MQTT Authorization failed - credentials may be invalid or expired');
+            console.error('🔧 Auth failure details:', {
+              username_length: username?.length,
+              password_length: password?.length,
+              host,
+              port,
+              brokerUrl,
+              clientId
+            });
+            this.updateConnectionStatus({
+              ...this.connectionStatus,
+              connected: false,
+              connecting: false,
+              error: 'Authorization failed - check MQTT credentials',
+              reconnectAttempts: this.maxReconnectAttempts // Stop further attempts
+            });
+            resolve(false);
+            return; // Don't schedule reconnect for auth failures
+          }
+          
           this.updateConnectionStatus({
             ...this.connectionStatus,
             connected: false,
@@ -159,6 +239,17 @@ class MqttService {
 
         this.client.on('close', () => {
           console.log('🔌 MQTT connection closed');
+          
+          // Don't reconnect if we've reached max attempts (likely auth failure)
+          if (this.connectionStatus.reconnectAttempts >= this.maxReconnectAttempts) {
+            this.updateConnectionStatus({
+              ...this.connectionStatus,
+              connected: false,
+              connecting: false
+            });
+            return;
+          }
+          
           this.updateConnectionStatus({
             ...this.connectionStatus,
             connected: false,
@@ -207,7 +298,7 @@ class MqttService {
 
     if (this.client) {
       // Offline status publishing disabled to reduce console spam
-      if (import.meta.env.VITE_MQTT_DEBUG === 'true') {
+      if (ENV.DEBUG) {
         this.publish('rfid/status', JSON.stringify({
           device_id: 'frontend-client',
           wifi_connected: false,
@@ -329,7 +420,7 @@ class MqttService {
   /**
    * Send command to ESP32 device
    */
-  public sendDeviceCommand(deviceId: string, command: string, payload?: any): boolean {
+  public sendDeviceCommand(deviceId: string, command: string, payload?: Record<string, unknown>): boolean {
     const commandMessage = {
       command,
       device_id: deviceId,
@@ -344,7 +435,7 @@ class MqttService {
   /**
    * Send RFID command response
    */
-  public sendRfidResponse(uid: string, response: any): boolean {
+  public sendRfidResponse(uid: string, response: Record<string, unknown>): boolean {
     const responseMessage = {
       uid,
       ...response,
@@ -361,9 +452,8 @@ class MqttService {
    * Check if MQTT credentials are properly configured
    */
   private hasValidCredentials(): boolean {
-    const host = import.meta.env.VITE_HIVEMQ_HOST;
-    const username = import.meta.env.VITE_HIVEMQ_USERNAME;
-    const password = import.meta.env.VITE_HIVEMQ_PASSWORD;
+    const mqttConfig = getMqttConfig();
+    const { host, username, password } = mqttConfig;
 
     return !!(
       host && 
@@ -446,10 +536,10 @@ class MqttService {
 
   private scheduleReconnect(): void {
     if (this.connectionStatus.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('🛑 Max reconnection attempts reached');
+      console.log('🛑 Max reconnection attempts reached - MQTT service disabled');
       this.updateConnectionStatus({
         ...this.connectionStatus,
-        error: 'Max reconnection attempts reached'
+        error: 'MQTT disabled - restart application to retry'
       });
       return;
     }
@@ -478,7 +568,7 @@ export const mqttService = new MqttService();
 
 // Make MQTT service globally available for ESP32 commands
 if (typeof window !== 'undefined') {
-  window.mqttService = mqttService;
+  (window as any).mqttService = mqttService;
 }
 
 export default mqttService;

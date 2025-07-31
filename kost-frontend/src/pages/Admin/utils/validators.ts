@@ -1,5 +1,5 @@
 // File: src/pages/Admin/utils/validators.ts
-export const validateRequired = (value: any): string | null => {
+export const validateRequired = (value: unknown): string | null => {
   if (!value || (typeof value === 'string' && !value.trim())) {
     return 'This field is required';
   }
@@ -164,7 +164,7 @@ export const validateJsonString = (jsonString: string): string | null => {
 };
 
 // Comprehensive form validation
-export const validateForm = (data: Record<string, any>, rules: Record<string, Array<(value: any) => string | null>>): Record<string, string> => {
+export const validateForm = (data: Record<string, unknown>, rules: Record<string, Array<(value: unknown) => string | null>>): Record<string, string> => {
   const errors: Record<string, string> = {};
   
   Object.keys(rules).forEach(field => {

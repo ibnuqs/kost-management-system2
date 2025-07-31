@@ -1,7 +1,6 @@
 // File: src/pages/Admin/components/features/tenants/TenantStats.tsx
 import React from 'react';
-import { Users, UserCheck, UserX, AlertTriangle, DollarSign, TrendingUp } from 'lucide-react';
-import { Card } from '../../ui';
+import { Users, UserCheck, UserX, DollarSign } from 'lucide-react';
 
 interface TenantStatsProps {
   stats: {

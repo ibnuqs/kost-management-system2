@@ -1,6 +1,6 @@
 // File: src/pages/Admin/components/feature/rooms/TenantAssignmentWizard.tsx
 import React, { useState, useEffect } from 'react';
-import { X, ArrowRight, User, DollarSign, Calendar, CheckCircle, AlertTriangle, Search } from 'lucide-react';
+import { X, ArrowRight, User, DollarSign, CheckCircle, AlertTriangle, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { tenantService } from '../../../services/tenantService';
 import type { Room } from '../../../types/room';
@@ -33,9 +33,9 @@ interface AvailableTenant {
   user: {
     name: string;
     email: string;
-    phone: string;
+    phone?: string;
   };
-  tenant_code: string;
+  tenant_code?: string;
   status: string;
 }
 
@@ -93,7 +93,7 @@ export const TenantAssignmentWizard: React.FC<TenantAssignmentWizardProps> = ({
         per_page: 100 
       });
       setAvailableTenants(response.tenants);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load tenants:', error);
       toast.error('Gagal memuat daftar penyewa');
     } finally {
@@ -180,9 +180,9 @@ export const TenantAssignmentWizard: React.FC<TenantAssignmentWizardProps> = ({
       onClose();
       resetWizard();
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to assign tenant:', error);
-      toast.error(error.message || 'Gagal menempatkan penyewa');
+      toast.error((error as Error).message || 'Gagal menempatkan penyewa');
     } finally {
       setSubmitting(false);
     }

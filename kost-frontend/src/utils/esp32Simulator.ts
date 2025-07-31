@@ -11,7 +11,7 @@ interface SimulatorConfig {
 class ESP32Simulator {
   private client: mqtt.MqttClient | null = null;
   private config: SimulatorConfig;
-  private statusTimer: NodeJS.Timer | null = null;
+  private statusTimer: NodeJS.Timeout | null = null;
   private isRunning = false;
 
   constructor(config: SimulatorConfig) {
@@ -82,8 +82,8 @@ class ESP32Simulator {
         });
       });
 
-    } catch (error) {
-      console.error(`❌ Failed to start ESP32 simulator:`, error);
+    } catch {
+      console.error(`❌ Failed to start ESP32 simulator`);
       return false;
     }
   }
@@ -166,8 +166,8 @@ class ESP32Simulator {
           this.simulateDoorAction('close');
           break;
       }
-    } catch (error) {
-      console.error('❌ Error parsing command:', error);
+    } catch {
+      console.error('❌ Error parsing command');
     }
   }
 
@@ -271,7 +271,7 @@ export const esp32Simulator = new ESP32Simulator({
 
 // Make globally available for testing
 if (typeof window !== 'undefined') {
-  (window as any).esp32Simulator = esp32Simulator;
+  (window as Record<string, unknown>).esp32Simulator = esp32Simulator;
 }
 
 export default esp32Simulator;

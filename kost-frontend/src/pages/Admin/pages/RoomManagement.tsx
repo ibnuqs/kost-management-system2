@@ -1,15 +1,13 @@
 // File: src/pages/Admin/pages/RoomManagement.tsx
 import React, { useState, useMemo } from 'react';
-import { 
-  Plus, 
-  RefreshCw, 
-  AlertTriangle, 
-  Building2, 
-  Search,
+import {
+  Plus,
+  RefreshCw,
+  AlertTriangle,
+  Building2,
   Filter,
   LayoutGrid,
-  Loader2,
-  Settings
+  Loader2
 } from 'lucide-react';
 import { useRooms } from '../hooks';
 import {
@@ -22,9 +20,8 @@ import {
   ArchiveConfirmModal,
   ReservationModal
 } from '../components/feature/rooms';
-import { PageHeader } from '../components/layout';
 import { reservationService } from '../services/reservationService';
-import type { Room, RoomFormData, TenantAssignmentData, RoomReservationData } from '../types/room';
+import type { Room, RoomFormData, RoomReservationData } from '../types/room';
 
 // Loading component
 const RoomManagementLoading = () => (
@@ -54,7 +51,7 @@ const RoomManagementError = ({ error, onRetry }: { error: string; onRetry: () =>
       </div>
       <button
         onClick={onRetry}
-        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 font-medium"
+        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium"
       >
         <RefreshCw className="w-4 h-4" />
         Coba Lagi
@@ -72,7 +69,6 @@ const RoomManagement: React.FC = () => {
     createRoom,
     updateRoom,
     deleteRoom,
-    assignTenant,
     removeTenant,
     archiveRoom,
     unarchiveRoom,
@@ -148,7 +144,7 @@ const RoomManagement: React.FC = () => {
     try {
       await createRoom(data);
       closeModal('add');
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -158,7 +154,7 @@ const RoomManagement: React.FC = () => {
     try {
       await updateRoom(selectedRoom.id, data);
       closeModal('edit');
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -172,7 +168,7 @@ const RoomManagement: React.FC = () => {
       try {
         await deleteRoom(room.id);
         closeAllModals();
-      } catch (error) {
+      } catch {
         // Error handled by hook
       }
     }
@@ -189,7 +185,7 @@ const RoomManagement: React.FC = () => {
       try {
         await removeTenant(room.id);
         closeAllModals();
-      } catch (error) {
+      } catch {
         // Error handled by hook
       }
     }
@@ -212,13 +208,13 @@ const RoomManagement: React.FC = () => {
     // TODO: Replace with proper tenant details modal
     const tenant = room.tenant;
     const tenantInfo = [
-      `Nama: ${tenant.user?.name || 'Unknown'}`,
-      `Email: ${tenant.user?.email || 'N/A'}`,
-      `Telepon: ${tenant.user?.phone || 'N/A'}`,
-      `Kode Penyewa: ${tenant.tenant_code || 'N/A'}`,
-      `Sewa Bulanan: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(parseFloat(tenant.monthly_rent))}`,
-      `Tanggal Mulai: ${new Date(tenant.start_date).toLocaleDateString('id-ID')}`,
-      `Status: ${tenant.status === 'active' ? 'Aktif' : tenant.status}`
+      `Nama: ${tenant.user?.name || 'Unknown'}!`,
+      `Email: ${tenant.user?.email || 'N/A'}!`,
+      `Telepon: ${tenant.user?.phone || 'N/A'}!`,
+      `Kode Penyewa: ${tenant.tenant_code || 'N/A'}!`,
+      `Sewa Bulanan: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(parseFloat(tenant.monthly_rent))}!`,
+      `Tanggal Mulai: ${new Date(tenant.start_date).toLocaleDateString('id-ID')}!`,
+      `Status: ${tenant.status === 'active' ? 'Aktif' : tenant.status}!`
     ].join('\n');
     
     alert(`Detail Penyewa Kamar ${room.room_number}:\n\n${tenantInfo}`);
@@ -233,7 +229,7 @@ const RoomManagement: React.FC = () => {
     try {
       await archiveRoom(room.id, reason ? { reason } : undefined);
       closeModal('archive');
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -247,7 +243,7 @@ const RoomManagement: React.FC = () => {
       try {
         await unarchiveRoom(room.id);
         closeAllModals();
-      } catch (error) {
+      } catch {
         // Error handled by hook
       }
     }
@@ -260,8 +256,8 @@ const RoomManagement: React.FC = () => {
       closeModal('reservation');
       // Refresh the rooms list to show updated reservation status
       await refresh();
-    } catch (error) {
-      console.error('Failed to reserve room:', error);
+    } catch (_error) {
+      console.error('Failed to reserve room:', _error);
     }
   };
 
@@ -274,18 +270,6 @@ const RoomManagement: React.FC = () => {
   if (error && !rooms.length) {
     return <RoomManagementError error={error} onRetry={refresh} />;
   }
-
-  // Transform rooms to ensure compatibility if needed
-  const compatibleRooms: Room[] = rooms.map(room => ({
-    ...room,
-    // Ensure all required properties exist
-    room_number: room.room_number || '',
-    room_name: room.room_name || '',
-    monthly_price: room.monthly_price || '0',
-    status: room.status || 'available',
-    created_at: room.created_at || new Date().toISOString(),
-    updated_at: room.updated_at || new Date().toISOString(),
-  }));
 
   return (
     <div className="min-h-screen bg-gray-50">

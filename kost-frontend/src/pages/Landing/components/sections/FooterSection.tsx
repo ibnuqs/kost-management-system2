@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   MapPin, Phone, Mail, MessageCircle, Facebook, Instagram, 
-  Heart, ExternalLink, ArrowUp, Calendar 
+  Heart, ArrowUp, Calendar 
 } from 'lucide-react';
 
 interface FooterSectionProps {
@@ -216,5 +216,3 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
     </footer>
   );
 };
-
-export default FooterSection;

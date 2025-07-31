@@ -1,7 +1,7 @@
 // src/pages/Landing/services/landingService.ts - FIXED
 import { BookingFormData, ContactFormData } from '../types';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -47,7 +47,7 @@ class LandingService {
 
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Booking inquiry error:', error);
       
       // Mock success response for demo purposes
@@ -86,7 +86,7 @@ class LandingService {
 
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Contact form error:', error);
       
       // Mock success response for demo purposes
@@ -114,7 +114,7 @@ class LandingService {
 
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Room availability error:', error);
       
       // Mock data for demo
@@ -160,7 +160,7 @@ class LandingService {
 
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Schedule visit error:', error);
       
       return new Promise((resolve) => {

@@ -1,15 +1,16 @@
 <?php
+
 // app/Services/PaymentService.php
 
 namespace App\Services;
 
+use App\Models\Payment;
+use App\Models\Tenant;
+use Exception;
+use Illuminate\Support\Facades\Log;
 use Midtrans\Config;
 use Midtrans\Snap;
 use Midtrans\Transaction;
-use App\Models\Payment;
-use App\Models\Tenant;
-use Illuminate\Support\Facades\Log;
-use Exception;
 
 class PaymentService
 {
@@ -29,17 +30,17 @@ class PaymentService
     {
         try {
             $tenant = Tenant::with('user', 'room')->findOrFail($tenantId);
-            
+
             // Generate unique order ID
-            $orderId = 'KOST-' . $tenantId . '-' . date('Ym') . '-' . time();
-            
+            $orderId = 'KOST-'.$tenantId.'-'.date('Ym').'-'.time();
+
             // Create payment record
             $payment = Payment::create([
                 'order_id' => $orderId,
                 'tenant_id' => $tenantId,
                 'payment_month' => $month,
                 'amount' => $amount,
-                'status' => 'pending'
+                'status' => 'pending',
             ]);
 
             // Prepare transaction details for Midtrans
@@ -56,11 +57,11 @@ class PaymentService
 
             $itemDetails = [
                 [
-                    'id' => 'rent-' . $tenant->room->id,
+                    'id' => 'rent-'.$tenant->room->id,
                     'price' => $amount,
                     'quantity' => 1,
-                    'name' => 'Sewa Kamar ' . $tenant->room->room_number . ' - ' . date('F Y', strtotime($month))
-                ]
+                    'name' => 'Sewa Kamar '.$tenant->room->room_number.' - '.date('F Y', strtotime($month)),
+                ],
             ];
 
             $transactionData = [
@@ -71,7 +72,7 @@ class PaymentService
 
             // Get Snap token from Midtrans
             $snapToken = Snap::getSnapToken($transactionData);
-            
+
             // Update payment with snap token
             $payment->update(['snap_token' => $snapToken]);
 
@@ -81,14 +82,15 @@ class PaymentService
                 'success' => true,
                 'payment' => $payment,
                 'snap_token' => $snapToken,
-                'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v2/vtweb/' . $snapToken
+                'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v2/vtweb/'.$snapToken,
             ];
 
         } catch (Exception $e) {
-            Log::error('Payment creation failed: ' . $e->getMessage());
+            Log::error('Payment creation failed: '.$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
         }
     }
@@ -104,10 +106,10 @@ class PaymentService
             $fraudStatus = $notification['fraud_status'] ?? '';
 
             // Verify signature
-            $signatureKey = hash('sha512', 
-                $orderId . 
-                $notification['status_code'] . 
-                $notification['gross_amount'] . 
+            $signatureKey = hash('sha512',
+                $orderId.
+                $notification['status_code'].
+                $notification['gross_amount'].
                 config('midtrans.server_key')
             );
 
@@ -122,22 +124,22 @@ class PaymentService
             if ($transactionStatus == 'capture') {
                 if ($fraudStatus == 'challenge') {
                     $payment->update(['status' => 'pending']);
-                } else if ($fraudStatus == 'accept') {
+                } elseif ($fraudStatus == 'accept') {
                     $payment->update([
                         'status' => 'paid',
                         'paid_at' => now(),
-                        'payment_method' => $notification['payment_type'] ?? 'unknown'
+                        'payment_method' => $notification['payment_type'] ?? 'unknown',
                     ]);
                 }
-            } else if ($transactionStatus == 'settlement') {
+            } elseif ($transactionStatus == 'settlement') {
                 $payment->update([
                     'status' => 'paid',
                     'paid_at' => now(),
-                    'payment_method' => $notification['payment_type'] ?? 'unknown'
+                    'payment_method' => $notification['payment_type'] ?? 'unknown',
                 ]);
-            } else if ($transactionStatus == 'pending') {
+            } elseif ($transactionStatus == 'pending') {
                 $payment->update(['status' => 'pending']);
-            } else if (in_array($transactionStatus, ['deny', 'expire', 'cancel'])) {
+            } elseif (in_array($transactionStatus, ['deny', 'expire', 'cancel'])) {
                 $payment->update(['status' => 'overdue']);
             }
 
@@ -145,14 +147,15 @@ class PaymentService
 
             return [
                 'success' => true,
-                'payment' => $payment
+                'payment' => $payment,
             ];
 
         } catch (Exception $e) {
-            Log::error('Payment notification processing failed: ' . $e->getMessage());
+            Log::error('Payment notification processing failed: '.$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
         }
     }
@@ -164,16 +167,17 @@ class PaymentService
     {
         try {
             $status = Transaction::status($orderId);
-            
+
             return [
                 'success' => true,
-                'status' => $status
+                'status' => $status,
             ];
         } catch (Exception $e) {
-            Log::error('Get payment status failed: ' . $e->getMessage());
+            Log::error('Get payment status failed: '.$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
         }
     }
@@ -185,7 +189,7 @@ class PaymentService
     {
         try {
             $cancel = Transaction::cancel($orderId);
-            
+
             // Update local payment record
             $payment = Payment::where('order_id', $orderId)->first();
             if ($payment) {
@@ -194,13 +198,14 @@ class PaymentService
 
             return [
                 'success' => true,
-                'result' => $cancel
+                'result' => $cancel,
             ];
         } catch (Exception $e) {
-            Log::error('Cancel payment failed: ' . $e->getMessage());
+            Log::error('Cancel payment failed: '.$e->getMessage());
+
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
         }
     }

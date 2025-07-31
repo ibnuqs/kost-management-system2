@@ -45,6 +45,8 @@ export const useAccessHistory = (params: UseAccessHistoryParams = {}) => {
       last_page: query.data.total > 0 ? Math.ceil(query.data.total / (filterParams.per_page || 10)) : 1,
       per_page: filterParams.per_page || 10,
       total: query.data.total || 0,
+      from: ((filterParams.page || 1) - 1) * (filterParams.per_page || 10) + 1,
+      to: Math.min((filterParams.page || 1) * (filterParams.per_page || 10), query.data.total || 0),
     } : null,
   };
 };

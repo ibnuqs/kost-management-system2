@@ -18,7 +18,6 @@ import {
 } from '../components/sections';
 import { useModalState } from '../hooks';
 import { RoomType, BookingFormData, ContactFormData } from '../types';
-import { ROOM_TYPES } from '../utils/constants';
 import { analyticsService } from '../services';
 
 interface LandingPageProps {
@@ -37,9 +36,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     openModal, 
     closeModal 
   } = useModalState();
-
-  // Find selected room data
-  const selectedRoom = selectedRoomType ? ROOM_TYPES.find(room => room.id === selectedRoomType) : undefined;
 
   // Modal handlers
   const handleBookingClick = (roomType?: RoomType) => {
@@ -171,5 +167,3 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     </LandingLayout>
   );
 };
-
-export default LandingPage;

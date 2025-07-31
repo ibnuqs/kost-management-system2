@@ -15,11 +15,12 @@ export const useRfidCards = () => {
     retry: 2,
     retryDelay: 1000,
     select: (data): RfidCard[] => data, // Remove .data since service already returns the array
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Failed to fetch RFID cards:', error);
       // Optional: Show toast error message
-      if (error.message && !error.message.includes('Authentication required')) {
-        toast.error('Gagal memuat kartu RFID: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage && !errorMessage.includes('Authentication required')) {
+        toast.error('Gagal memuat kartu RFID: ' + errorMessage);
       }
     },
   });
@@ -53,8 +54,16 @@ export const useRequestNewCard = () => {
         queryKey: tenantQueryKeys.dashboard(),
       });
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Failed to submit card request';
+    onError: (error: unknown) => {
+      let message = 'Failed to submit card request';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorWithResponse = error as { response?: { data?: { message?: string } } };
+        if (errorWithResponse.response?.data?.message) {
+          message = errorWithResponse.response.data.message;
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       toast.error(message);
     },
   });
@@ -78,8 +87,16 @@ export const useReportLostCard = () => {
         queryKey: tenantQueryKeys.dashboard(),
       });
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Failed to report lost card';
+    onError: (error: unknown) => {
+      let message = 'Failed to report lost card';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorWithResponse = error as { response?: { data?: { message?: string } } };
+        if (errorWithResponse.response?.data?.message) {
+          message = errorWithResponse.response.data.message;
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       toast.error(message);
     },
   });
@@ -103,8 +120,16 @@ export const useToggleCardStatus = () => {
         queryKey: tenantQueryKeys.dashboard(),
       });
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Gagal mengubah status kartu';
+    onError: (error: unknown) => {
+      let message = 'Gagal mengubah status kartu';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorWithResponse = error as { response?: { data?: { message?: string } } };
+        if (errorWithResponse.response?.data?.message) {
+          message = errorWithResponse.response.data.message;
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       toast.error(message);
     },
   });

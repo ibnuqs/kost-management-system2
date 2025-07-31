@@ -66,8 +66,8 @@ export const useTenants = (): UseTenantReturn => {
       setPagination(data.pagination);
       setCurrentFilters(filters);
       
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to load tenants';
+    } catch (err: unknown) {
+      const errorMessage = (err as Error).message || 'Failed to load tenants';
       setError(errorMessage);
       console.error('Load tenants error:', err);
       
@@ -87,8 +87,8 @@ export const useTenants = (): UseTenantReturn => {
       // Refresh the tenant list
       await loadTenants(currentFilters, true);
       
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to create tenant';
+    } catch (err: unknown) {
+      const errorMessage = (err as Error).message || 'Failed to create tenant';
       console.error('Create tenant error:', err);
       throw new Error(errorMessage);
     }
@@ -106,8 +106,8 @@ export const useTenants = (): UseTenantReturn => {
       await loadTenants(currentFilters, true);
       console.log('✅ Tenant list refreshed');
       
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to update tenant';
+    } catch (err: unknown) {
+      const errorMessage = (err as Error).message || 'Failed to update tenant';
       console.error('❌ Update tenant error:', err);
       throw new Error(errorMessage);
     }
@@ -120,8 +120,8 @@ export const useTenants = (): UseTenantReturn => {
       // Refresh the tenant list
       await loadTenants(currentFilters, true);
       
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to delete tenant';
+    } catch (err: unknown) {
+      const errorMessage = (err as Error).message || 'Failed to delete tenant';
       console.error('Delete tenant error:', err);
       throw new Error(errorMessage);
     }
@@ -134,8 +134,8 @@ export const useTenants = (): UseTenantReturn => {
       // Refresh the tenant list
       await loadTenants(currentFilters, true);
       
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to move out tenant';
+    } catch (err: unknown) {
+      const errorMessage = (err as Error).message || 'Failed to move out tenant';
       console.error('Move out tenant error:', err);
       throw new Error(errorMessage);
     }
@@ -149,8 +149,8 @@ export const useTenants = (): UseTenantReturn => {
       await loadTenants(currentFilters, true);
       
       toast.success('Tenant suspended successfully');
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to suspend tenant';
+    } catch (err: unknown) {
+      const errorMessage = (err as Error).message || 'Failed to suspend tenant';
       console.error('Suspend tenant error:', err);
       toast.error(errorMessage);
       throw new Error(errorMessage);
@@ -165,8 +165,8 @@ export const useTenants = (): UseTenantReturn => {
       await loadTenants(currentFilters, true);
       
       toast.success('Tenant reactivated successfully');
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to reactivate tenant';
+    } catch (err: unknown) {
+      const errorMessage = (err as Error).message || 'Failed to reactivate tenant';
       console.error('Reactivate tenant error:', err);
       toast.error(errorMessage);
       throw new Error(errorMessage);

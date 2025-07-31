@@ -6,7 +6,7 @@ import type { AccessLogFilters as AccessLogFiltersType } from '../../../types/ac
 
 interface AccessLogFiltersProps {
   filters: AccessLogFiltersType;
-  onFilterChange: (key: keyof AccessLogFiltersType, value: any) => void;
+  onFilterChange: (key: keyof AccessLogFiltersType, value: AccessLogFiltersType[typeof key]) => void;
 }
 
 export const AccessLogFilters: React.FC<AccessLogFiltersProps> = ({ 

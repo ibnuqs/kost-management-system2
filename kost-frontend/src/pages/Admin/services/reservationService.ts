@@ -10,7 +10,7 @@ import type { ApiResponse } from '../types/common';
 interface ReservationResponse {
   success: boolean;
   data: Room;
-  reservation_info?: any;
+  reservation_info?: unknown;
   message: string;
 }
 
@@ -19,10 +19,10 @@ interface SystemHealthResponse {
   data: {
     overall_status: 'healthy' | 'warning' | 'critical' | 'unhealthy';
     health_checks: {
-      database: any;
-      payments: any;
-      tenants: any;
-      commands: any;
+      database: unknown;
+      payments: unknown;
+      tenants: unknown;
+      commands: unknown;
       timestamp: string;
     };
   };
@@ -57,8 +57,8 @@ export const reservationService = {
   async assignTenantEnhanced(
     roomId: number, 
     data: TenantAssignmentEnhancedData
-  ): Promise<ApiResponse<{ room: Room; tenant: any }>> {
-    const response = await api.post<ApiResponse<{ room: Room; tenant: any }>>(
+  ): Promise<ApiResponse<{ room: Room; tenant: unknown }>> {
+    const response = await api.post<ApiResponse<{ room: Room; tenant: unknown }>>(
       `/admin/rooms/${roomId}/assign-tenant-enhanced`,
       data
     );
@@ -69,8 +69,8 @@ export const reservationService = {
   async generateMonthlyPayments(data: { 
     date?: string; 
     dry_run?: boolean 
-  } = {}): Promise<ApiResponse<any>> {
-    const response = await api.post<ApiResponse<any>>(
+  } = {}): Promise<ApiResponse<unknown>> {
+    const response = await api.post<ApiResponse<unknown>>(
       '/admin/system/generate-monthly-payments',
       data
     );
@@ -80,23 +80,23 @@ export const reservationService = {
   async processPaymentStatus(data: { 
     grace_days?: number; 
     dry_run?: boolean 
-  } = {}): Promise<ApiResponse<any>> {
-    const response = await api.post<ApiResponse<any>>(
+  } = {}): Promise<ApiResponse<unknown>> {
+    const response = await api.post<ApiResponse<unknown>>(
       '/admin/system/process-payment-status',
       data
     );
     return response.data;
   },
 
-  async updateTenantAccess(tenantId: number): Promise<ApiResponse<any>> {
-    const response = await api.post<ApiResponse<any>>(
+  async updateTenantAccess(tenantId: number): Promise<ApiResponse<unknown>> {
+    const response = await api.post<ApiResponse<unknown>>(
       `/admin/system/update-tenant-access/${tenantId}`
     );
     return response.data;
   },
 
-  async updateAllTenantsAccess(): Promise<ApiResponse<any>> {
-    const response = await api.post<ApiResponse<any>>(
+  async updateAllTenantsAccess(): Promise<ApiResponse<unknown>> {
+    const response = await api.post<ApiResponse<unknown>>(
       '/admin/system/update-all-tenants-access'
     );
     return response.data;
@@ -104,8 +104,8 @@ export const reservationService = {
 
   async cleanupExpiredReservations(data: { 
     dry_run?: boolean 
-  } = {}): Promise<ApiResponse<any>> {
-    const response = await api.post<ApiResponse<any>>(
+  } = {}): Promise<ApiResponse<unknown>> {
+    const response = await api.post<ApiResponse<unknown>>(
       '/admin/system/cleanup-expired-reservations',
       data
     );
@@ -159,7 +159,7 @@ export const reservationService = {
         hour: '2-digit',
         minute: '2-digit'
       });
-    } catch (error) {
+    } catch {
       return timestamp;
     }
   }

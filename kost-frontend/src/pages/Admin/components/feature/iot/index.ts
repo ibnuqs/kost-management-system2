@@ -7,7 +7,7 @@ export { default as DeviceForm } from './DeviceForm';
 export { default as DeviceFilters } from './DeviceFilters';
 export { ESP32Dashboard } from './ESP32Dashboard';
 export { ESP32CommandCenter } from './ESP32CommandCenter';
-export { ESP32Simulator } from './ESP32Simulator';
+// ESP32Simulator removed during cleanup
 export { DeviceRoomMapping } from './DeviceRoomMapping';
 
 // Re-export types for convenience

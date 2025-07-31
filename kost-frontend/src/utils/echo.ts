@@ -4,7 +4,7 @@ import Pusher from 'pusher-js';
 import { env } from '../config/env';
 
 // Define callback type for event handling
-type EventCallback = (eventType: string, data: any) => void;
+type EventCallback = (eventType: string, data: Record<string, unknown>) => void;
 
 // Extend window interface for TypeScript
 declare global {
@@ -18,7 +18,7 @@ window.Pusher = Pusher;
 // Echo Manager (singleton)
 // ==============================
 class EchoManager {
-  private echo: Echo<any> | null = null;
+  private echo: Echo<Pusher> | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectInterval = 3000; // 3 seconds
@@ -125,7 +125,7 @@ class EchoManager {
       this.handleDisconnection();
     });
 
-    pusher.connection.bind('error', (error: any) => {
+    pusher.connection.bind('error', (error: Record<string, unknown>) => {
       console.error('❌ Pusher connection error:', error);
       
       // Handle auth errors specifically
@@ -136,12 +136,12 @@ class EchoManager {
       this.handleDisconnection();
     });
 
-    pusher.connection.bind('state_change', (states: any) => {
+    pusher.connection.bind('state_change', (states: Record<string, unknown>) => {
       console.log(`🔄 WebSocket state: ${states.previous} → ${states.current}`);
     });
 
     // Subscription events
-    pusher.bind('pusher:subscription_error', (error: any) => {
+    pusher.bind('pusher:subscription_error', (error: Record<string, unknown>) => {
       console.error('❌ Subscription error:', error);
       
       // Handle 401 subscription errors
@@ -150,7 +150,7 @@ class EchoManager {
       }
     });
 
-    pusher.bind('pusher:subscription_succeeded', (data: any) => {
+    pusher.bind('pusher:subscription_succeeded', () => {
       console.log('✅ Subscription succeeded');
     });
   }
@@ -204,7 +204,7 @@ class EchoManager {
     this.reconnectAttempts = 0;
   }
 
-  public getEcho(): Echo<any> | null {
+  public getEcho(): Echo<Pusher> | null {
     return this.echo;
   }
 
@@ -324,19 +324,19 @@ export const echoHelpers = {
     if (!channel) return null;
     
     return channel
-      .listen('.RfidAccessEvent', (e: any) => {
+      .listen('.RfidAccessEvent', (e: Record<string, unknown>) => {
         console.log('🔑 Admin RFID event:', e);
         callback('rfid-access', e);
       })
-      .listen('.PaymentSuccessEvent', (e: any) => {
+      .listen('.PaymentSuccessEvent', (e: Record<string, unknown>) => {
         console.log('💰 Admin payment event:', e);
         callback('payment-success', e);
       })
-      .listen('.DeviceStatusEvent', (e: any) => {
+      .listen('.DeviceStatusEvent', (e: Record<string, unknown>) => {
         console.log('🔌 Admin device event:', e);
         callback('device-status', e);
       })
-      .listen('.SystemAlertEvent', (e: any) => {
+      .listen('.SystemAlertEvent', (e: Record<string, unknown>) => {
         console.log('🚨 Admin system alert:', e);
         callback('system-alert', e);
       });
@@ -353,19 +353,19 @@ export const echoHelpers = {
     if (!channel) return null;
     
     return channel
-      .listen('.RfidAccessEvent', (e: any) => {
+      .listen('.RfidAccessEvent', (e: Record<string, unknown>) => {
         console.log('🔑 User RFID event:', e);
         callback('rfid-access', e);
       })
-      .listen('.PaymentSuccessEvent', (e: any) => {
+      .listen('.PaymentSuccessEvent', (e: Record<string, unknown>) => {
         console.log('💰 User payment event:', e);
         callback('payment-success', e);
       })
-      .listen('.PaymentReminderEvent', (e: any) => {
+      .listen('.PaymentReminderEvent', (e: Record<string, unknown>) => {
         console.log('⏰ User payment reminder:', e);
         callback('payment-reminder', e);
       })
-      .listen('.NotificationEvent', (e: any) => {
+      .listen('.NotificationEvent', (e: Record<string, unknown>) => {
         console.log('📢 User notification:', e);
         callback('notification', e);
       });
@@ -379,10 +379,10 @@ export const echoHelpers = {
     if (!channel) return null;
     
     return channel
-      .listen('.RoomAccessEvent', (e: any) => {
+      .listen('.RoomAccessEvent', (e: Record<string, unknown>) => {
         callback('room-access', e);
       })
-      .listen('.RoomMaintenanceEvent', (e: any) => {
+      .listen('.RoomMaintenanceEvent', (e: Record<string, unknown>) => {
         callback('room-maintenance', e);
       });
   },
@@ -393,7 +393,7 @@ export const echoHelpers = {
     if (!channel) return null;
     
     return channel
-      .listen('.SystemAnnouncementEvent', (e: any) => {
+      .listen('.SystemAnnouncementEvent', (e: Record<string, unknown>) => {
         console.log('📢 System announcement:', e);
         callback('system-announcement', e);
       });

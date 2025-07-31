@@ -1,12 +1,8 @@
-﻿// pages/Auth/pages/Login.tsx
-// Modern Login page with enhanced UX
-
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, ArrowLeft, Home, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, Home } from 'lucide-react';
 import { useAuth, useAuthForm } from '../hooks';
-import { AuthInput, AuthButton, ErrorAlert, PasswordInput } from '../components/ui';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { validateEmail, validatePassword, AUTH_ROUTES, REDIRECT_ROUTES } from '../utils';
 import { LoginFormData } from '../types';
 

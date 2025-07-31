@@ -9,23 +9,30 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Notification extends Model
 {
     use HasFactory;
-    
+
     public $timestamps = false;
 
     // Type constants (sesuai database schema)
     const TYPE_PAYMENT = 'payment';
+
     const TYPE_ACCESS = 'access';
+
     const TYPE_SYSTEM = 'system';
 
     // Priority constants
     const PRIORITY_LOW = 'low';
+
     const PRIORITY_MEDIUM = 'medium';
+
     const PRIORITY_HIGH = 'high';
+
     const PRIORITY_URGENT = 'urgent';
 
     // Status constants (sesuai database)
     const STATUS_UNREAD = 'unread';
+
     const STATUS_READ = 'read';
+
     const STATUS_ARCHIVED = 'archived';
 
     protected $fillable = [
@@ -60,7 +67,7 @@ class Notification extends Model
     public function markAsRead(): void
     {
         $this->update([
-            'status' => self::STATUS_READ
+            'status' => self::STATUS_READ,
         ]);
     }
 

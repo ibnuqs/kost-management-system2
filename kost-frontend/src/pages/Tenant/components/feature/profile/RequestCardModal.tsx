@@ -5,7 +5,6 @@ import { useRequestNewCard } from '../../../hooks/useRfidCards';
 import { Modal } from '../../ui/Modal';
 import { Button } from '../../ui/Buttons';
 import { Textarea, Select } from '../../ui/Forms';
-import { InfoCard } from '../../ui/Card';
 import { validateRequired, validateTextLength } from '../../../utils/validators';
 
 interface RequestCardModalProps {
@@ -88,7 +87,7 @@ const RequestCardModal: React.FC<RequestCardModalProps> = ({
       setRequestType('new');
       setReason('');
       setErrors({});
-    } catch (error) {
+    } catch {
       // Error handled by mutation
     }
   };
@@ -128,7 +127,7 @@ const RequestCardModal: React.FC<RequestCardModalProps> = ({
           <Select
             label="Request Type"
             value={requestType}
-            onChange={(e) => setRequestType(e.target.value as any)}
+            onChange={(e) => setRequestType(e.target.value as 'new' | 'replacement')}
             options={requestTypeOptions}
             required
           />

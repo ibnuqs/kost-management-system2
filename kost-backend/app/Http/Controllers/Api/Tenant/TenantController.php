@@ -7,8 +7,8 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class TenantController extends Controller
 {
@@ -19,16 +19,16 @@ class TenantController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $tenant = Tenant::where('user_id', $user->id)
                 ->where('status', Tenant::STATUS_ACTIVE)
                 ->with(['room', 'user'])
                 ->first();
 
-            if (!$tenant) {
+            if (! $tenant) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Active tenant record not found'
+                    'message' => 'Active tenant record not found',
                 ], 404);
             }
 
@@ -54,13 +54,13 @@ class TenantController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $profileData,
-                'message' => 'Profile settings retrieved successfully'
+                'message' => 'Profile settings retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve profile settings: ' . $e->getMessage()
+                'message' => 'Failed to retrieve profile settings: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -72,22 +72,22 @@ class TenantController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $tenant = Tenant::where('user_id', $user->id)
                 ->where('status', Tenant::STATUS_ACTIVE)
                 ->first();
 
-            if (!$tenant) {
+            if (! $tenant) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Active tenant record not found'
+                    'message' => 'Active tenant record not found',
                 ], 404);
             }
 
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255',
                 'phone' => 'sometimes|nullable|string|max:20',
-                'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
+                'email' => 'sometimes|required|email|unique:users,email,'.$user->id,
                 'current_password' => 'sometimes|required_with:new_password|string',
                 'new_password' => 'sometimes|min:8|confirmed',
             ]);
@@ -96,7 +96,7 @@ class TenantController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -115,16 +115,16 @@ class TenantController extends Controller
 
             // Update password if provided
             if ($request->has('new_password') && $request->has('current_password')) {
-                if (!Hash::check($request->current_password, $user->password)) {
+                if (! Hash::check($request->current_password, $user->password)) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Current password is incorrect'
+                        'message' => 'Current password is incorrect',
                     ], 422);
                 }
                 $updateData['password'] = Hash::make($request->new_password);
             }
 
-            if (!empty($updateData)) {
+            if (! empty($updateData)) {
                 $user->update($updateData);
             }
 
@@ -136,13 +136,13 @@ class TenantController extends Controller
                     'email' => $user->email,
                     'phone' => $user->phone,
                 ],
-                'message' => 'Profile updated successfully'
+                'message' => 'Profile updated successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update profile: ' . $e->getMessage()
+                'message' => 'Failed to update profile: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -154,15 +154,15 @@ class TenantController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $tenant = Tenant::where('user_id', $user->id)
                 ->where('status', Tenant::STATUS_ACTIVE)
                 ->first();
 
-            if (!$tenant) {
+            if (! $tenant) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Active tenant record not found'
+                    'message' => 'Active tenant record not found',
                 ], 404);
             }
 
@@ -176,14 +176,14 @@ class TenantController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
             // Untuk sekarang, karena tidak ada field emergency contact di schema,
             // kita bisa simpan sebagai JSON di field tambahan atau buat table terpisah
             // Sementara ini kita kembalikan success response
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -191,13 +191,13 @@ class TenantController extends Controller
                     'phone' => $request->phone,
                     'relationship' => $request->relationship,
                 ],
-                'message' => 'Emergency contact updated successfully'
+                'message' => 'Emergency contact updated successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update emergency contact: ' . $e->getMessage()
+                'message' => 'Failed to update emergency contact: '.$e->getMessage(),
             ], 500);
         }
     }

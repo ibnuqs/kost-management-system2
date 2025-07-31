@@ -2,6 +2,35 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import mqttService, { MqttConnectionStatus, MqttMessageHandler } from '../services/mqttService';
 
+// Define types to replace 'any'
+type CommandPayload = Record<string, unknown>;
+
+interface RfidScanEvent {
+  uid: string;
+  device_id: string;
+  signal_strength?: number;
+  timestamp: number;
+  response?: {
+    status: string;
+    user?: string;
+    message: string;
+    access_granted: boolean;
+  };
+}
+
+interface DeviceStatus {
+  device_id: string;
+  wifi_connected: boolean;
+  mqtt_connected: boolean;
+  rfid_ready: boolean;
+  device_ip?: string;
+  uptime?: number;
+  firmware_version?: string;
+  free_heap?: number;
+  last_seen: Date;
+}
+
+
 interface UseMqttOptions {
   autoConnect?: boolean;
   topics?: string[];
@@ -15,8 +44,8 @@ interface UseMqttReturn {
   subscribe: (topic: string, handler: MqttMessageHandler) => void;
   unsubscribe: (topic: string, handler?: MqttMessageHandler) => void;
   publish: (topic: string, message: string, qos?: 0 | 1 | 2, retain?: boolean) => boolean;
-  sendDeviceCommand: (deviceId: string, command: string, payload?: any) => boolean;
-  sendRfidResponse: (uid: string, response: any) => boolean;
+  sendDeviceCommand: (deviceId: string, command: string, payload?: CommandPayload) => boolean;
+  sendRfidResponse: (uid: string, response: CommandPayload) => boolean;
 }
 
 export const useMqtt = (options: UseMqttOptions = {}): UseMqttReturn => {
@@ -41,12 +70,16 @@ export const useMqtt = (options: UseMqttOptions = {}): UseMqttReturn => {
     };
   }, []);
 
+  const connect = useCallback(async (): Promise<boolean> => {
+    return await mqttService.connect();
+  }, []);
+
   // Auto-connect if enabled
   useEffect(() => {
     if (autoConnect && !connectionStatus.connected && !connectionStatus.connecting) {
       connect();
     }
-  }, [autoConnect]);
+  }, [autoConnect, connectionStatus.connected, connectionStatus.connecting, connect]);
 
   // Auto-subscribe to topics when connected
   useEffect(() => {
@@ -62,17 +95,19 @@ export const useMqtt = (options: UseMqttOptions = {}): UseMqttReturn => {
 
   // Cleanup subscriptions on unmount
   useEffect(() => {
+    // This cleanup runs only on unmount. The ref's content is managed
+    // by subscribe/unsubscribe, and this ensures all are cleaned up.
+    // The linter warning is a false positive for this specific pattern.
     return () => {
-      handlersRef.current.forEach((handler, topic) => {
+      const currentHandlers = handlersRef.current;
+      currentHandlers.forEach((handler, topic) => {
         mqttService.unsubscribe(topic, handler);
       });
-      handlersRef.current.clear();
+      currentHandlers.clear();
     };
   }, []);
 
-  const connect = useCallback(async (): Promise<boolean> => {
-    return await mqttService.connect();
-  }, []);
+
 
   const disconnect = useCallback((): void => {
     mqttService.disconnect();
@@ -107,12 +142,12 @@ export const useMqtt = (options: UseMqttOptions = {}): UseMqttReturn => {
   const sendDeviceCommand = useCallback((
     deviceId: string, 
     command: string, 
-    payload?: any
+    payload?: CommandPayload
   ): boolean => {
     return mqttService.sendDeviceCommand(deviceId, command, payload);
   }, []);
 
-  const sendRfidResponse = useCallback((uid: string, response: any): boolean => {
+  const sendRfidResponse = useCallback((uid: string, response: CommandPayload): boolean => {
     return mqttService.sendRfidResponse(uid, response);
   }, []);
 
@@ -131,8 +166,8 @@ export const useMqtt = (options: UseMqttOptions = {}): UseMqttReturn => {
 
 // Hook for specific RFID events
 export const useRfidEvents = () => {
-  const [recentScans, setRecentScans] = useState<any[]>([]);
-  const [deviceStatuses, setDeviceStatuses] = useState<Map<string, any>>(new Map());
+  const [recentScans, setRecentScans] = useState<RfidScanEvent[]>([]);
+  const [deviceStatuses, setDeviceStatuses] = useState<Map<string, DeviceStatus>>(new Map());
   
   const { subscribe, unsubscribe, sendRfidResponse, ...mqtt } = useMqtt({
     autoConnect: true,
@@ -141,10 +176,10 @@ export const useRfidEvents = () => {
 
   useEffect(() => {
     // Handle RFID scan events
-    const handleRfidScan = (topic: string, message: string) => {
+    const handleRfidScan = (_topic: string, message: string) => {
       try {
         const data = JSON.parse(message);
-        const scanEvent = {
+        const scanEvent: RfidScanEvent = {
           uid: data.uid,
           device_id: data.device_id || 'ESP32-RFID-01',
           signal_strength: data.signal_strength,
@@ -158,10 +193,10 @@ export const useRfidEvents = () => {
     };
 
     // Handle device status updates
-    const handleDeviceStatus = (topic: string, message: string) => {
+    const handleDeviceStatus = (_topic: string, message: string) => {
       try {
         const data = JSON.parse(message);
-        const status = {
+        const status: DeviceStatus = {
           device_id: data.device_id,
           wifi_connected: data.wifi_connected || false,
           mqtt_connected: data.mqtt_connected || false,
@@ -180,7 +215,7 @@ export const useRfidEvents = () => {
     };
 
     // Handle RFID responses
-    const handleRfidResponse = (topic: string, message: string) => {
+    const handleRfidResponse = (_topic: string, message: string) => {
       try {
         const data = JSON.parse(message);
         setRecentScans(prev => 
@@ -214,7 +249,7 @@ export const useRfidEvents = () => {
     };
   }, [subscribe, unsubscribe]);
 
-  const sendResponse = useCallback((uid: string, response: any) => {
+  const sendResponse = useCallback((uid: string, response: CommandPayload) => {
     return sendRfidResponse(uid, response);
   }, [sendRfidResponse]);
 
@@ -230,7 +265,7 @@ export const useRfidEvents = () => {
 export const useDeviceControl = () => {
   const mqtt = useMqtt({ autoConnect: true });
 
-  const sendCommand = useCallback((deviceId: string, command: string, payload?: any) => {
+  const sendCommand = useCallback((deviceId: string, command: string, payload?: CommandPayload) => {
     return mqtt.sendDeviceCommand(deviceId, command, payload);
   }, [mqtt]);
 
@@ -246,7 +281,7 @@ export const useDeviceControl = () => {
     return sendCommand(deviceId, 'scan_rfid');
   }, [sendCommand]);
 
-  const updateDeviceConfig = useCallback((deviceId: string, config: any) => {
+  const updateDeviceConfig = useCallback((deviceId: string, config: CommandPayload) => {
     return sendCommand(deviceId, 'update_config', config);
   }, [sendCommand]);
 

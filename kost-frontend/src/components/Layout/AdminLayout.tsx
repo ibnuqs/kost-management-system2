@@ -6,8 +6,7 @@ import { NavigationSidebar, NavigationHeader, MobileBottomNav } from '../Navigat
 import { 
   adminMenuItems, 
   adminQuickActions, 
-  adminMobileNavItems,
-  getQuickActionsByRole 
+  adminMobileNavItems
 } from '../../config/navigation';
 
 interface AdminLayoutProps {
@@ -66,7 +65,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         }, 2000);
         break;
       default:
-        toast.info(`Action: ${actionId}`);
+        toast(`Action: ${actionId}`);
     }
   }, [navigate]);
 

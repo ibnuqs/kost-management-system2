@@ -17,7 +17,7 @@ export const GenerateModal: React.FC<{
         await onGenerate(month);
         setMonth('');
         onClose();
-      } catch (error) {
+      } catch {
         // Error is handled by the parent component
       } finally {
         setIsLoading(false);

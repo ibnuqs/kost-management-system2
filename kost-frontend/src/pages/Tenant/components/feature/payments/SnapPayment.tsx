@@ -6,6 +6,18 @@ import StatusBadge from '../../ui/Status/StatusBadge';
 import Button from '../../ui/Buttons/Button';
 import Card from '../../ui/Card/Card';
 
+// Snap payment result types
+interface SnapPaymentResult {
+  transaction_id: string;
+  status_code: string;
+  payment_type: string;
+  order_id: string;
+  gross_amount: string;
+  transaction_status: string;
+  signature_key?: string;
+  status_message?: string;
+}
+
 interface SnapPaymentProps {
   snapToken: string;
   clientKey: string;
@@ -15,9 +27,9 @@ interface SnapPaymentProps {
     gross_amount: number;
     payment_id: number;
   };
-  onSuccess?: (result: any) => void;
-  onPending?: (result: any) => void;
-  onError?: (result: any) => void;
+  onSuccess?: (result: SnapPaymentResult) => void;
+  onPending?: (result: SnapPaymentResult) => void;
+  onError?: (result: SnapPaymentResult) => void;
   onClose?: () => void;
 }
 
@@ -26,9 +38,9 @@ declare global {
   interface Window {
     snap: {
       pay: (token: string, options: {
-        onSuccess: (result: any) => void;
-        onPending: (result: any) => void;
-        onError: (result: any) => void;
+        onSuccess: (result: SnapPaymentResult) => void;
+        onPending: (result: SnapPaymentResult) => void;
+        onError: (result: SnapPaymentResult) => void;
         onClose: () => void;
       }) => void;
     };
@@ -49,11 +61,7 @@ export const SnapPayment: React.FC<SnapPaymentProps> = ({
   const [snapLoaded, setSnapLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadSnapScript();
-  }, [clientKey, isProduction]);
-
-  const loadSnapScript = () => {
+  const loadSnapScript = useCallback(() => {
     // Check if Snap script already exists
     if (document.querySelector('#snap-script')) {
       checkSnapReady();
@@ -79,7 +87,11 @@ export const SnapPayment: React.FC<SnapPaymentProps> = ({
     };
 
     document.head.appendChild(script);
-  };
+  }, [clientKey, isProduction]);
+
+  useEffect(() => {
+    loadSnapScript();
+  }, [loadSnapScript]);
 
   const checkSnapReady = () => {
     // Check if window.snap is available
@@ -118,7 +130,7 @@ export const SnapPayment: React.FC<SnapPaymentProps> = ({
       console.log('🚀 Opening Snap payment popup...');
       
       window.snap.pay(snapToken, {
-        onSuccess: (result: any) => {
+        onSuccess: (result: SnapPaymentResult) => {
           console.log('✅ Payment Success:', result);
           setIsLoading(false);
           
@@ -133,7 +145,7 @@ export const SnapPayment: React.FC<SnapPaymentProps> = ({
           }
         },
 
-        onPending: (result: any) => {
+        onPending: (result: SnapPaymentResult) => {
           console.log('⏳ Payment Pending:', result);
           setIsLoading(false);
           
@@ -148,7 +160,7 @@ export const SnapPayment: React.FC<SnapPaymentProps> = ({
           }
         },
 
-        onError: (result: any) => {
+        onError: (result: SnapPaymentResult) => {
           console.error('❌ Payment Error:', result);
           setIsLoading(false);
           
@@ -177,7 +189,7 @@ export const SnapPayment: React.FC<SnapPaymentProps> = ({
         }
       });
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Snap payment error:', error);
       setIsLoading(false);
       toast.error('Gagal membuka pembayaran. Silakan coba lagi.');

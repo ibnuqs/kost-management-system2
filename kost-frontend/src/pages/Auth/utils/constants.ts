@@ -1,4 +1,4 @@
-﻿// pages/Auth/utils/constants.ts
+// pages/Auth/utils/constants.ts
 // Constants for Auth module
 
 // API Endpoints - align with Laravel routes (removed /auth prefix since api.ts handles baseURL)
@@ -88,7 +88,7 @@ export const VALIDATION_MESSAGES = {
 // Regex patterns - ADDED for validators.ts
 export const REGEX_PATTERNS = {
   EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  PHONE: /^[\+]?[1-9][\d]{0,15}$/,
+  PHONE: /^[+]?[1-9][\d]{0,15}$/,
   PHONE_INDONESIA: /^(\+62|62|0)8[1-9][0-9]{6,9}$/,
   NAME: /^[a-zA-Z\s]+$/,
   PASSWORD_UPPERCASE: /[A-Z]/,
@@ -136,8 +136,8 @@ export const VALIDATION_RULES = {
     INVALID: VALIDATION_MESSAGES.PHONE_INVALID,
     MIN_LENGTH: 10,
     MAX_LENGTH: 20,
-    TOO_SHORT: 'Phone number must be at least 10 digits',
-    TOO_LONG: 'Phone number must not exceed 20 digits',
+    TOO_SHORT: VALIDATION_MESSAGES.PHONE_MIN_LENGTH,
+    TOO_LONG: VALIDATION_MESSAGES.PHONE_MAX_LENGTH,
   },
 } as const;
 

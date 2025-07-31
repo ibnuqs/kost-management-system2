@@ -20,7 +20,7 @@ export interface Device extends BaseEntity {
   ip_address?: string;
   mac_address?: string;
   location_description?: string;
-  configuration?: Record<string, any>;
+  configuration?: Record<string, unknown>;
   capabilities?: string[];
   error_message?: string;
   maintenance_notes?: string;
@@ -40,7 +40,7 @@ export interface DeviceStats {
 export interface DeviceLog extends BaseEntity {
   device_id: string;
   event_type: 'status_change' | 'error' | 'maintenance' | 'battery_low' | 'signal_weak';
-  event_data: Record<string, any>;
+  event_data: Record<string, unknown>;
   timestamp: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
   message: string;
@@ -76,7 +76,7 @@ export interface DeviceAlert {
 export interface DeviceControl {
   device_id: string;
   available_actions: string[];
-  current_state: Record<string, any>;
+  current_state: Record<string, unknown>;
   can_control: boolean;
   control_restrictions?: string[];
 }

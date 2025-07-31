@@ -25,7 +25,8 @@ export type {
   RoomFormData,
   RoomsResponse,
   RoomResponse,
-  TenantAssignmentData
+  TenantAssignmentData,
+  ArchiveRoomData
 } from './room';
 
 // Tenant types

@@ -4,7 +4,7 @@ import { useRfid } from '../hooks';
 import {
   RfidTable,
   RfidScanner,
-  DoorControl,
+  // DoorControl removed during cleanup
   RfidForm,
   RfidStats,
   RfidDeviceUpdater
@@ -24,7 +24,6 @@ const RfidManagement: React.FC = () => {
     users,
     rooms,
     loading,
-    error,
     registerCard,
     assignCard,
     toggleCardStatus,
@@ -37,7 +36,7 @@ const RfidManagement: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [devices, setDevices] = useState<ESP32Device[]>([]);
-  const [loadingDevices, setLoadingDevices] = useState(false);
+  const [, setLoadingDevices] = useState(false);
 
   // Load ESP32 devices for device assignment dropdown
   const loadDevices = async () => {
@@ -85,7 +84,7 @@ const RfidManagement: React.FC = () => {
   const handleRegisterCard = async (uid: string) => {
     try {
       await registerCard(uid);
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -96,7 +95,7 @@ const RfidManagement: React.FC = () => {
       await assignCard(selectedCard.id, data.user_id, data.room_id);
       setShowForm(false);
       setSelectedCard(null);
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -182,7 +181,9 @@ const RfidManagement: React.FC = () => {
       {showControls && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RfidScanner onCardRegistered={handleCardRegistered} />
-          <DoorControl />
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-700 text-sm">Door control temporarily unavailable</p>
+          </div>
         </div>
       )}
 

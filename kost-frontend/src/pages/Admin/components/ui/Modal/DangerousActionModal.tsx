@@ -32,7 +32,7 @@ export const DangerousActionModal: React.FC<DangerousActionModalProps> = ({
       setIsProcessing(true);
       await onConfirm();
       onCancel(); // Close modal after success
-    } catch (error) {
+    } catch {
       // Error handled by parent component
     } finally {
       setIsProcessing(false);

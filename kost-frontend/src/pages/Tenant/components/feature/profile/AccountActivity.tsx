@@ -1,6 +1,6 @@
 // File: src/pages/Tenant/components/feature/profile/AccountActivity.tsx
 import React, { useState } from 'react';
-import { Activity, User, CreditCard, Key, Bell, Shield, Calendar, Filter, Download } from 'lucide-react';
+import { Activity, User, CreditCard, Key, Bell, Shield, Filter, Download } from 'lucide-react';
 import { Card } from '../../ui/Card';
 import { Button, IconButton } from '../../ui/Buttons';
 import { Select } from '../../ui/Forms';

@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use Midtrans\Config;
-use Midtrans\Snap;
-use Midtrans\Notification;
-use Midtrans\Transaction;
 use App\Models\Payment;
-use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Support\Facades\Log;
+use Midtrans\Config;
+use Midtrans\Notification;
+use Midtrans\Snap;
+use Midtrans\Transaction;
 
 class MidtransService
 {
@@ -24,46 +24,43 @@ class MidtransService
         Config::$is3ds = true;
     }
 
-        /**
+    /**
      * Create Snap payment token
-     *
-     * @param Payment $payment
-     * @return array
      */
     public function createSnapToken(Payment $payment): array
     {
         try {
             // Debug Midtrans configuration
             Log::info('Midtrans Configuration Check', [
-                'server_key_set' => !empty(Config::$serverKey),
+                'server_key_set' => ! empty(Config::$serverKey),
                 'server_key_length' => strlen(Config::$serverKey ?? ''),
                 'is_production' => Config::$isProduction,
                 'is_sanitized' => Config::$isSanitized,
                 'is_3ds' => Config::$is3ds,
                 'config_server_key' => config('services.midtrans.server_key') ? 'SET' : 'NOT_SET',
-                'env_server_key' => env('MIDTRANS_SERVER_KEY') ? 'SET' : 'NOT_SET'
+                'env_server_key' => env('MIDTRANS_SERVER_KEY') ? 'SET' : 'NOT_SET',
             ]);
 
             // ✅ FIXED: Load tenant relationship properly
-            if (!$payment->tenant) {
+            if (! $payment->tenant) {
                 $payment->load('tenant.user');
             }
 
-            if (!$payment->tenant) {
+            if (! $payment->tenant) {
                 Log::error('Payment tenant relationship not found', [
                     'payment_id' => $payment->id,
-                    'tenant_id' => $payment->tenant_id ?? 'NULL'
+                    'tenant_id' => $payment->tenant_id ?? 'NULL',
                 ]);
-                throw new Exception('Payment tenant relationship not found. Payment ID: ' . $payment->id);
+                throw new Exception('Payment tenant relationship not found. Payment ID: '.$payment->id);
             }
-            
-            if (!$payment->tenant->user) {
+
+            if (! $payment->tenant->user) {
                 Log::error('Payment tenant user relationship not found', [
                     'payment_id' => $payment->id,
                     'tenant_id' => $payment->tenant_id,
-                    'user_id' => $payment->tenant->user_id ?? 'NULL'
+                    'user_id' => $payment->tenant->user_id ?? 'NULL',
                 ]);
-                throw new Exception('Payment tenant user relationship not found. Payment ID: ' . $payment->id);
+                throw new Exception('Payment tenant user relationship not found. Payment ID: '.$payment->id);
             }
 
             // ✅ FIXED: Ensure proper data types and clean values
@@ -75,7 +72,7 @@ class MidtransService
 
             // ✅ FIXED: Clean payment month format
             $paymentMonth = $payment->payment_month;
-            $formattedMonth = date('F Y', strtotime($paymentMonth . '-01'));
+            $formattedMonth = date('F Y', strtotime($paymentMonth.'-01'));
 
             $params = [
                 'transaction_details' => [
@@ -89,21 +86,21 @@ class MidtransService
                 ],
                 'item_details' => [
                     [
-                        'id' => 'rent_' . $paymentMonth,
+                        'id' => 'rent_'.$paymentMonth,
                         'price' => $amount,
                         'quantity' => 1,
-                        'name' => 'Sewa Kamar Bulan ' . $formattedMonth,
+                        'name' => 'Sewa Kamar Bulan '.$formattedMonth,
                         'category' => 'rent',
-                    ]
+                    ],
                 ],
                 // ✅ FIXED: Dynamic callback URLs (ngrok-ready)
                 'callbacks' => [
-                    'finish' => env('FRONTEND_URL', 'http://localhost:5173') . '/tenant/payments?status=success&order_id=' . $orderId,
-                    'unfinish' => env('FRONTEND_URL', 'http://localhost:5173') . '/tenant/payments?status=pending&order_id=' . $orderId,
-                    'error' => env('FRONTEND_URL', 'http://localhost:5173') . '/tenant/payments?status=failed&order_id=' . $orderId,
+                    'finish' => env('FRONTEND_URL', 'http://localhost:5173').'/tenant/payments?status=success&order_id='.$orderId,
+                    'unfinish' => env('FRONTEND_URL', 'http://localhost:5173').'/tenant/payments?status=pending&order_id='.$orderId,
+                    'error' => env('FRONTEND_URL', 'http://localhost:5173').'/tenant/payments?status=failed&order_id='.$orderId,
                 ],
                 // ✅ NEW: Webhook notification URL for real-time updates
-                'custom_field1' => env('WEBHOOK_URL', env('NGROK_URL', 'http://localhost:8000') . '/api/webhook/midtrans'),
+                'custom_field1' => env('WEBHOOK_URL', env('NGROK_URL', 'http://localhost:8000').'/api/webhook/midtrans'),
                 // ✅ FIXED: Simplified expiry without complex date formatting
                 'expiry' => [
                     'unit' => 'day',
@@ -116,7 +113,7 @@ class MidtransService
                 'order_id' => $orderId,
                 'amount' => $amount,
                 'tenant_name' => $tenantName,
-                'params' => $params
+                'params' => $params,
             ]);
 
             // Check if required configuration is set
@@ -126,9 +123,9 @@ class MidtransService
 
             Log::info('Attempting to create Snap token with Midtrans...', [
                 'request_url' => Config::$isProduction ? 'production' : 'sandbox',
-                'server_key_prefix' => substr(Config::$serverKey, 0, 10) . '...'
+                'server_key_prefix' => substr(Config::$serverKey, 0, 10).'...',
             ]);
-            
+
             try {
                 $snapToken = Snap::getSnapToken($params);
             } catch (\Exception $e) {
@@ -136,48 +133,48 @@ class MidtransService
                 if (strpos($e->getMessage(), 'order_id has already been taken') !== false) {
                     Log::warning('Order ID already exists, generating new one', [
                         'old_order_id' => $orderId,
-                        'payment_id' => $payment->id
+                        'payment_id' => $payment->id,
                     ]);
-                    
+
                     // Generate new order_id and update payment
                     $newOrderId = self::generateOrderId($payment->tenant_id, $payment->payment_month);
                     $payment->update(['order_id' => $newOrderId]);
-                    
+
                     // Update params with new order_id
                     $params['transaction_details']['order_id'] = $newOrderId;
                     $params['callbacks']['finish'] = str_replace($orderId, $newOrderId, $params['callbacks']['finish']);
                     $params['callbacks']['unfinish'] = str_replace($orderId, $newOrderId, $params['callbacks']['unfinish']);
                     $params['callbacks']['error'] = str_replace($orderId, $newOrderId, $params['callbacks']['error']);
-                    
+
                     Log::info('Retrying with new order_id', ['new_order_id' => $newOrderId]);
                     $snapToken = Snap::getSnapToken($params);
                 } else {
                     throw $e;
                 }
             }
-            
+
             Log::info('Midtrans Snap token request successful', [
                 'token_length' => strlen($snapToken),
-                'token_prefix' => substr($snapToken, 0, 20) . '...'
+                'token_prefix' => substr($snapToken, 0, 20).'...',
             ]);
 
             // Update payment with snap token and timestamp
             $payment->update([
                 'snap_token' => $snapToken,
-                'snap_token_created_at' => now()
+                'snap_token_created_at' => now(),
             ]);
 
             Log::info('Midtrans Snap token created successfully', [
                 'order_id' => $orderId,
                 'amount' => $amount,
                 'tenant_id' => $payment->tenant_id,
-                'snap_token' => substr($snapToken, 0, 10) . '...' // Log partial token for security
+                'snap_token' => substr($snapToken, 0, 10).'...', // Log partial token for security
             ]);
 
             return [
                 'success' => true,
                 'snap_token' => $snapToken,
-                'payment' => $payment
+                'payment' => $payment,
             ];
 
         } catch (Exception $e) {
@@ -185,26 +182,23 @@ class MidtransService
                 'error' => $e->getMessage(),
                 'order_id' => $payment->order_id ?? 'unknown',
                 'payment_id' => $payment->id ?? 'unknown',
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
      * Handle Midtrans notification webhook
-     *
-     * @param array $notificationData
-     * @return array
      */
     public function handleNotification(array $notificationData): array
     {
         try {
-            $notification = new Notification();
+            $notification = new Notification;
 
             $orderId = $notification->order_id;
             $transactionStatus = $notification->transaction_status;
@@ -215,17 +209,18 @@ class MidtransService
                 'order_id' => $orderId,
                 'transaction_status' => $transactionStatus,
                 'payment_type' => $type,
-                'fraud_status' => $fraudStatus
+                'fraud_status' => $fraudStatus,
             ]);
 
             // Find payment by order_id
             $payment = Payment::where('order_id', $orderId)->first();
 
-            if (!$payment) {
+            if (! $payment) {
                 Log::warning('Payment not found for order_id', ['order_id' => $orderId]);
+
                 return [
                     'success' => false,
-                    'message' => 'Payment not found'
+                    'message' => 'Payment not found',
                 ];
             }
 
@@ -235,30 +230,24 @@ class MidtransService
             return [
                 'success' => true,
                 'message' => 'Notification handled successfully',
-                'payment' => $payment
+                'payment' => $payment,
             ];
 
         } catch (Exception $e) {
             Log::error('Failed to handle Midtrans notification', [
                 'error' => $e->getMessage(),
-                'notification_data' => $notificationData
+                'notification_data' => $notificationData,
             ]);
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
      * Update payment status based on Midtrans response
-     *
-     * @param Payment $payment
-     * @param string $transactionStatus
-     * @param string|null $fraudStatus
-     * @param Notification $notification
-     * @return void
      */
     private function updatePaymentStatus(Payment $payment, string $transactionStatus, ?string $fraudStatus, Notification $notification): void
     {
@@ -269,7 +258,7 @@ class MidtransService
             case 'capture':
                 if ($fraudStatus == 'challenge') {
                     $status = 'pending';
-                } else if ($fraudStatus == 'accept') {
+                } elseif ($fraudStatus == 'accept') {
                     $status = 'paid';
                     $paidAt = now();
                 } else {
@@ -309,7 +298,7 @@ class MidtransService
             'order_id' => $payment->order_id,
             'old_status' => $payment->getOriginal('status'),
             'new_status' => $status,
-            'transaction_status' => $transactionStatus
+            'transaction_status' => $transactionStatus,
         ]);
 
         // Send notification to tenant if payment successful
@@ -320,9 +309,6 @@ class MidtransService
 
     /**
      * Check payment status from Midtrans
-     *
-     * @param string $orderId
-     * @return array
      */
     public function checkPaymentStatus(string $orderId): array
     {
@@ -330,7 +316,7 @@ class MidtransService
             Log::info('🔍 Checking payment status from Midtrans', [
                 'order_id' => $orderId,
                 'environment' => Config::$isProduction ? 'production' : 'sandbox',
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ]);
 
             $status = Transaction::status($orderId);
@@ -344,12 +330,12 @@ class MidtransService
                 'gross_amount' => $status->gross_amount ?? null,
                 'transaction_time' => $status->transaction_time ?? null,
                 'status_message' => $status->status_message ?? null,
-                'full_response' => json_encode($status, JSON_UNESCAPED_SLASHES)
+                'full_response' => json_encode($status, JSON_UNESCAPED_SLASHES),
             ]);
 
             return [
                 'success' => true,
-                'status' => $status
+                'status' => $status,
             ];
 
         } catch (Exception $e) {
@@ -359,36 +345,33 @@ class MidtransService
                 'error_class' => get_class($e),
                 'error_file' => $e->getFile(),
                 'error_line' => $e->getLine(),
-                'environment' => Config::$isProduction ? 'production' : 'sandbox'
+                'environment' => Config::$isProduction ? 'production' : 'sandbox',
             ]);
 
             // Log additional error details if available
             if (method_exists($e, 'getResponse')) {
                 Log::error('Midtrans API response details', [
                     'order_id' => $orderId,
-                    'response_body' => $e->getResponse()
+                    'response_body' => $e->getResponse(),
                 ]);
             }
 
             if (method_exists($e, 'getHttpStatusCode')) {
                 Log::error('Midtrans HTTP error details', [
                     'order_id' => $orderId,
-                    'http_status' => $e->getHttpStatusCode()
+                    'http_status' => $e->getHttpStatusCode(),
                 ]);
             }
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
      * Cancel payment transaction
-     *
-     * @param string $orderId
-     * @return array
      */
     public function cancelPayment(string $orderId): array
     {
@@ -397,43 +380,40 @@ class MidtransService
 
             Log::info('Payment cancelled', [
                 'order_id' => $orderId,
-                'response' => $cancel
+                'response' => $cancel,
             ]);
 
             return [
                 'success' => true,
-                'data' => $cancel
+                'data' => $cancel,
             ];
 
         } catch (Exception $e) {
             Log::error('Failed to cancel payment', [
                 'error' => $e->getMessage(),
-                'order_id' => $orderId
+                'order_id' => $orderId,
             ]);
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
 
     /**
      * Send payment success notification
-     *
-     * @param Payment $payment
-     * @return void
      */
     private function sendPaymentSuccessNotification(Payment $payment): void
     {
         try {
             // You can implement notification logic here
             // For example: send email, push notification, etc.
-            
+
             Log::info('Payment success notification should be sent', [
                 'payment_id' => $payment->id,
                 'tenant_id' => $payment->tenant_id,
-                'amount' => $payment->amount
+                'amount' => $payment->amount,
             ]);
 
             // Example: Broadcast event for real-time notification
@@ -442,17 +422,13 @@ class MidtransService
         } catch (Exception $e) {
             Log::error('Failed to send payment success notification', [
                 'error' => $e->getMessage(),
-                'payment_id' => $payment->id
+                'payment_id' => $payment->id,
             ]);
         }
     }
 
     /**
      * Generate unique order ID
-     *
-     * @param int $tenantId
-     * @param string $paymentMonth
-     * @return string
      */
     public static function generateOrderId(int $tenantId, string $paymentMonth): string
     {
@@ -460,15 +436,12 @@ class MidtransService
         $timestamp = time();
         $microseconds = substr(microtime(), 2, 6);
         $random = strtoupper(substr(uniqid(), -4));
-        
-        return 'RENT-' . $tenantId . '-' . $paymentMonth . '-' . $timestamp . $microseconds . $random;
+
+        return 'RENT-'.$tenantId.'-'.$paymentMonth.'-'.$timestamp.$microseconds.$random;
     }
 
     /**
      * Format amount for Midtrans (remove decimal)
-     *
-     * @param float $amount
-     * @return int
      */
     public static function formatAmount(float $amount): int
     {

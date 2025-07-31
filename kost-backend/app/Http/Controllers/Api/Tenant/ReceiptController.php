@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Services\ReceiptService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -27,12 +26,12 @@ class ReceiptController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             Log::info('Receipt download requested', [
                 'user_id' => $user->id,
-                'payment_id' => $paymentId
+                'payment_id' => $paymentId,
             ]);
-            
+
             // Get payment and verify ownership
             $payment = Payment::with(['tenant.user', 'tenant.room'])
                 ->whereHas('tenant', function ($query) use ($user) {
@@ -43,7 +42,7 @@ class ReceiptController extends Controller
             Log::info('Payment found', [
                 'payment_id' => $payment->id,
                 'status' => $payment->status,
-                'paid_at' => $payment->paid_at
+                'paid_at' => $payment->paid_at,
             ]);
 
             // Check if payment is paid
@@ -53,21 +52,22 @@ class ReceiptController extends Controller
                     'message' => 'Kwitansi hanya tersedia untuk pembayaran yang sudah lunas',
                     'debug' => [
                         'payment_status' => $payment->status,
-                        'payment_id' => $payment->id
-                    ]
+                        'payment_id' => $payment->id,
+                    ],
                 ], 400);
             }
 
             // Check dependencies first
             Log::info('Checking DomPDF dependency');
-            if (!class_exists('\Dompdf\Dompdf')) {
+            if (! class_exists('\Dompdf\Dompdf')) {
                 Log::error('DomPDF class not found');
+
                 return response()->json([
                     'success' => false,
                     'message' => 'PDF library tidak tersedia. Silakan hubungi administrator.',
                     'debug' => [
-                        'error' => 'DomPDF not installed'
-                    ]
+                        'error' => 'DomPDF not installed',
+                    ],
                 ], 500);
             }
             Log::info('DomPDF dependency check passed');
@@ -75,20 +75,20 @@ class ReceiptController extends Controller
             // Generate receipt
             Log::info('About to call generateReceipt method');
             $receiptPath = $this->receiptService->generateReceipt($payment);
-            
+
             Log::info('Receipt generated', [
-                'path' => $receiptPath
+                'path' => $receiptPath,
             ]);
-            
+
             // Check if file exists
-            if (!Storage::disk('public')->exists($receiptPath)) {
+            if (! Storage::disk('public')->exists($receiptPath)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Kwitansi tidak dapat dibuat. Silakan coba lagi.',
                     'debug' => [
                         'receipt_path' => $receiptPath,
-                        'storage_disk' => 'public'
-                    ]
+                        'storage_disk' => 'public',
+                    ],
                 ], 500);
             }
 
@@ -100,7 +100,7 @@ class ReceiptController extends Controller
                 'user_id' => $user->id,
                 'payment_id' => $paymentId,
                 'file_size' => strlen($fileContent),
-                'file_name' => $fileName
+                'file_name' => $fileName,
             ]);
 
             // Determine content type based on file extension
@@ -112,7 +112,7 @@ class ReceiptController extends Controller
                 'Content-Length' => strlen($fileContent),
                 'Cache-Control' => 'no-cache, no-store, must-revalidate',
                 'Pragma' => 'no-cache',
-                'Expires' => '0'
+                'Expires' => '0',
             ]);
 
         } catch (\Exception $e) {
@@ -120,18 +120,18 @@ class ReceiptController extends Controller
                 'user_id' => Auth::id(),
                 'payment_id' => $paymentId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan saat mengunduh kwitansi: ' . $e->getMessage(),
+                'message' => 'Terjadi kesalahan saat mengunduh kwitansi: '.$e->getMessage(),
                 'debug' => [
                     'error_class' => get_class($e),
                     'error_message' => $e->getMessage(),
                     'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
+                    'line' => $e->getLine(),
+                ],
             ], 500);
         }
     }
@@ -143,7 +143,7 @@ class ReceiptController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // Get payment and verify ownership
             $payment = Payment::with(['tenant.user', 'tenant.room'])
                 ->whereHas('tenant', function ($query) use ($user) {
@@ -155,7 +155,7 @@ class ReceiptController extends Controller
             if ($payment->status !== 'paid') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Kwitansi hanya tersedia untuk pembayaran yang sudah lunas'
+                    'message' => 'Kwitansi hanya tersedia untuk pembayaran yang sudah lunas',
                 ], 400);
             }
 
@@ -169,20 +169,20 @@ class ReceiptController extends Controller
                     'payment_id' => $payment->id,
                     'order_id' => $payment->order_id,
                     'amount' => $payment->amount,
-                    'paid_at' => $payment->paid_at
-                ]
+                    'paid_at' => $payment->paid_at,
+                ],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error getting receipt URL', [
                 'user_id' => Auth::id(),
                 'payment_id' => $paymentId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan saat memuat kwitansi'
+                'message' => 'Terjadi kesalahan saat memuat kwitansi',
             ], 500);
         }
     }
@@ -194,7 +194,7 @@ class ReceiptController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // Get payment and verify ownership
             $payment = Payment::whereHas('tenant', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
@@ -209,20 +209,20 @@ class ReceiptController extends Controller
                     'payment_id' => $payment->id,
                     'status' => $payment->status,
                     'paid_at' => $payment->paid_at,
-                    'reason' => $available ? 'Kwitansi tersedia' : 'Kwitansi hanya tersedia untuk pembayaran yang sudah lunas'
-                ]
+                    'reason' => $available ? 'Kwitansi tersedia' : 'Kwitansi hanya tersedia untuk pembayaran yang sudah lunas',
+                ],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error checking receipt availability', [
                 'user_id' => Auth::id(),
                 'payment_id' => $paymentId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan saat memeriksa ketersediaan kwitansi'
+                'message' => 'Terjadi kesalahan saat memeriksa ketersediaan kwitansi',
             ], 500);
         }
     }

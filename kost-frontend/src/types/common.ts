@@ -99,7 +99,7 @@ export interface IoTDevice extends BaseEntity {
   last_seen?: string;
   firmware_version?: string;
   battery_level?: number;
-  configuration?: Record<string, any>;
+  configuration?: Record<string, unknown>;
   room?: Room;
 }
 
@@ -111,7 +111,7 @@ export interface Notification extends BaseEntity {
   type: 'info' | 'warning' | 'error' | 'success' | 'payment' | 'access' | 'system';
   read_at?: string;
   action_url?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   user?: User;
 }
 
@@ -212,8 +212,8 @@ export interface ComponentWithPagination {
 }
 
 // Event handler types
-export type EventHandler<T = any> = (event: T) => void;
-export type AsyncEventHandler<T = any> = (event: T) => Promise<void>;
+export type EventHandler<T = unknown> = (event: T) => void;
+export type AsyncEventHandler<T = unknown> = (event: T) => Promise<void>;
 export type ChangeHandler = EventHandler<React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>>;
 export type ClickHandler = EventHandler<React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>>;
 export type SubmitHandler = EventHandler<React.FormEvent<HTMLFormElement>>;

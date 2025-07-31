@@ -1,24 +1,24 @@
 <?php
+
 // File: app/Http/Controllers/Api/Admin/DashboardController.php
 
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
-use Carbon\Carbon;
-
-// Import Models
-use App\Models\Room;
-use App\Models\Tenant;
-use App\Models\User;
-use App\Models\Payment;
-use App\Models\RfidCard;
 use App\Models\AccessLog;
 use App\Models\IoTDevice;
+use App\Models\Payment;
+use App\Models\RfidCard;
+use App\Models\Room;
+use App\Models\Tenant;
+// Import Models
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -31,7 +31,7 @@ class DashboardController extends Controller
             $stats = Cache::remember('admin_dashboard_stats', 60, function () {
                 $currentMonth = now()->format('Y-m');
                 $currentYear = now()->year;
-                
+
                 return [
                     // Room Statistics
                     'rooms' => [
@@ -41,7 +41,7 @@ class DashboardController extends Controller
                         'maintenance' => Room::where('status', Room::STATUS_MAINTENANCE)->count(),
                         'occupancy_rate' => $this->calculateOccupancyRate(),
                     ],
-                    
+
                     // Tenant Statistics
                     'tenants' => [
                         'total_active' => Tenant::where('status', Tenant::STATUS_ACTIVE)->count(),
@@ -49,7 +49,7 @@ class DashboardController extends Controller
                         'new_this_month' => $this->getNewTenantsThisMonth(),
                         'moved_out_this_month' => $this->getMovedOutThisMonth(),
                     ],
-                    
+
                     // RFID Statistics
                     'rfid' => [
                         'total_cards' => RfidCard::count(),
@@ -57,7 +57,7 @@ class DashboardController extends Controller
                         'assigned_cards' => RfidCard::whereNotNull('user_id')->count(),
                         'unassigned_cards' => RfidCard::whereNull('user_id')->count(),
                     ],
-                    
+
                     // Finance Statistics
                     'finance' => [
                         'monthly_revenue' => $this->getMonthlyRevenue($currentMonth),
@@ -66,8 +66,8 @@ class DashboardController extends Controller
                         'overdue_amount' => $this->getOverdueAmount($currentMonth),
                         'collection_rate' => $this->calculateCollectionRate($currentMonth),
                     ],
-                    
-                    // Payment Statistics  
+
+                    // Payment Statistics
                     'payments' => [
                         'pending_count' => Payment::where('status', Payment::STATUS_PENDING)->count(),
                         'overdue_count' => Payment::where('status', Payment::STATUS_OVERDUE)->count(),
@@ -75,7 +75,7 @@ class DashboardController extends Controller
                         'total_this_month' => $this->getTotalThisMonth($currentMonth),
                         'collection_rate' => $this->calculateCollectionRate($currentMonth),
                     ],
-                    
+
                     // Access Statistics
                     'access' => [
                         'total_today' => $this->getTotalAccessToday(),
@@ -89,14 +89,14 @@ class DashboardController extends Controller
 
             Log::info('Dashboard statistics retrieved successfully', [
                 'user_id' => Auth::id(),
-                'timestamp' => now()
+                'timestamp' => now(),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $stats,
                 'message' => 'Dashboard statistics retrieved successfully',
-                'timestamp' => $this->formatDateForApi(now())
+                'timestamp' => $this->formatDateForApi(now()),
             ], 200);
 
         } catch (\Exception $e) {
@@ -104,7 +104,7 @@ class DashboardController extends Controller
                 'error' => $e->getMessage(),
                 'user_id' => Auth::id(),
                 'file' => $e->getFile(),
-                'line' => $e->getLine()
+                'line' => $e->getLine(),
             ]);
 
             // Default structure to prevent frontend errors
@@ -145,10 +145,10 @@ class DashboardController extends Controller
     {
         try {
             $perPage = min(50, max(5, (int) $request->get('per_page', 15)));
-            
+
             $activities = Cache::remember("recent_activities_{$perPage}", 120, function () use ($perPage) {
                 $activities = [];
-                
+
                 // Get recent access logs
                 try {
                     $accessLogs = $this->getRecentAccessLogs(ceil($perPage / 3));
@@ -156,7 +156,7 @@ class DashboardController extends Controller
                 } catch (\Exception $e) {
                     Log::warning('Failed to get access logs for activities', ['error' => $e->getMessage()]);
                 }
-                
+
                 // Get recent payments
                 try {
                     $payments = $this->getRecentPayments(ceil($perPage / 3));
@@ -164,7 +164,7 @@ class DashboardController extends Controller
                 } catch (\Exception $e) {
                     Log::warning('Failed to get payments for activities', ['error' => $e->getMessage()]);
                 }
-                
+
                 // Get recent RFID activities
                 try {
                     $rfidActivities = $this->getRecentRfidActivities(ceil($perPage / 3));
@@ -172,42 +172,42 @@ class DashboardController extends Controller
                 } catch (\Exception $e) {
                     Log::warning('Failed to get RFID activities', ['error' => $e->getMessage()]);
                 }
-                
+
                 // Sort by timestamp and limit
-                usort($activities, function($a, $b) {
+                usort($activities, function ($a, $b) {
                     return strtotime($b['timestamp']) - strtotime($a['timestamp']);
                 });
-                
+
                 // Ensure unique IDs for React keys
                 $finalActivities = [];
                 foreach (array_slice($activities, 0, $perPage) as $index => $activity) {
-                    $baseId = $activity['id'] ?? ($activity['type'] . '_' . $index);
-                    $uniqueId = $activity['type'] . '_' . $baseId . '_' . microtime(true) . '_' . $index;
-                    
+                    $baseId = $activity['id'] ?? ($activity['type'].'_'.$index);
+                    $uniqueId = $activity['type'].'_'.$baseId.'_'.microtime(true).'_'.$index;
+
                     $activity['id'] = $uniqueId;
                     $finalActivities[] = $activity;
                 }
-                
+
                 return $finalActivities;
             });
 
             return response()->json([
                 'success' => true,
                 'data' => $activities,
-                'message' => 'Recent activities retrieved successfully'
+                'message' => 'Recent activities retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to get recent activities', [
                 'error' => $e->getMessage(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve activities',
                 'data' => [],
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -238,12 +238,12 @@ class DashboardController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $health,
-                'message' => 'System health status retrieved successfully'
+                'message' => 'System health status retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to get system health', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             // Return fallback health data
@@ -266,7 +266,7 @@ class DashboardController extends Controller
                 'success' => false,
                 'data' => $fallbackHealth,
                 'message' => 'Failed to retrieve system health',
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -279,17 +279,17 @@ class DashboardController extends Controller
         try {
             $period = strtolower($request->get('period', 'monthly'));
             $year = (int) $request->get('year', now()->year);
-            
+
             // Validate period
-            if (!in_array($period, ['monthly', 'yearly', 'weekly', 'daily'])) {
+            if (! in_array($period, ['monthly', 'yearly', 'weekly', 'daily'])) {
                 $period = 'monthly';
             }
-            
+
             // Validate year
             if ($year < 2020 || $year > (now()->year + 1)) {
                 $year = now()->year;
             }
-            
+
             $cacheKey = "revenue_analytics_{$period}_{$year}";
             $analytics = Cache::remember($cacheKey, 600, function () use ($period, $year) {
                 switch ($period) {
@@ -311,22 +311,22 @@ class DashboardController extends Controller
                 'metadata' => [
                     'period' => $period,
                     'year' => $year,
-                    'count' => count($analytics)
-                ]
+                    'count' => count($analytics),
+                ],
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to get revenue analytics', [
                 'error' => $e->getMessage(),
                 'period' => $request->get('period'),
-                'year' => $request->get('year')
+                'year' => $request->get('year'),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve revenue analytics',
                 'data' => [],
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -357,14 +357,14 @@ class DashboardController extends Controller
     private function getDiffForHumans($date): string
     {
         try {
-            if (!$date) {
+            if (! $date) {
                 return 'Unknown';
             }
-            
+
             if ($date instanceof Carbon) {
                 return $date->diffForHumans();
             }
-            
+
             return Carbon::parse($date)->diffForHumans();
         } catch (\Exception $e) {
             return 'Unknown';
@@ -376,9 +376,11 @@ class DashboardController extends Controller
         try {
             $totalRooms = Room::count();
             $occupiedRooms = Room::where('status', Room::STATUS_OCCUPIED)->count();
-            return $totalRooms > 0 ? round(((float)$occupiedRooms / (float)$totalRooms) * 100, 2) : 0.0;
+
+            return $totalRooms > 0 ? round(((float) $occupiedRooms / (float) $totalRooms) * 100, 2) : 0.0;
         } catch (\Exception $e) {
             Log::error('Error calculating occupancy rate', ['error' => $e->getMessage()]);
+
             return 0.0;
         }
     }
@@ -392,6 +394,7 @@ class DashboardController extends Controller
                 ->count();
         } catch (\Exception $e) {
             Log::error('Error getting new tenants this month', ['error' => $e->getMessage()]);
+
             return 0;
         }
     }
@@ -405,6 +408,7 @@ class DashboardController extends Controller
                 ->count();
         } catch (\Exception $e) {
             Log::error('Error getting moved out tenants this month', ['error' => $e->getMessage()]);
+
             return 0;
         }
     }
@@ -417,6 +421,7 @@ class DashboardController extends Controller
                 ->sum('amount');
         } catch (\Exception $e) {
             Log::error('Error getting monthly revenue', ['error' => $e->getMessage()]);
+
             return 0.0;
         }
     }
@@ -429,6 +434,7 @@ class DashboardController extends Controller
                 ->sum('amount');
         } catch (\Exception $e) {
             Log::error('Error getting yearly revenue', ['error' => $e->getMessage()]);
+
             return 0.0;
         }
     }
@@ -440,6 +446,7 @@ class DashboardController extends Controller
                 ->sum('amount');
         } catch (\Exception $e) {
             Log::error('Error getting pending amount', ['error' => $e->getMessage()]);
+
             return 0.0;
         }
     }
@@ -448,13 +455,14 @@ class DashboardController extends Controller
     {
         try {
             return (float) Payment::where('status', Payment::STATUS_OVERDUE)
-                ->orWhere(function($query) use ($currentMonth) {
+                ->orWhere(function ($query) use ($currentMonth) {
                     $query->where('payment_month', '<', $currentMonth)
-                          ->where('status', '!=', Payment::STATUS_PAID);
+                        ->where('status', '!=', Payment::STATUS_PAID);
                 })
                 ->sum('amount');
         } catch (\Exception $e) {
             Log::error('Error getting overdue amount', ['error' => $e->getMessage()]);
+
             return 0.0;
         }
     }
@@ -466,10 +474,11 @@ class DashboardController extends Controller
             $paidPayments = Payment::where('payment_month', $month)
                 ->where('status', Payment::STATUS_PAID)
                 ->count();
-            
-            return $totalPayments > 0 ? round(((float)$paidPayments / (float)$totalPayments) * 100, 2) : 0.0;
+
+            return $totalPayments > 0 ? round(((float) $paidPayments / (float) $totalPayments) * 100, 2) : 0.0;
         } catch (\Exception $e) {
             Log::error('Error calculating collection rate', ['error' => $e->getMessage()]);
+
             return 0.0;
         }
     }
@@ -482,6 +491,7 @@ class DashboardController extends Controller
                 ->count();
         } catch (\Exception $e) {
             Log::error('Error getting paid this month', ['error' => $e->getMessage()]);
+
             return 0;
         }
     }
@@ -492,6 +502,7 @@ class DashboardController extends Controller
             return Payment::where('payment_month', $month)->count();
         } catch (\Exception $e) {
             Log::error('Error getting total this month', ['error' => $e->getMessage()]);
+
             return 0;
         }
     }
@@ -502,6 +513,7 @@ class DashboardController extends Controller
             return AccessLog::whereDate('accessed_at', now()->toDateString())->count();
         } catch (\Exception $e) {
             Log::error('Error getting total access today', ['error' => $e->getMessage()]);
+
             return 0;
         }
     }
@@ -511,10 +523,11 @@ class DashboardController extends Controller
         try {
             return AccessLog::whereBetween('accessed_at', [
                 now()->startOfWeek(),
-                now()->endOfWeek()
+                now()->endOfWeek(),
             ])->count();
         } catch (\Exception $e) {
             Log::error('Error getting total access this week', ['error' => $e->getMessage()]);
+
             return 0;
         }
     }
@@ -525,6 +538,7 @@ class DashboardController extends Controller
             return AccessLog::count();
         } catch (\Exception $e) {
             Log::error('Error getting total access all time', ['error' => $e->getMessage()]);
+
             return 0;
         }
     }
@@ -537,6 +551,7 @@ class DashboardController extends Controller
                 ->count('user_id');
         } catch (\Exception $e) {
             Log::error('Error getting unique users today', ['error' => $e->getMessage()]);
+
             return 0;
         }
     }
@@ -549,13 +564,15 @@ class DashboardController extends Controller
                 ->groupBy(DB::raw('HOUR(accessed_at)'))
                 ->orderBy('count', 'desc')
                 ->first();
-            
+
             if ($peakHour && $peakHour->hour !== null) {
                 return sprintf('%02d:00', $peakHour->hour);
             }
+
             return null;
         } catch (\Exception $e) {
             Log::error('Error getting peak access hour', ['error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -572,10 +589,10 @@ class DashboardController extends Controller
             $activities = [];
             foreach ($logs as $index => $log) {
                 $activities[] = [
-                    'id' => 'access_' . $log->id . '_' . $index,
+                    'id' => 'access_'.$log->id.'_'.$index,
                     'type' => 'access',
                     'title' => 'Room Access',
-                    'description' => ($log->user ? $log->user->name : 'Unknown User') . ' accessed ' . 
+                    'description' => ($log->user ? $log->user->name : 'Unknown User').' accessed '.
                                    ($log->room ? "Room {$log->room->room_number}" : 'Building'),
                     'user' => $log->user ? [
                         'id' => $log->user->id,
@@ -592,6 +609,7 @@ class DashboardController extends Controller
             return $activities;
         } catch (\Exception $e) {
             Log::warning('Failed to get recent access logs', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -608,19 +626,19 @@ class DashboardController extends Controller
             $activities = [];
             foreach ($payments as $index => $payment) {
                 $user = $payment->tenant ? $payment->tenant->user : null;
-                
+
                 $activities[] = [
-                    'id' => 'payment_' . $payment->id . '_' . $index,
+                    'id' => 'payment_'.$payment->id.'_'.$index,
                     'type' => 'payment',
                     'title' => 'Payment Received',
-                    'description' => "Payment of Rp " . number_format((float) $payment->amount, 0, ',', '.') . 
-                                   " from " . ($user ? $user->name : 'Unknown User'),
+                    'description' => 'Payment of Rp '.number_format((float) $payment->amount, 0, ',', '.').
+                                   ' from '.($user ? $user->name : 'Unknown User'),
                     'user' => $user ? [
                         'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
                     ] : null,
-                    'timestamp' => $payment->paid_at 
+                    'timestamp' => $payment->paid_at
                         ? $this->formatDateForApi($payment->paid_at)
                         : $this->formatDateForApi($payment->created_at),
                     'icon' => 'credit-card',
@@ -632,6 +650,7 @@ class DashboardController extends Controller
             return $activities;
         } catch (\Exception $e) {
             Log::warning('Failed to get recent payments', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -648,10 +667,10 @@ class DashboardController extends Controller
             $activities = [];
             foreach ($cards as $index => $card) {
                 $activities[] = [
-                    'id' => 'rfid_' . $card->id . '_' . $index,
+                    'id' => 'rfid_'.$card->id.'_'.$index,
                     'type' => 'rfid',
                     'title' => 'RFID Card Assigned',
-                    'description' => "Card {$card->uid} assigned to " . ($card->user ? $card->user->name : 'Unknown User'),
+                    'description' => "Card {$card->uid} assigned to ".($card->user ? $card->user->name : 'Unknown User'),
                     'user' => $card->user ? [
                         'id' => $card->user->id,
                         'name' => $card->user->name,
@@ -667,6 +686,7 @@ class DashboardController extends Controller
             return $activities;
         } catch (\Exception $e) {
             Log::warning('Failed to get recent RFID activities', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -677,9 +697,11 @@ class DashboardController extends Controller
         try {
             DB::connection()->getPdo();
             User::count(); // Test query using model
+
             return 'healthy';
         } catch (\Exception $e) {
             Log::error('Database health check failed', ['error' => $e->getMessage()]);
+
             return 'error';
         }
     }
@@ -690,12 +712,15 @@ class DashboardController extends Controller
             // Get MQTT service if available
             if (app()->bound(\App\Services\MqttService::class)) {
                 $mqttService = app(\App\Services\MqttService::class);
+
                 // Add your MQTT connection check logic here
                 return 'connected';
             }
+
             return 'disconnected';
         } catch (\Exception $e) {
             Log::warning('MQTT health check failed', ['error' => $e->getMessage()]);
+
             return 'error';
         }
     }
@@ -705,15 +730,17 @@ class DashboardController extends Controller
         try {
             $totalSpace = disk_total_space(storage_path());
             $freeSpace = disk_free_space(storage_path());
-            
+
             if ($totalSpace && $freeSpace && $totalSpace > 0) {
                 $usedSpace = $totalSpace - $freeSpace;
+
                 return (int) round(($usedSpace / $totalSpace) * 100);
             }
-            
+
             return 0;
         } catch (\Exception $e) {
             Log::warning('Failed to get storage usage', ['error' => $e->getMessage()]);
+
             return 0;
         }
     }
@@ -722,9 +749,11 @@ class DashboardController extends Controller
     {
         try {
             $freeBytes = disk_free_space(storage_path());
+
             return $freeBytes ? $this->formatBytes($freeBytes) : '0 GB';
         } catch (\Exception $e) {
             Log::warning('Failed to get free space', ['error' => $e->getMessage()]);
+
             return '0 GB';
         }
     }
@@ -734,15 +763,17 @@ class DashboardController extends Controller
         try {
             $memoryUsage = memory_get_usage(true);
             $memoryLimit = ini_get('memory_limit');
-            
+
             if ($memoryLimit == -1) {
                 return 0;
             }
-            
+
             $memoryLimitBytes = $this->convertToBytes($memoryLimit);
-            return $memoryLimitBytes > 0 ? (int) round(((float)$memoryUsage / (float)$memoryLimitBytes) * 100) : 0;
+
+            return $memoryLimitBytes > 0 ? (int) round(((float) $memoryUsage / (float) $memoryLimitBytes) * 100) : 0;
         } catch (\Exception $e) {
             Log::warning('Failed to get memory usage', ['error' => $e->getMessage()]);
+
             return 0;
         }
     }
@@ -751,9 +782,11 @@ class DashboardController extends Controller
     {
         try {
             $memoryLimit = ini_get('memory_limit');
+
             return $memoryLimit == -1 ? 'N/A' : $memoryLimit;
         } catch (\Exception $e) {
             Log::warning('Failed to get total memory', ['error' => $e->getMessage()]);
+
             return 'N/A';
         }
     }
@@ -762,23 +795,24 @@ class DashboardController extends Controller
     {
         try {
             $startTime = Cache::get('app_start_time', now()->subMinutes(5));
-            if (!($startTime instanceof Carbon)) {
+            if (! ($startTime instanceof Carbon)) {
                 $startTime = Carbon::parse($startTime);
             }
             $diffInSeconds = now()->diffInSeconds($startTime);
 
             if ($diffInSeconds < 60) {
-                return $diffInSeconds . ' seconds';
+                return $diffInSeconds.' seconds';
             } elseif ($diffInSeconds < 3600) {
-                return round($diffInSeconds / 60) . ' minutes';
+                return round($diffInSeconds / 60).' minutes';
             } elseif ($diffInSeconds < 86400) {
-                return round($diffInSeconds / 3600) . ' hours';
+                return round($diffInSeconds / 3600).' hours';
             } else {
-                return round($diffInSeconds / 86400) . ' days';
+                return round($diffInSeconds / 86400).' days';
             }
 
         } catch (\Exception $e) {
             Log::warning('Failed to get system uptime', ['error' => $e->getMessage()]);
+
             return 'N/A';
         }
     }
@@ -786,13 +820,15 @@ class DashboardController extends Controller
     private function getLastBackupTime(): string
     {
         try {
-            $lastBackup = Cache::get('last_backup_time', now()->subHours(2)); 
-            if (!($lastBackup instanceof Carbon)) {
+            $lastBackup = Cache::get('last_backup_time', now()->subHours(2));
+            if (! ($lastBackup instanceof Carbon)) {
                 $lastBackup = Carbon::parse($lastBackup);
             }
+
             return $this->getDiffForHumans($lastBackup);
         } catch (\Exception $e) {
             Log::warning('Failed to get last backup time', ['error' => $e->getMessage()]);
+
             return 'Unknown';
         }
     }
@@ -804,7 +840,7 @@ class DashboardController extends Controller
             $months = [
                 1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
                 5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Aug',
-                9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec'
+                9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec',
             ];
 
             $data = Payment::where('status', Payment::STATUS_PAID)
@@ -834,6 +870,7 @@ class DashboardController extends Controller
             return $result;
         } catch (\Exception $e) {
             Log::error('Failed to get monthly revenue analytics', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -843,7 +880,7 @@ class DashboardController extends Controller
         try {
             $startOfMonth = now()->startOfMonth();
             $endOfMonth = now()->endOfMonth();
-            
+
             return Payment::where('status', Payment::STATUS_PAID)
                 ->whereBetween('paid_at', [$startOfMonth, $endOfMonth])
                 ->select(
@@ -856,7 +893,7 @@ class DashboardController extends Controller
                 ->get()
                 ->map(function ($item) {
                     return [
-                        'month' => 'Week ' . $item->week,
+                        'month' => 'Week '.$item->week,
                         'revenue' => (float) $item->revenue,
                         'payments' => (int) $item->payments,
                     ];
@@ -864,6 +901,7 @@ class DashboardController extends Controller
                 ->toArray();
         } catch (\Exception $e) {
             Log::error('Failed to get weekly revenue analytics', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -891,6 +929,7 @@ class DashboardController extends Controller
                 ->toArray();
         } catch (\Exception $e) {
             Log::error('Failed to get daily revenue analytics', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -921,6 +960,7 @@ class DashboardController extends Controller
                 ->toArray();
         } catch (\Exception $e) {
             Log::error('Failed to get yearly revenue analytics', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -929,12 +969,12 @@ class DashboardController extends Controller
     private function formatBytes(int $bytes, int $precision = 2): string
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
-        return round($bytes, $precision) . ' ' . $units[$i];
+
+        return round($bytes, $precision).' '.$units[$i];
     }
 
     private function convertToBytes(string $value): int
@@ -942,13 +982,13 @@ class DashboardController extends Controller
         $value = trim($value);
         $last = strtolower($value[strlen($value) - 1]);
         $value = (int) $value;
-        
+
         switch ($last) {
             case 'g': $value *= 1024;
             case 'm': $value *= 1024;
             case 'k': $value *= 1024;
         }
-        
+
         return $value;
     }
 
@@ -972,12 +1012,12 @@ class DashboardController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $devices,
-                'message' => 'IoT device status retrieved successfully'
+                'message' => 'IoT device status retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to get IoT device status', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -991,7 +1031,7 @@ class DashboardController extends Controller
                     'card_scanners' => 0,
                     'recent_offline' => [],
                 ],
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -1022,6 +1062,7 @@ class DashboardController extends Controller
                 ->toArray();
         } catch (\Exception $e) {
             Log::warning('Failed to get recent offline devices', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1034,11 +1075,11 @@ class DashboardController extends Controller
         try {
             $period = strtolower($request->get('period', 'monthly'));
             $year = (int) $request->get('year', now()->year);
-            
-            if (!in_array($period, ['monthly', 'weekly', 'daily'])) {
+
+            if (! in_array($period, ['monthly', 'weekly', 'daily'])) {
                 $period = 'monthly';
             }
-            
+
             $cacheKey = "occupancy_trends_{$period}_{$year}";
             $trends = Cache::remember($cacheKey, 600, function () use ($period, $year) {
                 switch ($period) {
@@ -1058,22 +1099,22 @@ class DashboardController extends Controller
                 'metadata' => [
                     'period' => $period,
                     'year' => $year,
-                    'count' => count($trends)
-                ]
+                    'count' => count($trends),
+                ],
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to get occupancy trends', [
                 'error' => $e->getMessage(),
                 'period' => $request->get('period'),
-                'year' => $request->get('year')
+                'year' => $request->get('year'),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve occupancy trends',
                 'data' => [],
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -1084,7 +1125,7 @@ class DashboardController extends Controller
             $months = [
                 1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
                 5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Aug',
-                9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec'
+                9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec',
             ];
 
             $totalRooms = Room::count();
@@ -1093,24 +1134,24 @@ class DashboardController extends Controller
             for ($month = 1; $month <= 12; $month++) {
                 // Get occupied rooms at the end of each month
                 $occupiedRooms = Tenant::where('status', Tenant::STATUS_ACTIVE)
-                    ->where(function($query) use ($year, $month) {
-                        $query->where(function($q) use ($year, $month) {
+                    ->where(function ($query) use ($year, $month) {
+                        $query->where(function ($q) use ($year, $month) {
                             $q->whereYear('start_date', '<', $year)
-                              ->orWhere(function($subQ) use ($year, $month) {
-                                  $subQ->whereYear('start_date', $year)
-                                       ->whereMonth('start_date', '<=', $month);
-                              });
+                                ->orWhere(function ($subQ) use ($year, $month) {
+                                    $subQ->whereYear('start_date', $year)
+                                        ->whereMonth('start_date', '<=', $month);
+                                });
                         });
                     })
-                    ->where(function($query) use ($year, $month) {
+                    ->where(function ($query) use ($year, $month) {
                         $query->whereNull('end_date')
-                              ->orWhere(function($q) use ($year, $month) {
-                                  $q->whereYear('end_date', '>', $year)
-                                    ->orWhere(function($subQ) use ($year, $month) {
+                            ->orWhere(function ($q) use ($year, $month) {
+                                $q->whereYear('end_date', '>', $year)
+                                    ->orWhere(function ($subQ) use ($year, $month) {
                                         $subQ->whereYear('end_date', $year)
-                                             ->whereMonth('end_date', '>=', $month);
+                                            ->whereMonth('end_date', '>=', $month);
                                     });
-                              });
+                            });
                     })
                     ->count();
 
@@ -1128,6 +1169,7 @@ class DashboardController extends Controller
             return $result;
         } catch (\Exception $e) {
             Log::error('Failed to get monthly occupancy trends', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1145,19 +1187,19 @@ class DashboardController extends Controller
 
             while ($currentWeek->lte($endOfMonth)) {
                 $weekEnd = $currentWeek->copy()->endOfWeek()->min($endOfMonth);
-                
+
                 $occupiedRooms = Tenant::where('status', Tenant::STATUS_ACTIVE)
                     ->where('start_date', '<=', $weekEnd)
-                    ->where(function($query) use ($weekEnd) {
+                    ->where(function ($query) use ($weekEnd) {
                         $query->whereNull('end_date')
-                              ->orWhere('end_date', '>=', $weekEnd);
+                            ->orWhere('end_date', '>=', $weekEnd);
                     })
                     ->count();
 
                 $occupancyRate = $totalRooms > 0 ? round(($occupiedRooms / $totalRooms) * 100, 2) : 0.0;
 
                 $result[] = [
-                    'month' => 'Week ' . $weekNumber,
+                    'month' => 'Week '.$weekNumber,
                     'occupancy_rate' => $occupancyRate,
                     'occupied_rooms' => $occupiedRooms,
                     'total_rooms' => $totalRooms,
@@ -1171,6 +1213,7 @@ class DashboardController extends Controller
             return $result;
         } catch (\Exception $e) {
             Log::error('Failed to get weekly occupancy trends', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1183,12 +1226,12 @@ class DashboardController extends Controller
 
             for ($i = 29; $i >= 0; $i--) {
                 $date = now()->subDays($i);
-                
+
                 $occupiedRooms = Tenant::where('status', Tenant::STATUS_ACTIVE)
                     ->where('start_date', '<=', $date->endOfDay())
-                    ->where(function($query) use ($date) {
+                    ->where(function ($query) use ($date) {
                         $query->whereNull('end_date')
-                              ->orWhere('end_date', '>=', $date->startOfDay());
+                            ->orWhere('end_date', '>=', $date->startOfDay());
                     })
                     ->count();
 
@@ -1206,6 +1249,7 @@ class DashboardController extends Controller
             return $result;
         } catch (\Exception $e) {
             Log::error('Failed to get daily occupancy trends', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1217,7 +1261,7 @@ class DashboardController extends Controller
     {
         try {
             $currentMonth = now()->format('Y-m');
-            
+
             $summary = Cache::remember('payment_status_summary', 300, function () use ($currentMonth) {
                 return [
                     'current_month' => [
@@ -1245,12 +1289,12 @@ class DashboardController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $summary,
-                'message' => 'Payment status summary retrieved successfully'
+                'message' => 'Payment status summary retrieved successfully',
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to get payment status summary', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -1262,7 +1306,7 @@ class DashboardController extends Controller
                     'recent_payments' => [],
                     'overdue_tenants' => [],
                 ],
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -1277,6 +1321,7 @@ class DashboardController extends Controller
                 ->get()
                 ->map(function ($payment) {
                     $user = $payment->tenant ? $payment->tenant->user : null;
+
                     return [
                         'id' => $payment->id,
                         'order_id' => $payment->order_id,
@@ -1293,6 +1338,7 @@ class DashboardController extends Controller
                 ->toArray();
         } catch (\Exception $e) {
             Log::warning('Failed to get recent successful payments', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1301,12 +1347,12 @@ class DashboardController extends Controller
     {
         try {
             $currentMonth = now()->format('Y-m');
-            
+
             return Payment::with(['tenant.user:id,name,email', 'tenant.room:id,room_number'])
                 ->where('status', Payment::STATUS_OVERDUE)
-                ->orWhere(function($query) use ($currentMonth) {
+                ->orWhere(function ($query) use ($currentMonth) {
                     $query->where('payment_month', '<', $currentMonth)
-                          ->where('status', '!=', Payment::STATUS_PAID);
+                        ->where('status', '!=', Payment::STATUS_PAID);
                 })
                 ->latest('created_at')
                 ->limit($limit)
@@ -1315,13 +1361,13 @@ class DashboardController extends Controller
                     $tenant = $payment->tenant;
                     $user = $tenant ? $tenant->user : null;
                     $room = $tenant ? $tenant->room : null;
-                    
+
                     return [
                         'id' => $payment->id,
                         'order_id' => $payment->order_id,
                         'amount' => $this->toFloat($payment->amount),
                         'payment_month' => $payment->payment_month,
-                        'days_overdue' => now()->diffInDays(Carbon::parse($payment->payment_month . '-01')->endOfMonth()),
+                        'days_overdue' => now()->diffInDays(Carbon::parse($payment->payment_month.'-01')->endOfMonth()),
                         'user' => $user ? [
                             'id' => $user->id,
                             'name' => $user->name,
@@ -1336,6 +1382,7 @@ class DashboardController extends Controller
                 ->toArray();
         } catch (\Exception $e) {
             Log::warning('Failed to get overdue tenants', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1348,11 +1395,11 @@ class DashboardController extends Controller
         try {
             $period = strtolower($request->get('period', 'monthly'));
             $year = (int) $request->get('year', now()->year);
-            
-            if (!in_array($period, ['monthly', 'weekly', 'daily'])) {
+
+            if (! in_array($period, ['monthly', 'weekly', 'daily'])) {
                 $period = 'monthly';
             }
-            
+
             $cacheKey = "payment_trends_{$period}_{$year}";
             $trends = Cache::remember($cacheKey, 300, function () use ($period, $year) {
                 switch ($period) {
@@ -1372,22 +1419,22 @@ class DashboardController extends Controller
                 'metadata' => [
                     'period' => $period,
                     'year' => $year,
-                    'count' => count($trends)
-                ]
+                    'count' => count($trends),
+                ],
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to get payment trends', [
                 'error' => $e->getMessage(),
                 'period' => $request->get('period'),
-                'year' => $request->get('year')
+                'year' => $request->get('year'),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve payment trends',
                 'data' => [],
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -1400,15 +1447,15 @@ class DashboardController extends Controller
         try {
             $period = strtolower($request->get('period', 'daily'));
             $days = (int) $request->get('days', 7);
-            
-            if (!in_array($period, ['hourly', 'daily', 'weekly'])) {
+
+            if (! in_array($period, ['hourly', 'daily', 'weekly'])) {
                 $period = 'daily';
             }
-            
+
             if ($days < 1 || $days > 365) {
                 $days = 7;
             }
-            
+
             $cacheKey = "access_history_{$period}_{$days}";
             $history = Cache::remember($cacheKey, 60, function () use ($period, $days) {
                 switch ($period) {
@@ -1428,22 +1475,22 @@ class DashboardController extends Controller
                 'metadata' => [
                     'period' => $period,
                     'days' => $days,
-                    'count' => count($history)
-                ]
+                    'count' => count($history),
+                ],
             ], 200);
 
         } catch (\Exception $e) {
             Log::error('Failed to get access history', [
                 'error' => $e->getMessage(),
                 'period' => $request->get('period'),
-                'days' => $request->get('days')
+                'days' => $request->get('days'),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve access history',
                 'data' => [],
-                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error'
+                'error' => app()->environment('local') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -1454,7 +1501,7 @@ class DashboardController extends Controller
             $months = [
                 1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
                 5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Aug',
-                9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec'
+                9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec',
             ];
 
             $data = Payment::where('status', Payment::STATUS_PAID)
@@ -1484,6 +1531,7 @@ class DashboardController extends Controller
             return $result;
         } catch (\Exception $e) {
             Log::error('Failed to get monthly payment trends', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1497,7 +1545,7 @@ class DashboardController extends Controller
             for ($i = 0; $i < 12; $i++) {
                 $weekStart = $startDate->copy()->addWeeks($i);
                 $weekEnd = $weekStart->copy()->endOfWeek();
-                
+
                 $payments = Payment::where('status', Payment::STATUS_PAID)
                     ->whereBetween('paid_at', [$weekStart, $weekEnd])
                     ->select(
@@ -1508,7 +1556,7 @@ class DashboardController extends Controller
                     ->first();
 
                 $result[] = [
-                    'period' => 'Week ' . $weekStart->format('M d'),
+                    'period' => 'Week '.$weekStart->format('M d'),
                     'total_payments' => $payments ? (int) $payments->total_payments : 0,
                     'total_amount' => $payments ? $this->toFloat($payments->total_amount) : 0.0,
                     'avg_amount' => $payments ? round($this->toFloat($payments->avg_amount), 2) : 0.0,
@@ -1518,6 +1566,7 @@ class DashboardController extends Controller
             return $result;
         } catch (\Exception $e) {
             Log::error('Failed to get weekly payment trends', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1526,10 +1575,10 @@ class DashboardController extends Controller
     {
         try {
             $result = [];
-            
+
             for ($i = 29; $i >= 0; $i--) {
                 $date = now()->subDays($i);
-                
+
                 $payments = Payment::where('status', Payment::STATUS_PAID)
                     ->whereDate('paid_at', $date)
                     ->select(
@@ -1550,6 +1599,7 @@ class DashboardController extends Controller
             return $result;
         } catch (\Exception $e) {
             Log::error('Failed to get daily payment trends', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1559,11 +1609,11 @@ class DashboardController extends Controller
         try {
             $result = [];
             $today = now()->startOfDay();
-            
+
             for ($hour = 0; $hour < 24; $hour++) {
                 $hourStart = $today->copy()->addHours($hour);
                 $hourEnd = $hourStart->copy()->addHour();
-                
+
                 $accessCount = AccessLog::whereBetween('accessed_at', [$hourStart, $hourEnd])->count();
                 $successfulAccess = AccessLog::whereBetween('accessed_at', [$hourStart, $hourEnd])
                     ->where('access_granted', true)->count();
@@ -1582,6 +1632,7 @@ class DashboardController extends Controller
             return $result;
         } catch (\Exception $e) {
             Log::error('Failed to get hourly access history', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1590,10 +1641,10 @@ class DashboardController extends Controller
     {
         try {
             $result = [];
-            
+
             for ($i = $days - 1; $i >= 0; $i--) {
                 $date = now()->subDays($i);
-                
+
                 $accessCount = AccessLog::whereDate('accessed_at', $date->toDateString())->count();
                 $successfulAccess = AccessLog::whereDate('accessed_at', $date->toDateString())
                     ->where('access_granted', true)->count();
@@ -1617,6 +1668,7 @@ class DashboardController extends Controller
             return $result;
         } catch (\Exception $e) {
             Log::error('Failed to get daily access history', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1626,11 +1678,11 @@ class DashboardController extends Controller
         try {
             $weeks = ceil($days / 7);
             $result = [];
-            
+
             for ($i = $weeks - 1; $i >= 0; $i--) {
                 $weekStart = now()->subWeeks($i)->startOfWeek();
                 $weekEnd = $weekStart->copy()->endOfWeek();
-                
+
                 $accessCount = AccessLog::whereBetween('accessed_at', [$weekStart, $weekEnd])->count();
                 $successfulAccess = AccessLog::whereBetween('accessed_at', [$weekStart, $weekEnd])
                     ->where('access_granted', true)->count();
@@ -1642,7 +1694,7 @@ class DashboardController extends Controller
                     ->count('user_id');
 
                 $result[] = [
-                    'period' => 'Week ' . $weekStart->format('M d'),
+                    'period' => 'Week '.$weekStart->format('M d'),
                     'total_access' => $accessCount,
                     'successful_access' => $successfulAccess,
                     'failed_access' => $failedAccess,
@@ -1654,6 +1706,7 @@ class DashboardController extends Controller
             return $result;
         } catch (\Exception $e) {
             Log::error('Failed to get weekly access history', ['error' => $e->getMessage()]);
+
             return [];
         }
     }

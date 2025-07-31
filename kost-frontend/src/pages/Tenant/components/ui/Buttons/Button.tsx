@@ -2,7 +2,7 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
 import { mergeClasses } from '../../../utils/helpers';
-import { MOBILE_OPTIMIZED_CLASSES, TOUCH_TARGETS } from '../../../utils/constants';
+import { TOUCH_TARGETS } from '../../../utils/constants';
 
 interface ButtonProps {
   children: React.ReactNode;

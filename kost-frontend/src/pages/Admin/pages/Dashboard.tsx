@@ -1,13 +1,13 @@
 // File: src/pages/Admin/pages/Dashboard.tsx
 import React, { useState } from 'react';
-import { 
-  RefreshCw, TrendingUp, Plus, Users, Home, CreditCard, AlertCircle,
+import {
+  RefreshCw, TrendingUp, Users, CreditCard, AlertCircle,
   Building2, Wifi, WifiOff, Clock, Eye, Shield, Zap,
-  DollarSign, TrendingDown, Bell, Settings, Activity
+  DollarSign, Settings, Activity
 } from 'lucide-react';
 import { useDashboard } from '../hooks';
+import { useIoTDevices } from '../hooks/useIoTDevices';
 import {
-  DashboardStats,
   RevenueChart,
   SystemStatus,
   AccessHistoryChart,
@@ -57,12 +57,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     revenueData,
     accessHistoryData,
     paymentTrendsData,
-    occupancyHistoryData,
+    // occupancyHistoryData not available in current hook
     loading,
     lastUpdated,
     loadRevenueData,
     refresh
   } = useDashboard();
+
+  // Get real IoT device data
+  const { devices: iotDevices } = useIoTDevices();
 
   const [revenuePeriod, setRevenuePeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -198,15 +201,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Device Status */}
+            {/* Device Status - Using real IoT data */}
             <div className="bg-purple-50 border border-purple-200 rounded-xl p-6 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-purple-700 text-sm font-medium">Perangkat IoT</p>
-                  <p className="text-3xl font-bold text-purple-900 mt-1">{stats.online_devices || 0}/{stats.total_devices || 0}</p>
+                  <p className="text-3xl font-bold text-purple-900 mt-1">
+                    {iotDevices ? iotDevices.filter(d => d.status === 'online').length : 0}/{iotDevices ? iotDevices.length : 0}
+                  </p>
                   <div className="flex items-center text-purple-600 text-sm mt-1">
-                    {(stats.total_devices || 0) > 0 ? (
-                      <><Wifi className="w-3 h-3 mr-1" />{Math.round(((stats.online_devices || 0) / (stats.total_devices || 1)) * 100)}% Online</>
+                    {iotDevices && iotDevices.length > 0 ? (
+                      <>
+                        <Wifi className="w-3 h-3 mr-1" />
+                        {Math.round((iotDevices.filter(d => d.status === 'online').length / iotDevices.length) * 100)}% Online
+                      </>
                     ) : (
                       <><WifiOff className="w-3 h-3 mr-1" />Tidak ada perangkat</>
                     )}

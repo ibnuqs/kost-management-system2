@@ -4,7 +4,6 @@ import { Menu, Bell, Settings, Home, CreditCard, BarChart3, User } from 'lucide-
 import { useLocation } from 'react-router-dom';
 import { IconButton } from '../../ui/Buttons';
 import NotificationBell from './NotificationBell';
-import { mergeClasses } from '../../../utils/helpers';
 
 interface MobileHeaderProps {
   onMenuClick: () => void;

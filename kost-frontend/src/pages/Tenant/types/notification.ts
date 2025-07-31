@@ -19,6 +19,7 @@ export interface Notification extends BaseEntity {
 }
 
 export interface NotificationFilters {
+  search?: string;
   type?: NotificationType | 'all';
   priority?: NotificationPriority | 'all';
   status?: NotificationStatus | 'all';
@@ -27,6 +28,7 @@ export interface NotificationFilters {
   category?: string;
   sort_by?: 'created_at' | 'priority' | 'type';
   sort_order?: 'asc' | 'desc';
+  per_page?: number;
 }
 
 export interface NotificationStats {
@@ -73,7 +75,7 @@ export interface NotificationAction {
   text: string;
   url?: string;
   action_type: 'navigate' | 'api_call' | 'download' | 'external';
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   style: 'primary' | 'secondary' | 'danger' | 'success';
 }
 
@@ -83,7 +85,7 @@ export interface PushNotificationPayload {
   icon?: string;
   badge?: string;
   image?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   actions?: NotificationAction[];
   tag?: string;
   renotify?: boolean;

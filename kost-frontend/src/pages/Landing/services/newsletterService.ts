@@ -6,7 +6,7 @@ export interface NewsletterSubscription {
   source: string;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -53,7 +53,7 @@ class NewsletterService {
 
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Newsletter subscription error:', error);
       
       // Mock success response for demo
@@ -93,7 +93,7 @@ class NewsletterService {
 
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Newsletter unsubscribe error:', error);
       
       return new Promise((resolve) => {
@@ -121,7 +121,7 @@ class NewsletterService {
 
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Newsletter check subscription error:', error);
       
       return new Promise((resolve) => {
@@ -162,7 +162,7 @@ class NewsletterService {
 
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Newsletter preferences update error:', error);
       
       return new Promise((resolve) => {

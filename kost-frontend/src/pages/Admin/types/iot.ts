@@ -9,9 +9,12 @@ export interface IoTDevice extends BaseEntity {
   room: Room | null;
   room_id?: number | null;
   status: 'online' | 'offline';
+  status_db?: 'online' | 'offline';
   status_label: string;
   last_seen?: string | null;
+  last_seen_date?: string;
   last_seen_human: string;
+  minutes_since_last_seen?: number;
   is_online: boolean;
 }
 

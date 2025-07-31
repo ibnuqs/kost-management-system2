@@ -6,7 +6,6 @@ import { useTenantPayments } from '../../../hooks/useTenantPayments';
 import { useUnreadNotificationsCount } from '../../../hooks/useNotifications';
 import api, { endpoints } from '../../../../../utils/api'; // Import API dari utils
 import { toast } from 'react-hot-toast';
-import { IconButton } from '../../ui/Buttons';
 import { mergeClasses } from '../../../utils/helpers';
 
 interface QuickActionsProps {
@@ -54,7 +53,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
         navigate('/login', { replace: true });
         
         onActionClick?.();
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Logout failed:', error);
         
         // Even if API call fails, clear local storage and redirect

@@ -62,7 +62,7 @@ export const formatRelativeTime = (dateString: string): string => {
     if (days === 1) return `Kemarin`;
     if (days < 7) return `${days} hari lalu`;
     return date.toLocaleDateString('id-ID');
-  } catch (error) {
+  } catch {
     return dateString;
   }
 };

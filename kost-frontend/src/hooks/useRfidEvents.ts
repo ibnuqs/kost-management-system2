@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { mqttService, MqttConnectionStatus } from '../services/mqttService';
 import { parseTimestamp } from '../utils/dateUtils';
+import { getMqttConfig } from '../config/environment';
 
 interface RfidEvent {
   id: string;
@@ -12,9 +13,10 @@ interface RfidEvent {
   room_number?: string;
   access_granted?: boolean;
   message?: string;
+  user?: { name: string; email: string; };
   // Add other fields that might come from MQTT
   type?: 'access_log' | 'device_status';
-  payload?: any;
+  payload?: Record<string, unknown>;
 }
 
 interface DeviceStatus {
@@ -24,6 +26,7 @@ interface DeviceStatus {
   // Add other relevant device status fields
   wifi_connected?: boolean;
   mqtt_connected?: boolean;
+  rfid_ready?: boolean;
   firmware_version?: string;
   uptime?: string;
 }
@@ -115,14 +118,20 @@ export const useRfidEvents = () => {
   useEffect(() => {
     console.log('🔌 Setting up MQTT subscriptions...');
     
-    // Subscribe to relevant MQTT topics - update to match backend
-    mqttService.subscribe('rfid/tags', handleMqttMessage);           // ESP32 scans
-    mqttService.subscribe('rfid/access_log', handleMqttMessage);     // Access logs
-    mqttService.subscribe('rfid/status', handleMqttMessage);         // Device status
-    mqttService.subscribe('kost_system/+/status', handleMqttMessage); // IoT device status
-    mqttService.onConnectionStatusChange(handleConnectionStatusChange);
-
-    console.log('✅ Subscribed to MQTT topics: rfid/tags, rfid/access_log, rfid/status, kost_system/+/status');
+    // Subscribe to relevant MQTT topics with error handling
+    try {
+      mqttService.subscribe('rfid/tags', handleMqttMessage);           // ESP32 scans
+      mqttService.subscribe('rfid/access_log', handleMqttMessage);     // Access logs
+      mqttService.subscribe('rfid/status', handleMqttMessage);         // Device status
+      
+      // Subscribe to all topics including kost_system (using HiveMQ Cloud)
+      mqttService.subscribe('kost_system/+/status', handleMqttMessage); // IoT device status
+      console.log('✅ Subscribed to MQTT topics: rfid/tags, rfid/access_log, rfid/status, kost_system/+/status');
+      
+      mqttService.onConnectionStatusChange(handleConnectionStatusChange);
+    } catch (error) {
+      console.warn('⚠️ Some MQTT subscriptions failed:', error);
+    }
 
     // Initial connection attempt if not already connected
     if (!mqttService.getConnectionStatus().connected && !mqttService.getConnectionStatus().connecting) {
@@ -133,11 +142,18 @@ export const useRfidEvents = () => {
     // Cleanup on unmount
     return () => {
       console.log('🧹 Cleaning up MQTT subscriptions...');
-      mqttService.unsubscribe('rfid/tags', handleMqttMessage);
-      mqttService.unsubscribe('rfid/access_log', handleMqttMessage);
-      mqttService.unsubscribe('rfid/status', handleMqttMessage);
-      mqttService.unsubscribe('kost_system/+/status', handleMqttMessage);
-      mqttService.removeConnectionStatusCallback(handleConnectionStatusChange);
+      try {
+        mqttService.unsubscribe('rfid/tags', handleMqttMessage);
+        mqttService.unsubscribe('rfid/access_log', handleMqttMessage);
+        mqttService.unsubscribe('rfid/status', handleMqttMessage);
+        
+        // Unsubscribe from all topics
+        mqttService.unsubscribe('kost_system/+/status', handleMqttMessage);
+        
+        mqttService.removeConnectionStatusCallback(handleConnectionStatusChange);
+      } catch (error) {
+        console.warn('⚠️ Error during MQTT cleanup:', error);
+      }
     };
   }, [handleMqttMessage, handleConnectionStatusChange]);
 

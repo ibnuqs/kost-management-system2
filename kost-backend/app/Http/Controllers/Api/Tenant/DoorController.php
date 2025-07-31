@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Tenant;
 use App\Models\IoTDevice;
+use App\Models\Tenant;
 use App\Services\MqttService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,24 +26,24 @@ class DoorController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // Step 1: Verifikasi tenant record dan status
             $tenant = Tenant::where('user_id', $user->id)
                 ->where('status', Tenant::STATUS_ACTIVE)
                 ->with('room')
                 ->first();
 
-            if (!$tenant || !$tenant->room) {
+            if (! $tenant || ! $tenant->room) {
                 Log::warning('Tenant access denied - no active tenant record', [
                     'user_id' => $user->id,
                     'user_name' => $user->name,
                     'has_tenant' => $tenant ? true : false,
-                    'has_room' => $tenant && $tenant->room ? true : false
+                    'has_room' => $tenant && $tenant->room ? true : false,
                 ]);
-                
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Akses ditolak: Tidak ditemukan record tenant aktif'
+                    'message' => 'Akses ditolak: Tidak ditemukan record tenant aktif',
                 ], 403);
             }
 
@@ -52,17 +52,17 @@ class DoorController extends Controller
                 ->whereIn('device_type', ['door_controller', 'rfid_reader'])
                 ->first();
 
-            if (!$device) {
+            if (! $device) {
                 Log::warning('Door controller not found for tenant room', [
                     'user_id' => $user->id,
                     'tenant_id' => $tenant->id,
                     'room_id' => $tenant->room->id,
-                    'room_number' => $tenant->room->room_number
+                    'room_number' => $tenant->room->room_number,
                 ]);
-                
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tidak ada door controller yang terdaftar untuk kamar Anda'
+                    'message' => 'Tidak ada door controller yang terdaftar untuk kamar Anda',
                 ], 404);
             }
 
@@ -72,12 +72,12 @@ class DoorController extends Controller
                     'user_id' => $user->id,
                     'device_id' => $device->device_id,
                     'device_status' => $device->status,
-                    'room_number' => $tenant->room->room_number
+                    'room_number' => $tenant->room->room_number,
                 ]);
-                
+
                 return response()->json([
                     'success' => false,
-                    'message' => "Door controller sedang offline (status: {$device->status})"
+                    'message' => "Door controller sedang offline (status: {$device->status})",
                 ], 503);
             }
 
@@ -93,7 +93,7 @@ class DoorController extends Controller
                 'timestamp' => now()->timestamp * 1000, // milliseconds
                 'reason' => $reason,
                 'from' => 'tenant_dashboard',
-                'user_id' => $user->id
+                'user_id' => $user->id,
             ];
 
             Log::info('Sending door open command for tenant', [
@@ -103,11 +103,11 @@ class DoorController extends Controller
                 'room_id' => $tenant->room->id,
                 'room_number' => $tenant->room->room_number,
                 'device_id' => $device->device_id,
-                'command' => $command
+                'command' => $command,
             ]);
 
             // Use the exact topic requested: rfid/command
-            $topic = "rfid/command";
+            $topic = 'rfid/command';
             $published = $this->mqttService->publish($topic, json_encode($command));
 
             if ($published) {
@@ -120,7 +120,7 @@ class DoorController extends Controller
                     'room_number' => $tenant->room->room_number,
                     'device_id' => $device->device_id,
                     'reason' => $reason,
-                    'mqtt_topic' => $topic
+                    'mqtt_topic' => $topic,
                 ]);
 
                 return response()->json([
@@ -132,20 +132,20 @@ class DoorController extends Controller
                         'room_number' => $tenant->room->room_number,
                         'timestamp' => now()->toISOString(),
                         'reason' => $reason,
-                        'user' => $user->name
-                    ]
+                        'user' => $user->name,
+                    ],
                 ]);
             } else {
                 Log::error('Failed to publish MQTT command for tenant door', [
                     'user_id' => $user->id,
                     'device_id' => $device->device_id,
                     'mqtt_topic' => $topic,
-                    'command' => $command
+                    'command' => $command,
                 ]);
-                
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal mengirim perintah - koneksi MQTT bermasalah'
+                    'message' => 'Gagal mengirim perintah - koneksi MQTT bermasalah',
                 ], 500);
             }
 
@@ -153,12 +153,12 @@ class DoorController extends Controller
             Log::error('Error in tenant door control', [
                 'user_id' => $user->id ?? null,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal membuka pintu: ' . $e->getMessage()
+                'message' => 'Gagal membuka pintu: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -174,9 +174,9 @@ class DoorController extends Controller
                 'user_id' => $user->id,
                 'tenant_room_id' => $tenant->room->id,
                 'device_room_id' => $device->room_id,
-                'device_id' => $device->device_id
+                'device_id' => $device->device_id,
             ]);
-            
+
             throw new \Exception('Akses ditolak: Device bukan milik kamar Anda');
         }
 
@@ -185,9 +185,9 @@ class DoorController extends Controller
             Log::warning('Inactive tenant attempting door access', [
                 'user_id' => $user->id,
                 'tenant_id' => $tenant->id,
-                'tenant_status' => $tenant->status
+                'tenant_status' => $tenant->status,
             ]);
-            
+
             throw new \Exception('Akses ditolak: Status tenant tidak aktif');
         }
 
@@ -200,7 +200,7 @@ class DoorController extends Controller
             'user_id' => $user->id,
             'tenant_id' => $tenant->id,
             'device_id' => $device->device_id,
-            'room_id' => $tenant->room->id
+            'room_id' => $tenant->room->id,
         ]);
     }
 
@@ -211,17 +211,17 @@ class DoorController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // Get tenant record
             $tenant = Tenant::where('user_id', $user->id)
                 ->where('status', Tenant::STATUS_ACTIVE)
                 ->with('room')
                 ->first();
 
-            if (!$tenant || !$tenant->room) {
+            if (! $tenant || ! $tenant->room) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tenant record or room not found'
+                    'message' => 'Tenant record or room not found',
                 ], 404);
             }
 
@@ -230,7 +230,7 @@ class DoorController extends Controller
                 ->whereIn('device_type', ['door_controller', 'rfid_reader'])
                 ->first();
 
-            if (!$device) {
+            if (! $device) {
                 return response()->json([
                     'success' => true,
                     'data' => [
@@ -239,16 +239,16 @@ class DoorController extends Controller
                         'door_status' => 'unknown',
                         'device_status' => 'offline',
                         'last_seen' => null,
-                        'message' => 'No door controller found for this room'
-                    ]
+                        'message' => 'No door controller found for this room',
+                    ],
                 ]);
             }
 
             // Parse device info if available
             $deviceInfo = [];
             if ($device->device_info) {
-                $deviceInfo = is_string($device->device_info) 
-                    ? json_decode($device->device_info, true) 
+                $deviceInfo = is_string($device->device_info)
+                    ? json_decode($device->device_info, true)
                     : $device->device_info;
             }
 
@@ -262,19 +262,19 @@ class DoorController extends Controller
                     'door_status' => $deviceInfo['door_status'] ?? 'unknown',
                     'device_status' => $device->status,
                     'last_seen' => $device->last_seen,
-                    'device_info' => $deviceInfo
-                ]
+                    'device_info' => $deviceInfo,
+                ],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error getting tenant door status', [
                 'user_id' => $user->id ?? null,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get door status: ' . $e->getMessage()
+                'message' => 'Failed to get door status: '.$e->getMessage(),
             ], 500);
         }
     }

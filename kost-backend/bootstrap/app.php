@@ -1,4 +1,5 @@
 <?php
+
 // bootstrap/app.php - ENHANCED VERSION dengan Expired Payment Support
 
 use Illuminate\Foundation\Application;
@@ -22,11 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Register custom middleware
         $middleware->alias([
-                'role' => \App\Http\Middleware\RoleMiddleware::class,
-                'admin.only' => \App\Http\Middleware\AdminOnly::class,
-                'tenant.only' => \App\Http\Middleware\TenantOnly::class,
-                'check.user.status' => \App\Http\Middleware\CheckUserStatus::class,
-                'validate.token.abilities' => \App\Http\Middleware\ValidateTokenAbilities::class,
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'admin.only' => \App\Http\Middleware\AdminOnly::class,
+            'tenant.only' => \App\Http\Middleware\TenantOnly::class,
+            'check.user.status' => \App\Http\Middleware\CheckUserStatus::class,
+            'validate.token.abilities' => \App\Http\Middleware\ValidateTokenAbilities::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
@@ -36,16 +37,16 @@ return Application::configure(basePath: dirname(__DIR__))
         // Existing MQTT commands
         \App\Console\Commands\MqttListener::class,
         \App\Console\Commands\MqttTest::class,
-        
+
         // ✅ NEW: Expired Payment Management Commands
         \App\Console\Commands\CheckExpiredPayments::class,
         \App\Console\Commands\CleanupOldExpiredPayments::class,
-        
+
         // ✅ NEW: Monthly Payment & Tenant Management Commands
         \App\Console\Commands\GenerateMonthlyPayments::class,
         \App\Console\Commands\ProcessPaymentStatus::class,
         \App\Console\Commands\CleanupExpiredReservations::class,
-        
+
         // ✅ NEW: Receipt Management Commands
         \App\Console\Commands\CleanupOldReceipts::class,
     ])
@@ -53,7 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // ===================================================================
         // SCHEDULED TASKS UNTUK EXPIRED PAYMENT HANDLING
         // ===================================================================
-        
+
         // Check for expired payments every hour
         $schedule->command('payments:check-expired')
             ->hourly()
@@ -61,7 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ->runInBackground()
             ->onFailure(function () {
                 \Illuminate\Support\Facades\Log::error('Expired payments check failed');
-                
+
                 // Send email notification on failure
                 if ($adminEmail = env('ADMIN_EMAIL')) {
                     try {
@@ -69,12 +70,12 @@ return Application::configure(basePath: dirname(__DIR__))
                             'The scheduled task for checking expired payments has failed. Please check the logs.',
                             function ($message) use ($adminEmail) {
                                 $message->to($adminEmail)
-                                       ->subject('Expired Payments Check Failed - ' . config('app.name'));
+                                    ->subject('Expired Payments Check Failed - '.config('app.name'));
                             }
                         );
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error('Failed to send failure email', [
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ]);
                     }
                 }
@@ -127,44 +128,44 @@ return Application::configure(basePath: dirname(__DIR__))
                     'near_expiry_payments' => \App\Models\Payment::where('status', 'pending')
                         ->where('created_at', '<', now()->subDays(6))
                         ->count(),
-                    'check_time' => now()->toDateTimeString()
+                    'check_time' => now()->toDateTimeString(),
                 ];
 
                 \Illuminate\Support\Facades\Log::info('Weekly payment system health check', $stats);
 
                 // Alert if there are issues
                 $alerts = [];
-                
+
                 if ($stats['old_pending_payments'] > 10) {
                     $alerts[] = "High number of old pending payments: {$stats['old_pending_payments']}";
                 }
-                
+
                 if ($stats['near_expiry_payments'] > 20) {
                     $alerts[] = "High number of near-expiry payments: {$stats['near_expiry_payments']}";
                 }
-                
-                $expiredRate = $stats['total_payments'] > 0 
-                    ? ($stats['expired_payments'] / $stats['total_payments']) * 100 
+
+                $expiredRate = $stats['total_payments'] > 0
+                    ? ($stats['expired_payments'] / $stats['total_payments']) * 100
                     : 0;
-                    
+
                 if ($expiredRate > 20) {
-                    $alerts[] = "High expiration rate: " . round($expiredRate, 1) . "%";
+                    $alerts[] = 'High expiration rate: '.round($expiredRate, 1).'%';
                 }
 
-                if (!empty($alerts)) {
-                    $alertMessage = "Payment System Alerts:\n\n" . implode("\n", $alerts) . "\n\n" .
-                        "System Statistics:\n" .
-                        "Total Payments: {$stats['total_payments']}\n" .
-                        "Pending: {$stats['pending_payments']}\n" .
-                        "Paid: {$stats['paid_payments']}\n" .
-                        "Expired: {$stats['expired_payments']}\n" .
-                        "Old Pending: {$stats['old_pending_payments']}\n" .
-                        "Near Expiry: {$stats['near_expiry_payments']}\n\n" .
+                if (! empty($alerts)) {
+                    $alertMessage = "Payment System Alerts:\n\n".implode("\n", $alerts)."\n\n".
+                        "System Statistics:\n".
+                        "Total Payments: {$stats['total_payments']}\n".
+                        "Pending: {$stats['pending_payments']}\n".
+                        "Paid: {$stats['paid_payments']}\n".
+                        "Expired: {$stats['expired_payments']}\n".
+                        "Old Pending: {$stats['old_pending_payments']}\n".
+                        "Near Expiry: {$stats['near_expiry_payments']}\n\n".
                         "Check Time: {$stats['check_time']}";
 
                     \Illuminate\Support\Facades\Log::warning('Payment system alerts detected', [
                         'alerts' => $alerts,
-                        'stats' => $stats
+                        'stats' => $stats,
                     ]);
 
                     // Send alert email if configured
@@ -174,12 +175,12 @@ return Application::configure(basePath: dirname(__DIR__))
                                 $alertMessage,
                                 function ($message) use ($adminEmail) {
                                     $message->to($adminEmail)
-                                           ->subject('Payment System Alert - ' . config('app.name'));
+                                        ->subject('Payment System Alert - '.config('app.name'));
                                 }
                             );
                         } catch (\Exception $e) {
                             \Illuminate\Support\Facades\Log::error('Failed to send alert email', [
-                                'error' => $e->getMessage()
+                                'error' => $e->getMessage(),
                             ]);
                         }
                     }
@@ -187,22 +188,22 @@ return Application::configure(basePath: dirname(__DIR__))
 
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error('Payment system health check failed', [
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         })
-        ->weekly()
-        ->sundays()
-        ->at('08:00')
-        ->name('payment-system-health-check')
-        ->description('Weekly payment system health check every Sunday at 8 AM');
+            ->weekly()
+            ->sundays()
+            ->at('08:00')
+            ->name('payment-system-health-check')
+            ->description('Weekly payment system health check every Sunday at 8 AM');
 
         // Monthly payment statistics report
         $schedule->call(function () {
             try {
                 $currentMonth = now()->format('Y-m');
                 $previousMonth = now()->subMonth()->format('Y-m');
-                
+
                 $currentStats = [
                     'month' => $currentMonth,
                     'total_payments' => \App\Models\Payment::where('payment_month', $currentMonth)->count(),
@@ -228,23 +229,23 @@ return Application::configure(basePath: dirname(__DIR__))
                 ];
 
                 // Calculate rates and changes
-                $currentSuccessRate = $currentStats['total_payments'] > 0 
+                $currentSuccessRate = $currentStats['total_payments'] > 0
                     ? round(($currentStats['paid'] / $currentStats['total_payments']) * 100, 2)
                     : 0;
-                    
-                $previousSuccessRate = $previousStats['total_payments'] > 0 
+
+                $previousSuccessRate = $previousStats['total_payments'] > 0
                     ? round(($previousStats['paid'] / $previousStats['total_payments']) * 100, 2)
                     : 0;
 
-                $revenueChange = $previousStats['revenue'] > 0 
+                $revenueChange = $previousStats['revenue'] > 0
                     ? round((($currentStats['revenue'] - $previousStats['revenue']) / $previousStats['revenue']) * 100, 2)
                     : 0;
 
                 $stats = array_merge($currentStats, [
-                    'success_rate' => $currentSuccessRate . '%',
-                    'previous_success_rate' => $previousSuccessRate . '%',
-                    'revenue_change' => $revenueChange . '%',
-                    'report_generated_at' => now()->toDateTimeString()
+                    'success_rate' => $currentSuccessRate.'%',
+                    'previous_success_rate' => $previousSuccessRate.'%',
+                    'revenue_change' => $revenueChange.'%',
+                    'report_generated_at' => now()->toDateTimeString(),
                 ]);
 
                 \Illuminate\Support\Facades\Log::info('Monthly payment statistics report', $stats);
@@ -252,48 +253,48 @@ return Application::configure(basePath: dirname(__DIR__))
                 // Send monthly report email if configured
                 if ($adminEmail = env('ADMIN_EMAIL')) {
                     try {
-                        $reportContent = "Monthly Payment Report for {$currentMonth}\n\n" .
-                            "=== CURRENT MONTH ({$currentMonth}) ===\n" .
-                            "Total Payments: {$currentStats['total_payments']}\n" .
-                            "Paid: {$currentStats['paid']}\n" .
-                            "Pending: {$currentStats['pending']}\n" .
-                            "Expired: {$currentStats['expired']}\n" .
-                            "Success Rate: {$currentSuccessRate}%\n" .
-                            "Revenue: Rp " . number_format((float)$currentStats['revenue'], 0, ',', '.') . "\n\n" .
-                            "=== COMPARISON WITH PREVIOUS MONTH ({$previousMonth}) ===\n" .
-                            "Previous Success Rate: {$previousSuccessRate}%\n" .
-                            "Previous Revenue: Rp " . number_format((float)$previousStats['revenue'], 0, ',', '.') . "\n" .
-                            "Revenue Change: {$revenueChange}%\n\n" .
+                        $reportContent = "Monthly Payment Report for {$currentMonth}\n\n".
+                            "=== CURRENT MONTH ({$currentMonth}) ===\n".
+                            "Total Payments: {$currentStats['total_payments']}\n".
+                            "Paid: {$currentStats['paid']}\n".
+                            "Pending: {$currentStats['pending']}\n".
+                            "Expired: {$currentStats['expired']}\n".
+                            "Success Rate: {$currentSuccessRate}%\n".
+                            'Revenue: Rp '.number_format((float) $currentStats['revenue'], 0, ',', '.')."\n\n".
+                            "=== COMPARISON WITH PREVIOUS MONTH ({$previousMonth}) ===\n".
+                            "Previous Success Rate: {$previousSuccessRate}%\n".
+                            'Previous Revenue: Rp '.number_format((float) $previousStats['revenue'], 0, ',', '.')."\n".
+                            "Revenue Change: {$revenueChange}%\n\n".
                             "Report Generated: {$stats['report_generated_at']}";
 
                         \Illuminate\Support\Facades\Mail::raw(
                             $reportContent,
                             function ($message) use ($adminEmail, $currentMonth) {
                                 $message->to($adminEmail)
-                                       ->subject("Monthly Payment Report - {$currentMonth} - " . config('app.name'));
+                                    ->subject("Monthly Payment Report - {$currentMonth} - ".config('app.name'));
                             }
                         );
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error('Failed to send monthly report email', [
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ]);
                     }
                 }
 
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error('Monthly payment report generation failed', [
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         })
-        ->monthlyOn(1, '09:00') // First day of month at 9 AM
-        ->name('monthly-payment-report')
-        ->description('Generate monthly payment statistics report on 1st of each month at 9 AM');
+            ->monthlyOn(1, '09:00') // First day of month at 9 AM
+            ->name('monthly-payment-report')
+            ->description('Generate monthly payment statistics report on 1st of each month at 9 AM');
 
         // ===================================================================
         // NEW: MONTHLY PAYMENT GENERATION & TENANT STATUS MANAGEMENT
         // ===================================================================
-        
+
         // Generate monthly payments on 25th of each month at 9 AM
         $schedule->command('payments:generate-monthly')
             ->monthlyOn(25, '09:00')
@@ -301,19 +302,19 @@ return Application::configure(basePath: dirname(__DIR__))
             ->runInBackground()
             ->onFailure(function () {
                 \Illuminate\Support\Facades\Log::error('Monthly payment generation failed');
-                
+
                 if ($adminEmail = env('ADMIN_EMAIL')) {
                     try {
                         \Illuminate\Support\Facades\Mail::raw(
                             'The scheduled task for generating monthly payments has failed. Please check the logs and run manually if needed.',
                             function ($message) use ($adminEmail) {
                                 $message->to($adminEmail)
-                                       ->subject('Monthly Payment Generation Failed - ' . config('app.name'));
+                                    ->subject('Monthly Payment Generation Failed - '.config('app.name'));
                             }
                         );
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error('Failed to send payment generation failure email', [
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ]);
                     }
                 }
@@ -331,19 +332,19 @@ return Application::configure(basePath: dirname(__DIR__))
             ->runInBackground()
             ->onFailure(function () {
                 \Illuminate\Support\Facades\Log::error('Payment status processing failed');
-                
+
                 if ($adminEmail = env('ADMIN_EMAIL')) {
                     try {
                         \Illuminate\Support\Facades\Mail::raw(
                             'The scheduled task for processing payment statuses and tenant suspensions has failed. Please check the logs.',
                             function ($message) use ($adminEmail) {
                                 $message->to($adminEmail)
-                                       ->subject('Payment Status Processing Failed - ' . config('app.name'));
+                                    ->subject('Payment Status Processing Failed - '.config('app.name'));
                             }
                         );
                     } catch (\Exception $e) {
                         \Illuminate\Support\Facades\Log::error('Failed to send status processing failure email', [
-                            'error' => $e->getMessage()
+                            'error' => $e->getMessage(),
                         ]);
                     }
                 }
@@ -398,8 +399,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // ===================================================================
         // EXISTING MQTT/RFID SCHEDULED TASKS (if any)
         // ===================================================================
-        
+
         // You can add any existing MQTT or other scheduled tasks here
-        
+
     })
     ->create();

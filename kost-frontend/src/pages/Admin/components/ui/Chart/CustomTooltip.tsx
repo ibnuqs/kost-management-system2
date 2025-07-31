@@ -1,10 +1,10 @@
 // File: src/pages/Admin/components/ui/Chart/CustomTooltip.tsx
 import React from 'react';
-import { chartTheme, formatCurrency, formatNumber } from '../../../utils/chartTheme';
+import { formatCurrency, formatNumber } from '../../../utils/chartTheme';
 
 interface TooltipProps {
   active?: boolean;
-  payload?: any[];
+  payload?: Array<{ value: number; name: string; dataKey: string; color: string; payload: { color: string; percentage: number; }; }>;
   label?: string;
   formatValue?: (value: number) => string;
   showLabel?: boolean;
@@ -26,7 +26,7 @@ export const CustomTooltip: React.FC<TooltipProps> = ({
       {showLabel && label && (
         <p className="font-medium mb-2">{label}</p>
       )}
-      {payload.map((entry: any, index: number) => {
+      {payload.map((entry, index: number) => {
         if (entry.value == null) return null;
         
         return (

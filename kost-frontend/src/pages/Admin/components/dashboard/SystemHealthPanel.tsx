@@ -58,7 +58,7 @@ export const SystemHealthPanel: React.FC = () => {
       } else {
         setError(result.message || 'Failed to get system health');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err?.response?.data?.message || err.message || 'Failed to check system health');
     } finally {
       setLoading(false);

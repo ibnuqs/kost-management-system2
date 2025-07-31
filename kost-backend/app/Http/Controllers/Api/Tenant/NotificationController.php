@@ -52,24 +52,25 @@ class NotificationController extends Controller
                 'per_page' => $perPage,
                 'total_notifications' => $notifications->total(),
                 'returned_count' => count($notifications->items()),
-                'filters' => $request->only(['type', 'status', 'date_from', 'date_to'])
+                'filters' => $request->only(['type', 'status', 'date_from', 'date_to']),
             ]);
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'notifications' => $notifications->items(),
-                    'total' => $notifications->total()
+                    'total' => $notifications->total(),
                 ],
-                'message' => 'Notifications retrieved successfully'
+                'message' => 'Notifications retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Failed to fetch tenant notifications: ' . $e->getMessage(), ['user_id' => $user->id ?? null]);
+            Log::error('Failed to fetch tenant notifications: '.$e->getMessage(), ['user_id' => $user->id ?? null]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch notifications',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -88,17 +89,18 @@ class NotificationController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'count' => $count
+                    'count' => $count,
                 ],
-                'message' => 'Unread count retrieved successfully'
+                'message' => 'Unread count retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Failed to fetch unread count: ' . $e->getMessage(), ['user_id' => $user->id ?? null]);
+            Log::error('Failed to fetch unread count: '.$e->getMessage(), ['user_id' => $user->id ?? null]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch unread count',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -114,14 +116,15 @@ class NotificationController extends Controller
                 ->where('user_id', $user->id)
                 ->first();
 
-            if (!$notification) {
+            if (! $notification) {
                 Log::warning('Notification not found for markAsRead', [
                     'user_id' => $user->id,
-                    'notification_id' => $id
+                    'notification_id' => $id,
                 ]);
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Notifikasi tidak ditemukan'
+                    'message' => 'Notifikasi tidak ditemukan',
                 ], 404);
             }
 
@@ -130,25 +133,25 @@ class NotificationController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Notifikasi sudah dibaca sebelumnya',
-                    'data' => $notification
+                    'data' => $notification,
                 ]);
             }
 
             // Update status
             $notification->update([
-                'status' => 'read'
+                'status' => 'read',
             ]);
 
             Log::info('Notification marked as read', [
                 'user_id' => $user->id,
                 'notification_id' => $id,
-                'notification_type' => $notification->type
+                'notification_type' => $notification->type,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Notifikasi berhasil ditandai sebagai sudah dibaca',
-                'data' => $notification
+                'data' => $notification,
             ]);
 
         } catch (\Exception $e) {
@@ -156,12 +159,13 @@ class NotificationController extends Controller
                 'user_id' => $user->id ?? null,
                 'notification_id' => $id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menandai notifikasi sebagai sudah dibaca',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -176,34 +180,34 @@ class NotificationController extends Controller
             $updated = Notification::where('user_id', $user->id)
                 ->where('status', 'unread')
                 ->update([
-                    'status' => 'read'
+                    'status' => 'read',
                 ]);
 
             Log::info('All notifications marked as read', [
                 'user_id' => $user->id,
-                'updated_count' => $updated
+                'updated_count' => $updated,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Semua notifikasi berhasil ditandai sebagai sudah dibaca',
                 'data' => [
-                    'updated_count' => $updated
-                ]
+                    'updated_count' => $updated,
+                ],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to mark all notifications as read', [
                 'user_id' => $user->id ?? null,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menandai semua notifikasi sebagai sudah dibaca',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 }
-

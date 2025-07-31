@@ -8,7 +8,7 @@
  * Parse timestamp from various formats (MQTT, API, etc.)
  * Returns current time as fallback for invalid timestamps to prevent crashes
  */
-export function parseTimestamp(timestamp: any): Date {
+export function parseTimestamp(timestamp: unknown): Date {
   if (!timestamp) {
     console.warn('parseTimestamp: Empty timestamp, using current time');
     return new Date();
@@ -90,7 +90,7 @@ export function parseTimestamp(timestamp: any): Date {
 /**
  * Format date for display in Indonesian locale
  */
-export function formatTimeForDisplay(date: any): string {
+export function formatTimeForDisplay(date: unknown): string {
   // Parse and validate the date first
   const validDate = parseTimestamp(date);
   
@@ -142,8 +142,8 @@ export function getRelativeTime(date: Date): string {
     }
 
     // Extra protection for extremely large differences
-    if (minutes > 527117) { // This was the value from your error
-      console.warn('Detected known problematic timestamp, using fallback');
+    if (minutes > 527117 || minutes > 421248) { // Known problematic timestamp values
+      console.warn('Detected known problematic timestamp (421248 or 527117), using fallback:', minutes);
       return 'timestamp ESP32 tidak valid';
     }
 
@@ -174,7 +174,7 @@ export function getRelativeTime(date: Date): string {
 /**
  * Get device last seen human readable string
  */
-export function getLastSeenHuman(lastSeen: any, fallbackDate?: any): string {
+export function getLastSeenHuman(lastSeen: unknown, fallbackDate?: unknown): string {
   console.debug('getLastSeenHuman inputs:', { lastSeen, fallbackDate });
   
   const date = parseTimestamp(lastSeen);
@@ -189,7 +189,7 @@ export function getLastSeenHuman(lastSeen: any, fallbackDate?: any): string {
  * Check if device is considered online based on last seen time
  * Default threshold: 2 minutes (ESP32 sends heartbeat every 30 seconds)
  */
-export function isDeviceOnline(lastSeen: any, thresholdMinutes: number = 2): boolean {
+export function isDeviceOnline(lastSeen: unknown, thresholdMinutes: number = 2): boolean {
   const date = parseTimestamp(lastSeen);
   
   // Since parseTimestamp now always returns a Date, we can safely use it
@@ -208,7 +208,7 @@ export function isDeviceOnline(lastSeen: any, thresholdMinutes: number = 2): boo
 /**
  * Format timestamp for display with relative time
  */
-export function formatTimestampWithRelative(timestamp: any): string {
+export function formatTimestampWithRelative(timestamp: unknown): string {
   if (process.env.NODE_ENV === 'development') {
     console.debug('formatTimestampWithRelative input:', timestamp);
   }

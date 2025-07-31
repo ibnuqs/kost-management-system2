@@ -1,15 +1,15 @@
 // File: src/pages/Admin/hooks/useDashboard.ts
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { dashboardServiceNew as dashboardService } from '../services/dashboardServiceNew';
+import { dashboardService } from '../services/dashboardService';
 import type { DashboardStats, ActivityItem, RevenueData } from '../types';
 
 export const useDashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
-  const [accessHistoryData, setAccessHistoryData] = useState<any[]>([]);
-  const [paymentTrendsData, setPaymentTrendsData] = useState<any[]>([]);
+  const [accessHistoryData, setAccessHistoryData] = useState<Record<string, unknown>[]>([]);
+  const [paymentTrendsData, setPaymentTrendsData] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState({ 
     stats: true, 
     revenue: true, 
@@ -24,7 +24,7 @@ export const useDashboard = () => {
       const data = await dashboardService.getDashboardData();
       setStats(data.stats);
       setActivities(data.activities);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Dashboard loading error:', err);
       toast.error('Failed to load dashboard data');
     } finally {
@@ -37,7 +37,7 @@ export const useDashboard = () => {
       setLoading(prev => ({ ...prev, revenue: true }));
       const data = await dashboardService.getRevenueData(period);
       setRevenueData(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Revenue loading error:', err);
       toast.error(`Failed to load ${period} revenue data`);
       setRevenueData([]);
@@ -51,7 +51,7 @@ export const useDashboard = () => {
       setLoading(prev => ({ ...prev, accessHistory: true }));
       const data = await dashboardService.getAccessHistoryData();
       setAccessHistoryData(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Access history loading error:', err);
       setAccessHistoryData([]);
     } finally {
@@ -64,7 +64,7 @@ export const useDashboard = () => {
       setLoading(prev => ({ ...prev, paymentTrends: true }));
       const data = await dashboardService.getPaymentTrendsData();
       setPaymentTrendsData(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Payment trends loading error:', err);
       setPaymentTrendsData([]);
     } finally {

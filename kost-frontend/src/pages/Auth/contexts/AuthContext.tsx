@@ -1,6 +1,3 @@
-﻿// pages/Auth/contexts/AuthContext.tsx
-// AuthContext implementation with state management
-
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { toast } from 'react-hot-toast';
 import authService from '../services/authService'; // Fixed import
@@ -8,7 +5,7 @@ import {
   User, 
   LoginCredentials, 
   RegisterData, 
-  AuthContextType, 
+  AuthContextType,
   AuthState,
   ChangePasswordData,
   ForgotPasswordData,
@@ -107,11 +104,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           authService.clearAuth();
           dispatch({ type: 'LOGOUT' });
         }
-      } catch (error) {
+      } catch {
         // Keep cached data if server is unreachable
         // Don't clear auth on network errors
       }
-    } catch (error) {
+    } catch {
       authService.clearAuth();
       dispatch({ type: 'LOGOUT' });
     } finally {
@@ -135,8 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.error(result.error || 'Login failed');
         return result;
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Login failed';
+    } catch (error: unknown) {
+      const errorMessage = (error as Error).message || 'Login failed';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -159,8 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.error(result.error || 'Registration failed');
         return result;
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Registration failed';
+    } catch (error: unknown) {
+      const errorMessage = (error as Error).message || 'Registration failed';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -172,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authService.logout();
       dispatch({ type: 'LOGOUT' });
       toast.success(SUCCESS_MESSAGES.LOGOUT_SUCCESS);
-    } catch (error) {
+    } catch {
       // Clear local state even if API call fails
       authService.clearAuth();
       dispatch({ type: 'LOGOUT' });
@@ -193,8 +190,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_ERROR', payload: result.error || 'Failed to load user' });
         return result;
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to load user';
+    } catch (error: unknown) {
+      const errorMessage = (error as Error).message || 'Failed to load user';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
       return { success: false, error: errorMessage };
     }
@@ -212,8 +209,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.error(result.error || 'Failed to update profile');
         return result;
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to update profile';
+    } catch (error: unknown) {
+      const errorMessage = (error as Error).message || 'Failed to update profile';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -236,8 +233,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.error(result.error || 'Failed to change password');
         return result;
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to change password';
+    } catch (error: unknown) {
+      const errorMessage = (error as Error).message || 'Failed to change password';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -255,8 +252,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.error(result.error || 'Failed to send reset email');
         return result;
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to send reset email';
+    } catch (error: unknown) {
+      const errorMessage = (error as Error).message || 'Failed to send reset email';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -279,8 +277,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.error(result.error || 'Failed to reset password');
         return result;
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to reset password';
+    } catch (error: unknown) {
+      const errorMessage = (error as Error).message || 'Failed to reset password';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     }

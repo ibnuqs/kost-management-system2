@@ -3,28 +3,31 @@ import api from '../../../utils/api';
 import type { Room, RoomFormData, RoomStats, RoomFilters, TenantAssignmentData, ArchiveRoomData } from '../types/room';
 import type { PaginationData } from '../types/common';
 
-interface RoomsResponse {
-  success: boolean;
-  data: Room[];  // ✅ FIXED: Direct array, not nested in data.data
-  pagination: {
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
+// API response interfaces
+interface RoomApiData {
+  id: number;
+  room_number: string;
+  room_name: string;
+  floor: number;
+  room_type: string;
+  monthly_price: number;
+  status: string;
+  description?: string;
+  is_archived?: boolean;
+  tenant?: {
+    id: number;
+    user_name?: string;
+    user_email?: string;
+    [key: string]: unknown;
   };
-  filters: {
-    status: string;
-    search: string;
-    sort_by: string;
-    sort_order: string;
-  };
-  message?: string;
+  [key: string]: unknown;
 }
 
-interface RoomResponse {
-  success: boolean;
-  data: Room;
-  message?: string;
+interface ApiPagination {
+  current_page?: number;
+  last_page?: number;
+  per_page?: number;
+  total?: number;
 }
 
 export const roomService = {
@@ -64,16 +67,15 @@ export const roomService = {
       }
 
       // ✅ FIXED: Correct parsing based on your backend response structure
-      const responseData = response.data;  // This is the whole response
+      const responseData = response.data as RoomsApiResponse;  // This is the whole response
       
       // 🔍 DEBUG: Log detailed room information
-      console.log('=== ROOM DEBUG INFO ===');
       console.log('Raw response:', responseData);
       console.log('Total rooms received:', responseData.data?.length || 0);
-      console.log('Room IDs:', responseData.data?.map((room: any) => room.id) || []);
-      console.log('Room ID 8 exists:', responseData.data?.some((room: any) => room.id === 8));
-      console.log('Room ID 8 data:', responseData.data?.find((room: any) => room.id === 8));
-      console.log('All rooms summary:', responseData.data?.map((room: any) => ({
+      console.log('Room IDs:', responseData.data?.map((room: RoomApiData) => room.id) || []);
+      console.log('Room ID 8 exists:', responseData.data?.some((room: RoomApiData) => room.id === 8));
+      console.log('Room ID 8 data:', responseData.data?.find((room: RoomApiData) => room.id === 8));
+      console.log('All rooms summary:', responseData.data?.map((room: RoomApiData) => ({
         id: room.id,
         room_number: room.room_number,
         room_name: room.room_name,
@@ -83,7 +85,7 @@ export const roomService = {
       console.log('========================');
       
       // ✅ FIXED: Transform backend data to match frontend expectations
-      const rooms = responseData.data?.map((room: any) => ({
+      const rooms = (responseData.data as RoomApiData[])?.map((room: RoomApiData) => ({
         ...room,
         // Transform tenant data to match frontend structure
         tenant: room.tenant ? {
@@ -108,7 +110,7 @@ export const roomService = {
         } else {
           throw new Error('Failed to fetch stats from backend');
         }
-      } catch (statsError) {
+      } catch (statsError: unknown) {
         console.warn('Failed to fetch backend stats, falling back to calculated stats:', statsError);
         // Fallback to calculated stats if backend fails
         stats = {
@@ -135,25 +137,26 @@ export const roomService = {
         rooms: rooms,
         stats: stats,
         pagination: {
-          current_page: responseData.pagination?.current_page || 1,
-          last_page: responseData.pagination?.last_page || 1,
-          per_page: responseData.pagination?.per_page || 100,
-          total: responseData.pagination?.total || rooms.length
+          current_page: (responseData.pagination as ApiPagination)?.current_page || 1,
+          last_page: (responseData.pagination as ApiPagination)?.last_page || 1,
+          per_page: (responseData.pagination as ApiPagination)?.per_page || 100,
+          total: (responseData.pagination as ApiPagination)?.total || rooms.length
         }
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch rooms:', error);
       
       // More specific error handling
-      if (error.response?.status === 401) {
+      const apiError = error as ApiError;
+      if (apiError.response?.status === 401) {
         throw new Error('Authentication required. Please login again.');
-      } else if (error.response?.status === 403) {
+      } else if (apiError.response?.status === 403) {
         throw new Error('You do not have permission to access rooms data.');
-      } else if (error.response?.status >= 500) {
+      } else if (apiError.response?.status && apiError.response.status >= 500) {
         throw new Error('Server error occurred. Please try again later.');
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to fetch rooms');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to fetch rooms');
     }
   },
 
@@ -190,12 +193,13 @@ export const roomService = {
       }
       
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create room:', error);
       
       // Handle validation errors
-      if (error.response?.status === 422) {
-        const errors = error.response.data.errors;
+      const apiError = error as ApiError;
+      if (apiError.response?.status === 422) {
+        const errors = apiError.response.data?.errors;
         if (errors) {
           const errorMessages = Object.values(errors).flat();
           throw new Error(errorMessages.join(', '));
@@ -203,11 +207,11 @@ export const roomService = {
       }
       
       // Handle specific business logic errors
-      if (error.response?.status === 409) {
+      if (apiError.response?.status === 409) {
         throw new Error('Room number already exists. Please choose a different room number.');
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to create room');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to create room');
     }
   },
 
@@ -243,23 +247,24 @@ export const roomService = {
       }
       
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update room:', error);
       
+      const apiError = error as ApiError;
       // Handle validation errors
-      if (error.response?.status === 422) {
-        const errors = error.response.data.errors;
+      if (apiError.response?.status === 422) {
+        const errors = apiError.response.data?.errors;
         if (errors) {
           const errorMessages = Object.values(errors).flat();
           throw new Error(errorMessages.join(', '));
         }
       }
       
-      if (error.response?.status === 404) {
+      if (apiError.response?.status === 404) {
         throw new Error('Room not found. It may have been deleted.');
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to update room');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to update room');
     }
   },
 
@@ -277,18 +282,19 @@ export const roomService = {
       }
       
       console.log('Room deleted successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to delete room:', error);
+      const apiError = error as ApiError;
       console.error('Error details:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
+        status: apiError.response?.status,
+        data: apiError.response?.data,
+        message: (error as Error).message
       });
       
-      if (error.response?.status === 404) {
+      if (apiError.response?.status === 404) {
         throw new Error('Room not found. The room may have already been deleted.');
-      } else if (error.response?.status === 422) {
-        const errorData = error.response?.data;
+      } else if (apiError.response?.status === 422) {
+        const errorData = apiError.response?.data;
         const errorType = errorData?.error_type;
         
         if (errorType === 'active_tenants') {
@@ -302,10 +308,10 @@ export const roomService = {
           const message = errorData?.message || 'Cannot delete room. Please check for related data.';
           throw new Error(message);
         }
-      } else if (error.response?.status === 403) {
+      } else if (apiError.response?.status === 403) {
         throw new Error('You do not have permission to delete this room.');
-      } else if (error.response?.status === 500) {
-        const errorData = error.response?.data;
+      } else if (apiError.response?.status === 500) {
+        const errorData = apiError.response?.data;
         const errorType = errorData?.error_type;
         
         if (errorType === 'database_error') {
@@ -316,7 +322,7 @@ export const roomService = {
         }
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to delete room');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to delete room');
     }
   },
 
@@ -351,28 +357,29 @@ export const roomService = {
       }
       
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to assign tenant:', error);
       
-      if (error.response?.status === 422) {
-        const errors = error.response.data.errors;
+      const apiError = error as ApiError;
+      if (apiError.response?.status === 422) {
+        const errors = apiError.response?.data.errors;
         if (errors) {
           const errorMessages = Object.values(errors).flat();
           throw new Error(errorMessages.join(', '));
         }
       }
 
-      if (error.response?.status === 400) {
-        const message = error.response.data.message;
+      if (apiError.response?.status === 400) {
+        const message = apiError.response?.data.message;
         if (message?.includes('already an active tenant')) {
           throw new Error('This user is already a tenant in another room.');
         } else if (message?.includes('not available')) {
-          throw new Error('This room is not available for assignment.');
+          throw new new Error('This room is not available for assignment.');
         }
         throw new Error(message || 'Cannot assign tenant to this room');
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to assign tenant');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to assign tenant');
     }
   },
 
@@ -390,25 +397,26 @@ export const roomService = {
       }
       
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to remove tenant:', error);
       
-      if (error.response?.status === 400) {
-        const message = error.response.data.message;
+      const apiError = error as ApiError;
+      if (apiError.response?.status === 400) {
+        const message = apiError.response?.data.message;
         if (message?.includes('No active tenant')) {
           throw new Error('No active tenant found in this room.');
         }
         throw new Error(message || 'Cannot remove tenant from this room');
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to remove tenant');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to remove tenant');
     }
   },
 
   /**
    * Get available tenants for room assignment
    */
-  async getAvailableTenants(): Promise<any[]> {
+  async getAvailableTenants(): Promise<unknown[]> {
     try {
       // Fetch users who are not currently tenants
       const response = await api.get('/admin/tenants/available');
@@ -418,7 +426,7 @@ export const roomService = {
       }
       
       return response.data.data || [];
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch available tenants:', error);
       // Return empty array if API fails
       return [];
@@ -432,7 +440,7 @@ export const roomService = {
     try {
       const response = await this.getRooms({ status: 'available', per_page: 100 });
       return response.rooms;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to fetch available rooms:', error);
       return [];
     }
@@ -451,14 +459,15 @@ export const roomService = {
       }
       
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch room:', error);
       
-      if (error.response?.status === 404) {
+      const apiError = error as ApiError;
+      if (apiError.response?.status === 404) {
         throw new Error('Room not found');
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Failed to fetch room');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Failed to fetch room');
     }
   },
 
@@ -470,7 +479,7 @@ export const roomService = {
       // Try to get stats from rooms index endpoint first (more accurate)
       const roomsResponse = await this.getRooms({ per_page: 1 });
       return roomsResponse.stats;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch room stats:', error);
       
       // Return default stats if everything fails
@@ -502,21 +511,22 @@ export const roomService = {
       }
       
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to archive room:', error);
       
-      if (error.response?.status === 422) {
-        const errorType = error.response.data.error_type;
+      const apiError = error as ApiError;
+      if (apiError.response?.status === 422) {
+        const errorType = apiError.response?.data.error_type;
         if (errorType === 'active_tenants') {
           throw new Error('Tidak dapat mengarsipkan kamar yang masih ditempati. Silakan pindahkan penyewa terlebih dahulu.');
         }
       }
       
-      if (error.response?.status === 404) {
+      if (apiError.response?.status === 404) {
         throw new Error('Kamar tidak ditemukan.');
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Gagal mengarsipkan kamar');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Gagal mengarsipkan kamar');
     }
   },
 
@@ -534,21 +544,22 @@ export const roomService = {
       }
       
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to unarchive room:', error);
       
-      if (error.response?.status === 422) {
-        const errorType = error.response.data.error_type;
+      const apiError = error as ApiError;
+      if (apiError.response?.status === 422) {
+        const errorType = apiError.response?.data.error_type;
         if (errorType === 'not_archived') {
           throw new Error('Kamar tidak dalam status arsip.');
         }
       }
       
-      if (error.response?.status === 404) {
+      if (apiError.response?.status === 404) {
         throw new Error('Kamar tidak ditemukan.');
       }
       
-      throw new Error(error.response?.data?.message || error.message || 'Gagal memulihkan kamar dari arsip');
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Gagal memulihkan kamar dari arsip');
     }
   },
 
@@ -582,7 +593,7 @@ export const roomService = {
         throw new Error(response.data.message || 'Gagal mengambil data kamar arsip');
       }
 
-      const responseData = response.data;
+      const responseData = response.data as RoomsApiResponse;
       const rooms = responseData.data || [];
       
       return {
@@ -594,9 +605,10 @@ export const roomService = {
           total: responseData.pagination?.total || rooms.length
         }
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch archived rooms:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Gagal mengambil data kamar arsip');
+      const apiError = error as ApiError;
+      throw new Error(apiError.response?.data?.message || apiError.message || 'Gagal mengambil data kamar arsip');
     }
   }
 };

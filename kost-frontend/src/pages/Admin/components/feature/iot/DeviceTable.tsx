@@ -144,22 +144,22 @@ const DeviceTable: React.FC<DeviceTableProps> = ({
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                📱 Perangkat
+                Perangkat
               </th>
               <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                🔧 Tipe
+                Tipe
               </th>
               <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                🏠 Kamar
+                Kamar
               </th>
               <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                🟢 Status
+                Status
               </th>
               <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                🕐 Terakhir Aktif
+                Terakhir Aktif
               </th>
               <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                ⚙️ Aksi
+                Aksi
               </th>
             </tr>
           </thead>
@@ -171,7 +171,7 @@ const DeviceTable: React.FC<DeviceTableProps> = ({
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                       <Wifi className="w-8 h-8 text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">🔍 Tidak ada perangkat ditemukan</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Tidak ada perangkat ditemukan</h3>
                     <p className="text-gray-600 mb-4">Tidak ada perangkat IoT yang sesuai dengan filter saat ini.</p>
                     <div className="text-sm text-gray-500">
                       • Coba sesuaikan filter pencarian Anda<br/>
@@ -230,11 +230,11 @@ const DeviceTable: React.FC<DeviceTableProps> = ({
                   <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                     {device.room ? (
                       <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 shadow-sm">
-                        🏠 Kamar {device.room.room_number}
+                        Kamar {device.room.room_number}
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 shadow-sm">
-                        📌 Belum Ditugaskan
+                        Belum Ditugaskan
                       </span>
                     )}
                   </td>
@@ -253,7 +253,7 @@ const DeviceTable: React.FC<DeviceTableProps> = ({
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {device.status === 'online' || device.is_online ? '✅ Terhubung' : '❌ Terputus'}
+                          {device.status === 'online' || device.is_online ? 'Terhubung' : 'Terputus'}
                         </span>
                         <div className="text-xs text-gray-500 mt-0.5">
                           {device.status === 'online' || device.is_online ? 'Aktif' : 'Tidak Aktif'}
@@ -322,7 +322,7 @@ const DeviceTable: React.FC<DeviceTableProps> = ({
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div className="flex items-center space-x-2">
               <div className="text-sm text-gray-700 bg-white px-3 py-1 rounded-lg border">
-                📊 Menampilkan <span className="font-bold text-blue-600">{((pagination?.current_page || 1) - 1) * (pagination?.per_page || 10) + 1}</span> sampai{' '}
+                Menampilkan <span className="font-bold text-blue-600">{((pagination?.current_page || 1) - 1) * (pagination?.per_page || 10) + 1}</span> sampai{' '}
                 <span className="font-bold text-blue-600">
                   {Math.min((pagination?.current_page || 1) * (pagination?.per_page || 10), pagination?.total || 0)}
                 </span> dari{' '}

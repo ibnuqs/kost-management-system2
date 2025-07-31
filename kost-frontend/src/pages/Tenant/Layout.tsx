@@ -1,5 +1,5 @@
 // ===== src/pages/Tenant/Layout.tsx =====
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { tenantService } from './services/tenantService';
@@ -36,10 +36,10 @@ const Layout: React.FC = () => {
   }, []);
 
   // Get user data for layout - with better error handling
-  const { 
-    data: dashboardData, 
-    isLoading, 
-    isError, 
+  const {
+    data: dashboardData,
+    isLoading,
+    isError,
     error,
     refetch 
   } = useQuery({
@@ -49,19 +49,10 @@ const Layout: React.FC = () => {
     retry: 2,
   });
 
-  // Memoize user data to prevent unnecessary re-renders
-  const userData = useMemo(() => {
-    return dashboardData?.user || null;
-  }, [dashboardData?.user]);
-
   // Memoized handlers
-  const handleSidebarToggle = useCallback(() => {
-    setSidebarOpen(prev => !prev);
-  }, []);
-
-  const handleSidebarClose = useCallback(() => {
-    setSidebarOpen(false);
-  }, []);
+  const handleMenuClick = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
 
   // Close sidebar when route changes (mobile only)
   useEffect(() => {
@@ -70,10 +61,6 @@ const Layout: React.FC = () => {
       setSidebarOpen(false);
     }
   }, [location.pathname]);
-
-  const handleMenuClick = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
 
   // Show loading screen only on initial load
   if (isLoading) {

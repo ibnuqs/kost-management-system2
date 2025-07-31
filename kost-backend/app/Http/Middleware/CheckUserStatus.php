@@ -17,10 +17,10 @@ class CheckUserStatus
      */
     public function handle(Request $request, Closure $next)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthenticated'
+                'message' => 'Unauthenticated',
             ], 401);
         }
 
@@ -29,11 +29,11 @@ class CheckUserStatus
         if ($user->status !== 'active') {
             // Revoke all tokens for inactive users
             $user->tokens()->delete();
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Account has been deactivated. Please contact administrator.',
-                'error_code' => 'ACCOUNT_INACTIVE'
+                'error_code' => 'ACCOUNT_INACTIVE',
             ], 403);
         }
 

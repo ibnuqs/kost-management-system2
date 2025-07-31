@@ -18,6 +18,7 @@ export interface User {
 export interface Room {
   id: number;
   room_number: string;
+  room_name?: string;
   floor?: number;
   type?: string;
   created_at?: string;
@@ -28,10 +29,13 @@ export interface AccessLog extends BaseEntity {
   user_id?: number;
   room_id?: number;
   rfid_uid: string;
-  device_id?: string;
+  device_id: string;
   access_granted: boolean;
   accessed_at: string;
+  access_time?: string; // Alias for accessed_at
   reason?: string;
+  status?: 'granted' | 'denied';
+  access_type?: 'door' | 'gate' | 'room';
   user?: User;
   room?: Room;
 }

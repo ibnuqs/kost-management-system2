@@ -2,10 +2,9 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Http\JsonResponse;
 
 abstract class BaseRequest extends FormRequest
 {
@@ -27,7 +26,7 @@ abstract class BaseRequest extends FormRequest
                 'success' => false,
                 'message' => 'Validation failed',
                 'errors' => $validator->errors(),
-                'timestamp' => now()->format('c')
+                'timestamp' => now()->format('c'),
             ], 422)
         );
     }
@@ -89,9 +88,9 @@ abstract class BaseRequest extends FormRequest
             $phone = preg_replace('/[\s\-\(\)]/', '', $phone);
             // Convert +62 to 0
             if (str_starts_with($phone, '+62')) {
-                $phone = '0' . substr($phone, 3);
+                $phone = '0'.substr($phone, 3);
             } elseif (str_starts_with($phone, '62')) {
-                $phone = '0' . substr($phone, 2);
+                $phone = '0'.substr($phone, 2);
             }
             $this->merge(['phone' => $phone]);
         }

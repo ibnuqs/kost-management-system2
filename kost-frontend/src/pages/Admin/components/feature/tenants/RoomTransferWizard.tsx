@@ -1,6 +1,6 @@
 // File: src/pages/Admin/components/feature/tenants/RoomTransferWizard.tsx
-import React, { useState, useEffect } from 'react';
-import { X, ArrowRight, Home, DollarSign, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, ArrowRight, Home, DollarSign, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { roomService } from '../../../services/roomService';
 import { tenantService } from '../../../services/tenantService';
@@ -28,10 +28,10 @@ interface BillingCalculation {
   proRataAdjustment: number;
 }
 
-export const RoomTransferWizard: React.FC<RoomTransferWizardProps> = ({
-  isOpen,
-  tenant,
-  onClose,
+export const RoomTransferWizard: React.FC<RoomTransferWizardProps> = ({ 
+  isOpen, 
+  tenant, 
+  onClose, 
   onSuccess
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -48,21 +48,7 @@ export const RoomTransferWizard: React.FC<RoomTransferWizardProps> = ({
   const [billingCalculation, setBillingCalculation] = useState<BillingCalculation | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
-  // Load available rooms
-  useEffect(() => {
-    if (isOpen && currentStep === 1) {
-      loadAvailableRooms();
-    }
-  }, [isOpen, currentStep]);
-
-  // Calculate billing when room is selected
-  useEffect(() => {
-    if (transferData.targetRoomId && tenant) {
-      calculateBilling();
-    }
-  }, [transferData.targetRoomId, transferData.transferDate, tenant]);
-
-  const loadAvailableRooms = async () => {
+  const loadAvailableRooms = useCallback(async () => {
     try {
       setLoadingRooms(true);
       const response = await roomService.getRooms({ 
@@ -70,22 +56,29 @@ export const RoomTransferWizard: React.FC<RoomTransferWizardProps> = ({
         per_page: 100 
       });
       setAvailableRooms(response.rooms);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load rooms:', error);
       toast.error('Gagal memuat daftar kamar');
     } finally {
       setLoadingRooms(false);
     }
-  };
+  }, []);
 
-  const calculateBilling = () => {
+  // Load available rooms
+  useEffect(() => {
+    if (isOpen && currentStep === 1) {
+      loadAvailableRooms();
+    }
+  }, [isOpen, currentStep, loadAvailableRooms]);
+
+  const calculateBilling = useCallback(() => {
     if (!tenant || !transferData.targetRoomId) return;
 
     const targetRoom = availableRooms.find(room => room.id.toString() === transferData.targetRoomId);
     if (!targetRoom) return;
 
-    const currentRent = parseFloat(tenant.monthly_rent || '0');
-    const newRent = parseFloat(targetRoom.monthly_price);
+    const currentRent = typeof tenant.monthly_rent === 'string' ? parseFloat(tenant.monthly_rent || '0') : (tenant.monthly_rent || 0);
+    const newRent = typeof targetRoom.monthly_price === 'string' ? parseFloat(targetRoom.monthly_price) : targetRoom.monthly_price;
     const rentDifference = newRent - currentRent;
 
     // Simple pro-rata calculation (can be enhanced later)
@@ -103,7 +96,14 @@ export const RoomTransferWizard: React.FC<RoomTransferWizardProps> = ({
     });
 
     setSelectedRoom(targetRoom);
-  };
+  }, [availableRooms, tenant, transferData.targetRoomId, transferData.transferDate]);
+
+  // Calculate billing when room is selected
+  useEffect(() => {
+    if (transferData.targetRoomId && tenant) {
+      calculateBilling();
+    }
+  }, [transferData.targetRoomId, transferData.transferDate, tenant, calculateBilling]);
 
   const handleRoomSelect = (roomId: string) => {
     setTransferData(prev => ({ ...prev, targetRoomId: roomId }));
@@ -134,7 +134,7 @@ export const RoomTransferWizard: React.FC<RoomTransferWizardProps> = ({
         phone: tenant.user.phone || '',
         room_id: transferData.targetRoomId,
         tenant_code: tenant.tenant_code || '',
-        monthly_rent: selectedRoom?.monthly_price.toString() || tenant.monthly_rent,
+        monthly_rent: selectedRoom?.monthly_price.toString() || tenant.monthly_rent.toString(),
         start_date: tenant.start_date.split('T')[0],
         status: tenant.status
       });
@@ -144,9 +144,9 @@ export const RoomTransferWizard: React.FC<RoomTransferWizardProps> = ({
       onClose();
       resetWizard();
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to transfer room:', error);
-      toast.error(error.message || 'Gagal memindahkan penyewa');
+      toast.error((error as Error).message || 'Gagal memindahkan penyewa');
     } finally {
       setSubmitting(false);
     }

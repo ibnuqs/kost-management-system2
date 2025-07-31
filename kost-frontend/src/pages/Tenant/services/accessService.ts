@@ -1,9 +1,6 @@
 // File: src/pages/Tenant/services/accessService.ts (FIXED - PRODUCTION READY)
 import api, { endpoints, ApiResponse } from '../../../utils/api';
 import { 
-  FilterParams 
-} from '../types/common';
-import { 
   AccessLog, 
   AccessStats,
   AccessFilters,
@@ -53,11 +50,11 @@ class AccessService {
       
       // Check if this is an ApiResponse wrapper with success field
       if ('success' in apiData && apiData.success === false) {
-        throw new Error((apiData as any).message || 'Failed to fetch access history');
+        throw new Error((apiData as ApiResponse<unknown> & { message?: string }).message || 'Failed to fetch access history');
       }
 
       // FIXED - Handle different response structures from backend
-      const responseData = ('data' in apiData) ? (apiData as any).data : apiData;
+      const responseData = ('data' in apiData) ? (apiData as ApiResponse<AccessHistoryResponse>).data : apiData;
       
       if (!responseData) {
         console.warn('No data in response, returning empty result');
@@ -74,7 +71,7 @@ class AccessService {
       const actualData = responseData.data || responseData;
       
       // FIXED: Handle object with numeric keys (Laravel Collection serialization issue)
-      let logsArray = [];
+      let logsArray: AccessLog[] = [];
       if (actualData.data && Array.isArray(actualData.data)) {
         logsArray = actualData.data;
       } else if (actualData.logs && Array.isArray(actualData.logs)) {
@@ -110,7 +107,7 @@ class AccessService {
       
       return result;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ AccessService.getAccessHistory error:', error);
       
       // Enhanced error handling with specific error types
@@ -124,7 +121,7 @@ class AccessService {
             per_page: params?.per_page || params?.limit || 15,
           };
 
-          const fallbackResponse = await api.get<ApiResponse<any>>(
+          const fallbackResponse = await api.get<ApiResponse<{ logs: AccessLog[]; total: number }>>(
             '/tenant/access-logs', // Alternative endpoint
             { params: fallbackParams }
           );
@@ -136,7 +133,7 @@ class AccessService {
               total: fallbackData?.total || 0
             };
           }
-        } catch (fallbackError) {
+        } catch {
           console.warn('🔄 Fallback endpoint also failed, trying mock data...');
         }
 
@@ -181,7 +178,7 @@ class AccessService {
 
       return data;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ AccessService.getAccessStats error:', error);
       
       if (error.response?.status === 404) {
@@ -189,11 +186,11 @@ class AccessService {
         
         // FALLBACK: Try alternative endpoint or return mock data
         try {
-          const fallbackResponse = await api.get<ApiResponse<any>>('/tenant/access-stats');
+          const fallbackResponse = await api.get<ApiResponse<unknown>>('/tenant/access-stats');
           if (fallbackResponse.data.success !== false) {
             return fallbackResponse.data.data || this.getDefaultStats();
           }
-        } catch (fallbackError) {
+        } catch {
           console.warn('🔄 Fallback stats endpoint failed, returning mock data');
         }
 
@@ -216,7 +213,7 @@ class AccessService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('AccessService.getAccessLogById error:', error);
       throw new Error(error.message || 'Failed to fetch access log');
     }
@@ -283,7 +280,7 @@ class AccessService {
       }
 
       return [];
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('AccessService.getAccessPatterns error:', error);
       
       if (error.response?.status === 404) {
@@ -316,7 +313,7 @@ class AccessService {
       });
 
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('AccessService.exportAccessLogs error:', error);
       throw new Error(error.message || 'Failed to export access logs');
     }
@@ -416,7 +413,7 @@ class AccessService {
         per_page: 100
       });
       return result.logs;
-    } catch (error) {
+    } catch {
       console.warn('getTodayAccessLogs failed, returning empty array');
       return [];
     }
@@ -437,7 +434,7 @@ class AccessService {
         per_page: 100
       });
       return result.logs;
-    } catch (error) {
+    } catch {
       console.warn('getWeekAccessLogs failed, returning empty array');
       return [];
     }
@@ -458,7 +455,7 @@ class AccessService {
         per_page: 100
       });
       return result.logs;
-    } catch (error) {
+    } catch {
       console.warn('getMonthAccessLogs failed, returning empty array');
       return [];
     }
@@ -481,7 +478,7 @@ class AccessService {
       }
 
       return response.data.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('AccessService.getAccessSummary error:', error);
       
       // Return default summary if endpoint doesn't exist
@@ -515,7 +512,7 @@ class AccessService {
         per_page: 100
       });
       return result.logs;
-    } catch (error) {
+    } catch {
       console.warn('getDeniedAccessLogs failed, returning empty array');
       return [];
     }
@@ -533,7 +530,7 @@ class AccessService {
       }
 
       return response.data.data || [];
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('AccessService.getAccessLogsByDevice error:', error);
       
       if (error.response?.status === 404) {
@@ -556,7 +553,7 @@ class AccessService {
       }
 
       return response.data.data || [];
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('AccessService.getAccessLogsByCard error:', error);
       
       if (error.response?.status === 404) {

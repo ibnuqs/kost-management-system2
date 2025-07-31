@@ -1,8 +1,8 @@
 // File: src/pages/Admin/components/dashboard/StatsCards.tsx
 import React from 'react';
 import { 
-  Building, Users, DollarSign, Sun, UserCheck, UserX,
-  TrendingUp, TrendingDown, ArrowUp, ArrowDown
+  Building, DollarSign, Sun, UserCheck, UserX,
+  TrendingUp, TrendingDown, ArrowUp
 } from 'lucide-react';
 import { Card } from '../ui';
 import type { DashboardStats } from '../../types';

@@ -7,8 +7,8 @@ import {
   RfidAccessControl,
   AdminDoorControl
 } from '../components/feature/rfid';
-import { SimpleRfidMonitor } from '../components/feature/rfid/SimpleRfidMonitor';
-import { CompactRfidDashboard } from '../components/feature/rfid/CompactRfidDashboard';
+// SimpleRfidMonitor removed during cleanup
+// CompactRfidDashboard removed during cleanup
 import { ESP32Dashboard } from '../components/feature/iot';
 import { useRfidEvents } from '../../../hooks';
 import { esp32Service } from '../services/esp32Service';
@@ -25,7 +25,7 @@ export const RfidRealTimeManagement: React.FC = () => {
   });
   
   // Get real-time MQTT data
-  const { recentScans, deviceStatuses, isConnected, connectionStatus } = useRfidEvents();
+  const { recentScans, deviceStatuses, isConnected } = useRfidEvents();
 
   // Update stats when data changes
   useEffect(() => {
@@ -202,13 +202,17 @@ export const RfidRealTimeManagement: React.FC = () => {
         <div className="min-h-[500px]">
           {activeTab === 'dashboard' && (
             <div className="animate-fadeIn">
-              <CompactRfidDashboard />
+              <div className="p-6 text-center text-gray-500">
+                Compact dashboard temporarily unavailable
+              </div>
             </div>
           )}
 
           {activeTab === 'simple' && (
             <div className="animate-fadeIn">
-              <SimpleRfidMonitor />
+              <div className="p-6 text-center text-gray-500">
+                Simple monitor temporarily unavailable
+              </div>
             </div>
           )}
 

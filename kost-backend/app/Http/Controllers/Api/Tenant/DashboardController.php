@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Tenant;
-use App\Models\Payment;
 use App\Models\AccessLog;
+use App\Models\Payment;
 use App\Models\RfidCard;
+use App\Models\Tenant;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -20,23 +20,23 @@ class DashboardController extends Controller
     {
         try {
             $user = Auth::user();
-            
-            if (!$user) {
+
+            if (! $user) {
                 return response()->json([
                     'success' => false,
                     'message' => 'User not authenticated',
-                    'debug' => 'Auth::user() returned null'
+                    'debug' => 'Auth::user() returned null',
                 ], 401);
             }
 
             // Debug: Check all tenant records for this user
             $allTenants = Tenant::where('user_id', $user->id)->get();
-            
+
             // Debug: Check if any tenant exists
             $activeTenant = Tenant::where('user_id', $user->id)
                 ->where('status', Tenant::STATUS_ACTIVE)
                 ->first();
-            
+
             return response()->json([
                 'success' => true,
                 'debug' => [
@@ -46,7 +46,7 @@ class DashboardController extends Controller
                         'email' => $user->email,
                         'role' => $user->role,
                     ],
-                    'all_tenants' => $allTenants->map(function($t) {
+                    'all_tenants' => $allTenants->map(function ($t) {
                         return [
                             'id' => $t->id,
                             'user_id' => $t->user_id,
@@ -66,15 +66,15 @@ class DashboardController extends Controller
                         'STATUS_ACTIVE' => Tenant::STATUS_ACTIVE,
                         'STATUS_MOVED_OUT' => Tenant::STATUS_MOVED_OUT,
                         'STATUS_SUSPENDED' => Tenant::STATUS_SUSPENDED,
-                    ]
-                ]
+                    ],
+                ],
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Debug failed: ' . $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'message' => 'Debug failed: '.$e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ], 500);
         }
     }
@@ -86,28 +86,28 @@ class DashboardController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // Add debug logging
             \Log::info('Tenant dashboard request', [
                 'user_id' => $user ? $user->id : 'null',
-                'user_role' => $user ? $user->role : 'null'
+                'user_role' => $user ? $user->role : 'null',
             ]);
-            
+
             // Get active tenant record
             $tenant = Tenant::where('user_id', $user->id)
                 ->where('status', Tenant::STATUS_ACTIVE)
                 ->with(['room', 'user'])
                 ->first();
 
-            if (!$tenant) {
+            if (! $tenant) {
                 \Log::warning('Active tenant not found', [
                     'user_id' => $user->id,
-                    'all_tenants' => Tenant::where('user_id', $user->id)->get(['id', 'status', 'user_id'])->toArray()
+                    'all_tenants' => Tenant::where('user_id', $user->id)->get(['id', 'status', 'user_id'])->toArray(),
                 ]);
-                
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Active tenant record not found'
+                    'message' => 'Active tenant record not found',
                 ], 404);
             }
 
@@ -144,69 +144,69 @@ class DashboardController extends Controller
                 'start_date' => $tenant->start_date ? $tenant->start_date->format('Y-m-d') : 'null',
                 'end_date' => $tenant->end_date ? $tenant->end_date->format('Y-m-d') : 'null',
                 'monthly_rent' => $tenant->monthly_rent,
-                'status' => $tenant->status
+                'status' => $tenant->status,
             ]);
 
             // Add each section with error handling
             try {
                 $dashboardData['payment_info'] = $this->getPaymentInfo($tenant->id);
             } catch (\Exception $e) {
-                \Log::error('Payment info error: ' . $e->getMessage());
+                \Log::error('Payment info error: '.$e->getMessage());
                 $dashboardData['payment_info'] = ['error' => 'Failed to load payment info'];
             }
 
             try {
                 $dashboardData['access_stats'] = $this->getAccessStats($tenant);
             } catch (\Exception $e) {
-                \Log::error('Access stats error: ' . $e->getMessage());
+                \Log::error('Access stats error: '.$e->getMessage());
                 $dashboardData['access_stats'] = ['error' => 'Failed to load access stats'];
             }
 
             try {
                 $dashboardData['rfid_cards'] = $this->getRfidCards($user->id);
             } catch (\Exception $e) {
-                \Log::error('RFID cards error: ' . $e->getMessage());
+                \Log::error('RFID cards error: '.$e->getMessage());
                 $dashboardData['rfid_cards'] = ['error' => 'Failed to load RFID cards'];
             }
 
             try {
                 $dashboardData['notifications'] = $this->getNotifications($user->id);
             } catch (\Exception $e) {
-                \Log::error('Notifications error: ' . $e->getMessage());
+                \Log::error('Notifications error: '.$e->getMessage());
                 $dashboardData['notifications'] = ['error' => 'Failed to load notifications'];
             }
 
             try {
                 $dashboardData['recent_activities'] = $this->getRecentActivities($user->id);
             } catch (\Exception $e) {
-                \Log::error('Recent activities error: ' . $e->getMessage());
+                \Log::error('Recent activities error: '.$e->getMessage());
                 $dashboardData['recent_activities'] = ['error' => 'Failed to load recent activities'];
             }
 
             try {
                 $quickStats = $this->getQuickStats($tenant);
                 $dashboardData['quick_stats'] = $quickStats;
-                
+
                 // Debug: Log quick stats data
                 \Log::info('Quick stats data', [
                     'tenant_id' => $tenant->id,
-                    'quick_stats' => $quickStats
+                    'quick_stats' => $quickStats,
                 ]);
             } catch (\Exception $e) {
-                \Log::error('Quick stats error: ' . $e->getMessage());
+                \Log::error('Quick stats error: '.$e->getMessage());
                 $dashboardData['quick_stats'] = ['error' => 'Failed to load quick stats'];
             }
 
             return response()->json([
                 'success' => true,
                 'data' => $dashboardData,
-                'message' => 'Dashboard data retrieved successfully'
+                'message' => 'Dashboard data retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve dashboard data: ' . $e->getMessage()
+                'message' => 'Failed to retrieve dashboard data: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -295,7 +295,7 @@ class DashboardController extends Controller
         $successfulAccesses = AccessLog::where('room_id', $tenant->room_id)
             ->where('access_granted', true)
             ->count();
-        
+
         $successRate = $totalAccesses > 0 ? ($successfulAccesses / $totalAccesses) * 100 : 0;
 
         // Calculate average daily accesses (for current month)
@@ -314,7 +314,6 @@ class DashboardController extends Controller
             ->where('access_granted', false)
             ->count();
 
-
         $result = [
             'total_accesses' => $totalAccesses,
             'this_month' => $thisMonthAccesses,
@@ -325,14 +324,14 @@ class DashboardController extends Controller
             'success_rate' => round($successRate, 2),
             'average_daily' => round($averageDaily, 1),
             'peak_hours' => $peakHour ? [['hour' => $peakHour->hour, 'count' => $peakHour->count]] : [],
-            'denial_count' => $deniedAccesses
+            'denial_count' => $deniedAccesses,
         ];
 
         // Debug: Log access stats data
         \Log::info('Access stats data', [
             'tenant_id' => $tenant->id,
             'room_id' => $tenant->room_id,
-            'access_stats' => $result
+            'access_stats' => $result,
         ]);
 
         return $result;
@@ -369,7 +368,7 @@ class DashboardController extends Controller
                 'title' => 'Welcome',
                 'message' => 'Welcome to the tenant dashboard',
                 'action' => 'View',
-            ]
+            ],
         ];
     }
 
@@ -379,11 +378,11 @@ class DashboardController extends Controller
         $tenant = Tenant::where('user_id', $userId)
             ->where('status', Tenant::STATUS_ACTIVE)
             ->first();
-            
-        if (!$tenant) {
+
+        if (! $tenant) {
             return [];
         }
-        
+
         return AccessLog::where('room_id', $tenant->room_id)
             ->with('room')
             ->latest('accessed_at')
@@ -396,14 +395,14 @@ class DashboardController extends Controller
                 } elseif ($log->room_id) {
                     // Fallback: get room data if relationship failed
                     $room = \App\Models\Room::find($log->room_id);
-                    $roomNumber = $room ? $room->room_number : 'room ' . $log->room_id;
+                    $roomNumber = $room ? $room->room_number : 'room '.$log->room_id;
                 }
-                
+
                 return [
                     'type' => 'access',
-                    'description' => $log->access_granted 
-                        ? 'Access granted to ' . $roomNumber
-                        : 'Access denied to ' . $roomNumber,
+                    'description' => $log->access_granted
+                        ? 'Access granted to '.$roomNumber
+                        : 'Access denied to '.$roomNumber,
                     'timestamp' => $log->accessed_at->format('c'),
                     'room_number' => $roomNumber,
                 ];
@@ -417,8 +416,8 @@ class DashboardController extends Controller
         $today = Carbon::today();
         $thisWeek = Carbon::now()->startOfWeek();
         $thisMonth = Carbon::now()->startOfMonth();
-        
-        $daysSinceMovein = $tenant->start_date ? 
+
+        $daysSinceMovein = $tenant->start_date ?
             Carbon::parse($tenant->start_date)->diffInDays(Carbon::now()) : 0;
 
         $totalPaymentsMade = Payment::where('tenant_id', $tenant->id)
@@ -444,13 +443,13 @@ class DashboardController extends Controller
 
         // Device statistics - get devices for this room
         $devicesTotal = \App\Models\IoTDevice::where('room_id', $tenant->room_id)->count();
-        
+
         // Consider devices online if they have recent activity (last 5 minutes)
         // FIXED: Add proper WHERE clause grouping for room_id
         $devicesOnline = \App\Models\IoTDevice::where('room_id', $tenant->room_id)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('status', 'online')
-                      ->orWhere('last_seen', '>=', Carbon::now()->subMinutes(5));
+                    ->orWhere('last_seen', '>=', Carbon::now()->subMinutes(5));
             })
             ->count();
 
@@ -460,7 +459,7 @@ class DashboardController extends Controller
             'room_id' => $tenant->room_id,
             'devices_total' => $devicesTotal,
             'devices_online' => $devicesOnline,
-            'all_devices_for_room' => \App\Models\IoTDevice::where('room_id', $tenant->room_id)->get(['id', 'device_id', 'device_name', 'status', 'last_seen'])->toArray()
+            'all_devices_for_room' => \App\Models\IoTDevice::where('room_id', $tenant->room_id)->get(['id', 'device_id', 'device_name', 'status', 'last_seen'])->toArray(),
         ]);
 
         return [

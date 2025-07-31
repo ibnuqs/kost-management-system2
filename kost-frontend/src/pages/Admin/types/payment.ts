@@ -46,6 +46,8 @@ export interface Tenant {
   status: 'active' | 'inactive' | 'terminated';
   user: TenantUser;
   room?: Room;
+  user_name?: string;
+  user_email?: string;
 }
 
 export interface Payment extends BaseEntity {
@@ -53,13 +55,15 @@ export interface Payment extends BaseEntity {
   tenant_id: number;
   payment_month: string;
   amount: string;
-  status: 'pending' | 'paid' | 'failed' | 'overdue';
+  status: 'pending' | 'paid' | 'failed' | 'overdue' | 'expired' | 'cancelled' | 'void';
   payment_method?: string;
   paid_at?: string;
   failed_at?: string;
   failure_reason?: string;
   snap_token?: string;
   transaction_id?: string;
+  due_date?: string;
+  snap_token_created_at?: string;
   tenant: Tenant;
 }
 
@@ -95,7 +99,7 @@ export interface PaymentStatsApiResponse {
       total_amount: number;
     }>;
   };
-  recent_payments: Array<any>;
+  recent_payments: Array<unknown>;
 }
 
 export interface PaymentFilters {

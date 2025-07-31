@@ -116,10 +116,6 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats }) => {
   const occupiedRooms = stats?.occupied_rooms ?? 0;
   const totalRooms = stats?.total_rooms ?? 0;
   const availableRooms = stats?.available_rooms ?? 0;
-  
-  // Get payment info - using flat structure
-  const paidThisMonth = stats?.paid_this_month ?? 0;
-  const totalThisMonth = stats?.total_payments_this_month ?? 0;
 
   const statCards: StatCardProps[] = [
     {

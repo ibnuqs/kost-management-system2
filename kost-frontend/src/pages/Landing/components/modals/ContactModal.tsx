@@ -1,6 +1,6 @@
 // src/pages/Landing/components/modals/ContactModal.tsx - FIXED
 import React, { useEffect, useMemo, useCallback } from 'react';
-import { X, User, Mail, Phone, MessageSquare, Send, MessageCircle } from 'lucide-react';
+import { X, User, Mail, Phone, MessageSquare, MessageCircle } from 'lucide-react';
 import { AnimatedButton } from '../ui';
 import { ContactModalProps, ContactFormData } from '../../types';
 import { useLandingForm } from '../../hooks';
@@ -91,7 +91,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
       } else {
         toast.error('Gagal mengirim pesan. Silakan coba lagi.');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Contact submission error:', error);
       toast.error('Terjadi kesalahan. Silakan coba lagi.');
     }
@@ -331,7 +331,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   <Mail size={12} />
                   Pesan melalui form: Respon dalam 2-6 jam (jam kerja)
                 </p>
-                <p className="flex items-center gap-1">
+                <p className="mb-1 flex items-center gap-1">
                   <MessageCircle size={12} />
                   WhatsApp: Respon langsung 24/7
                 </p>
@@ -343,5 +343,3 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     </div>
   );
 };
-
-export default ContactModal;

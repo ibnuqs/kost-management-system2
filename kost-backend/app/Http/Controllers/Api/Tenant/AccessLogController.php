@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccessLog;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 
 class AccessLogController extends Controller
 {
@@ -17,19 +17,19 @@ class AccessLogController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // Get tenant info first to get their room
             $tenant = \App\Models\Tenant::where('user_id', $user->id)
                 ->where('status', \App\Models\Tenant::STATUS_ACTIVE)
                 ->first();
-            
-            if (!$tenant) {
+
+            if (! $tenant) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Active tenant record not found'
+                    'message' => 'Active tenant record not found',
                 ], 404);
             }
-            
+
             // Option B Implementation: Show only logs for tenant's room
             $query = AccessLog::where('room_id', $tenant->room_id)
                 ->with('room')
@@ -41,7 +41,7 @@ class AccessLogController extends Controller
                 'tenant_room_id' => $tenant->room_id,
                 'total_logs_for_room' => $totalCount,
                 'user_id' => $user->id,
-                'tenant_status' => $tenant->status
+                'tenant_status' => $tenant->status,
             ]);
 
             // Apply filters if provided
@@ -56,15 +56,15 @@ class AccessLogController extends Controller
             // Pagination
             $perPage = $request->get('per_page', 15);
             $page = $request->get('page', 1);
-            
+
             $accessLogs = $query->paginate($perPage, ['*'], 'page', $page);
-            
+
             // Debug: Check paginated results
             \Log::info('Paginated results', [
                 'items_count' => count($accessLogs->items()),
                 'total' => $accessLogs->total(),
                 'per_page' => $accessLogs->perPage(),
-                'current_page' => $accessLogs->currentPage()
+                'current_page' => $accessLogs->currentPage(),
             ]);
 
             $data = [
@@ -88,7 +88,7 @@ class AccessLogController extends Controller
                     'accessed_at' => $sampleLog->accessed_at,
                     'accessed_at_type' => gettype($sampleLog->accessed_at),
                     'reason' => $sampleLog->reason,
-                    'room_loaded' => $sampleLog->room ? true : false
+                    'room_loaded' => $sampleLog->room ? true : false,
                 ]);
             }
 
@@ -103,7 +103,7 @@ class AccessLogController extends Controller
                         $accessedAt = Carbon::now(); // Fallback to current time
                     }
                 }
-                
+
                 return [
                     'id' => $log->id,
                     'user_id' => $log->user_id,
@@ -116,7 +116,7 @@ class AccessLogController extends Controller
                     'reason' => $log->reason,
                     'created_at' => $accessedAt->format('c'),
                     'updated_at' => $accessedAt->format('c'),
-                    
+
                     // Additional fields for frontend compatibility
                     'access_time' => $accessedAt->format('c'),
                     'access_type' => $log->access_granted ? 'Akses Berhasil' : 'Akses Ditolak',
@@ -134,13 +134,13 @@ class AccessLogController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $data,
-                'message' => 'Access history retrieved successfully'
+                'message' => 'Access history retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve access history: ' . $e->getMessage()
+                'message' => 'Failed to retrieve access history: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -152,19 +152,19 @@ class AccessLogController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // Get tenant info first to get their room
             $tenant = \App\Models\Tenant::where('user_id', $user->id)
                 ->where('status', \App\Models\Tenant::STATUS_ACTIVE)
                 ->first();
-            
-            if (!$tenant) {
+
+            if (! $tenant) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Active tenant record not found'
+                    'message' => 'Active tenant record not found',
                 ], 404);
             }
-            
+
             $today = Carbon::today();
             $thisWeek = Carbon::now()->startOfWeek();
             $thisMonth = Carbon::now()->startOfMonth();
@@ -212,7 +212,7 @@ class AccessLogController extends Controller
                 ->map(function ($item) {
                     return [
                         'hour' => (int) $item->hour,
-                        'count' => (int) $item->count
+                        'count' => (int) $item->count,
                     ];
                 });
 
@@ -235,12 +235,12 @@ class AccessLogController extends Controller
                     ->get()
                     ->pluck('count', 'method')
                     ->toArray();
-                
+
                 // If no device_id pattern, assume all are RFID
                 if (empty($deviceDistribution) && $totalCount > 0) {
                     $deviceDistribution = ['rfid' => $totalCount];
                 }
-                
+
                 $methodDistribution = $deviceDistribution;
             } catch (\Exception $e) {
                 // If query fails, set to null
@@ -266,13 +266,13 @@ class AccessLogController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $stats,
-                'message' => 'Access statistics retrieved successfully'
+                'message' => 'Access statistics retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve access statistics: ' . $e->getMessage()
+                'message' => 'Failed to retrieve access statistics: '.$e->getMessage(),
             ], 500);
         }
     }

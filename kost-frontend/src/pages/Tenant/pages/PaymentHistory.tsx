@@ -8,14 +8,12 @@ import {
   Filter, 
   Search, 
   TrendingUp, 
-  Calendar,
   Download,
   ArrowUpRight,
   Clock,
   CheckCircle,
   AlertCircle,
   Wallet,
-  BarChart3,
   Grid3X3,
   List,
   SortAsc,
@@ -23,13 +21,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useTenantPayments } from '../hooks/useTenantPayments';
-import { PaymentHistoryTable, PaymentActions, PaymentFilters, CustomSnapPayment } from '../components/feature/payments';
-import { SnapPayment } from '../components/feature/payments/SnapPayment';
-import { PageHeader } from '../components/layout/Header';
+import { PaymentHistoryTable, PaymentFilters, CustomSnapPayment } from '../components/feature/payments';
 import { Button } from '../components/ui/Buttons';
 import { Card } from '../components/ui/Card';
 import { StatusBadge } from '../components/ui/Status';
-import Modal from '../components/ui/Modal/Modal';
 import { mergeClasses } from '../utils/helpers';
 import { MOBILE_SPECIFIC } from '../utils/constants';
 import { formatCurrency, formatDate } from '../utils/formatters';
@@ -46,8 +41,14 @@ const PaymentHistory: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Snap payment modal state
+  interface SnapPaymentData {
+    snap_token: string;
+    payment_url?: string;
+    transaction_details?: Record<string, unknown>;
+  }
+  
   const [showSnapModal, setShowSnapModal] = useState(false);
-  const [snapData, setSnapData] = useState<any>(null);
+  const [snapData, setSnapData] = useState<SnapPaymentData | null>(null);
   const [currentPayment, setCurrentPayment] = useState<Payment | null>(null);
 
   const {
@@ -66,8 +67,13 @@ const PaymentHistory: React.FC = () => {
   });
 
   // Handle auto-open payment from dashboard
+  interface LocationState {
+    autoOpenPayment?: boolean;
+    highlightPayment?: string;
+  }
+  
   useEffect(() => {
-    const state = location.state as any;
+    const state = location.state as LocationState | null;
     if (state?.autoOpenPayment && state?.highlightPayment && payments?.length) {
       const paymentToOpen = payments.find(p => p.id.toString() === state.highlightPayment);
       if (paymentToOpen && paymentToOpen.status === 'pending') {
@@ -184,14 +190,24 @@ const PaymentHistory: React.FC = () => {
       setCurrentPayment(payment);
       setShowSnapModal(true);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Failed to load Custom Snap payment:', error);
       toast.error('Gagal memuat pembayaran. Silakan coba lagi.');
     }
   };
 
   // Handle Snap payment success
-  const handleSnapSuccess = async (result: any) => {
+  interface SnapPaymentResult {
+    status_code?: string;
+    status_message?: string;
+    transaction_id?: string;
+    order_id?: string;
+    payment_type?: string;
+    transaction_status?: string;
+    fraud_status?: string;
+  }
+  
+  const handleSnapSuccess = async (result: SnapPaymentResult) => {
     try {
       console.log('✅ Payment successful:', result);
       
@@ -208,7 +224,7 @@ const PaymentHistory: React.FC = () => {
   };
 
   // Handle Snap payment pending
-  const handleSnapPending = async (result: any) => {
+  const handleSnapPending = async (result: SnapPaymentResult) => {
     try {
       console.log('⏳ Payment pending:', result);
       
@@ -226,7 +242,7 @@ const PaymentHistory: React.FC = () => {
   };
 
   // Handle Snap payment error
-  const handleSnapError = async (result: any) => {
+  const handleSnapError = async (result: SnapPaymentResult) => {
     try {
       console.error('❌ Payment error:', result);
       
@@ -559,6 +575,7 @@ const PaymentHistory: React.FC = () => {
                       key={payment.id} 
                       payment={payment} 
                       onPayNow={handlePayNow}
+                      refreshPayments={refreshPayments}
                     />
                   ))}
                 </div>
@@ -591,7 +608,7 @@ const PaymentHistory: React.FC = () => {
             paymentData={{
               order_id: currentPayment.order_id,
               amount: currentPayment.amount,
-              payment_month: currentPayment.payment_month
+              payment_month: currentPayment.payment_month || new Date().toISOString().slice(0, 7)
             }}
             onSuccess={handleSnapSuccess}
             onPending={handleSnapPending}
@@ -608,8 +625,9 @@ const PaymentHistory: React.FC = () => {
 const ModernPaymentCard: React.FC<{ 
   payment: Payment; 
   onPayNow: (payment: Payment) => void;
-}> = ({ payment, onPayNow }) => {
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  refreshPayments?: () => void;
+}> = ({ payment, onPayNow, refreshPayments }) => {
+  const [isProcessingPayment] = useState(false);
   const isPaid = ['paid', 'success', 'settlement', 'capture'].includes(payment.status);
   const isPending = ['pending', 'authorize'].includes(payment.status);
   const isFailed = ['failed', 'failure', 'cancel', 'deny', 'expire'].includes(payment.status);
@@ -631,7 +649,7 @@ const ModernPaymentCard: React.FC<{
     if (isPending) return <StatusBadge status="warning" label="Menunggu" size="sm" />;
     if (isOverdue) return <StatusBadge status="error" label="Terlambat" size="sm" />;
     if (isFailed) return <StatusBadge status="error" label="Gagal" size="sm" />;
-    return <StatusBadge status="default" label="Pending" size="sm" />;
+    return <StatusBadge status="neutral" label="Pending" size="sm" />;
   };
 
   return (
@@ -733,11 +751,11 @@ const ModernPaymentCard: React.FC<{
                       
                       if (updatedPayment.status !== payment.status) {
                         toast.success(`Status terbaru: ${updatedPayment.status}`);
-                        refreshPayments();
+                        refreshPayments?.();
                       } else {
                         toast.success('Status sudah terbaru');
                       }
-                    } catch (error) {
+                    } catch (error: unknown) {
                       console.error('Error checking payment status:', error);
                       toast.error('Gagal mengecek status pembayaran');
                     }

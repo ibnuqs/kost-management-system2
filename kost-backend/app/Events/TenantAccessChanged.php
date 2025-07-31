@@ -3,9 +3,7 @@
 namespace App\Events;
 
 use App\Models\Tenant;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -16,6 +14,7 @@ class TenantAccessChanged implements ShouldBroadcast
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $tenant;
+
     public $accessInfo;
 
     public function __construct(Tenant $tenant, array $accessInfo)
@@ -32,7 +31,7 @@ class TenantAccessChanged implements ShouldBroadcast
         return [
             new PrivateChannel('admin.tenant-access'),
             new PrivateChannel("tenant.{$this->tenant->user_id}"),
-            new PrivateChannel("room.{$this->tenant->room_id}")
+            new PrivateChannel("room.{$this->tenant->room_id}"),
         ];
     }
 
@@ -60,7 +59,7 @@ class TenantAccessChanged implements ShouldBroadcast
             'reason' => $this->accessInfo['reason'],
             'overdue_amount' => $this->accessInfo['overdue_amount'],
             'overdue_count' => $this->accessInfo['overdue_count'],
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
         ];
     }
 }
